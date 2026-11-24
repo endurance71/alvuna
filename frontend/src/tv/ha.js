@@ -49,7 +49,11 @@ export async function connect({ onStates, onStatus }) {
   }
   conn.addEventListener("disconnected", () => onStatus("offline"));
   conn.addEventListener("ready", () => onStatus("online"));
-  conn.addEventListener("reconnect-error", () => onStatus("offline"));
+  // Tokens refused on reconnect (the TV was removed in Home Assistant, or its user deleted): forget them and start
+  // again, which shows the pairing code (or HA's sign-in with ?login=1).
+  conn.addEventListener("reconnect-error", (_conn, err) => {
+    if (err === ERR_INVALID_AUTH) { saveTokens(null); location.reload(); } else onStatus("offline");
+  });
   subscribeEntities(conn, onStates);
   return conn;
 }
