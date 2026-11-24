@@ -16,7 +16,7 @@ import { renderPanel, renderCamera, attentionCount, attnKey } from "./ui/panels.
 import { patch } from "./ui/morph.js";
 import { Focus } from "./ui/focus.js";
 import { icon, preloadIcons } from "./ui/icons.js";
-import { loadInstances, saveInstances, currentInstance, withHere, normalizeAddress, addInstance, removeInstance, switchTo, reachable } from "./instances.js";
+import { loadInstances, saveInstances, currentInstance, withHere, normalizeAddress, addInstance, removeInstance, renameInstance, switchTo, reachable } from "./instances.js";
 
 const WEBOS = /Web0S|webOS/i.test(navigator.userAgent);
 // Icons used by the screens themselves (kept in step with the code: grep -oh '"mdi:[a-z0-9-]*"' src).
@@ -28,7 +28,7 @@ const APP_ICONS = ["mdi:alert", "mdi:alert-circle", "mdi:alert-circle-outline", 
   "mdi:television", "mdi:thermometer", "mdi:thermostat", "mdi:tree-outline", "mdi:volume-high", "mdi:volume-off",
   "mdi:water-outline", "mdi:water-percent", "mdi:weather-windy", "mdi:weather-sunset-up", "mdi:weather-sunset-down",
   "mdi:gauge", "mdi:eye-outline", "mdi:sun-wireless-outline", "mdi:umbrella-outline", "mdi:navigation", "mdi:wifi-off",
-  "mdi:keyboard-return", "mdi:arrow-left", "mdi:home-thermometer-outline", "mdi:play-circle-outline", "mdi:history", "mdi:shield-off-outline", "mdi:bell-outline", "mdi:bell-ring-outline", "mdi:battery-low", "mdi:battery-alert-variant-outline", "mdi:package-up", "mdi:account-group-outline", "mdi:trash-can-outline", "mdi:check-circle-outline", "mdi:check", "mdi:eye-off-outline", "mdi:debug-step-over", "mdi:bell-check-outline", "mdi:monitor-star", "mdi:brightness-6", "mdi:cursor-move", "mdi:exit-run", "mdi:blur", "mdi:animation-outline", "mdi:check-bold", "mdi:border-radius", "mdi:home-plus-outline", "mdi:logout", "mdi:home-remove-outline", "mdi:home-switch-outline", "mdi:home-outline", "mdi:arrow-right", "mdi:web", "mdi:dots-horizontal-circle-outline", "mdi:close"];
+  "mdi:keyboard-return", "mdi:arrow-left", "mdi:home-thermometer-outline", "mdi:play-circle-outline", "mdi:history", "mdi:shield-off-outline", "mdi:bell-outline", "mdi:bell-ring-outline", "mdi:battery-low", "mdi:battery-alert-variant-outline", "mdi:package-up", "mdi:account-group-outline", "mdi:trash-can-outline", "mdi:check-circle-outline", "mdi:check", "mdi:eye-off-outline", "mdi:debug-step-over", "mdi:bell-check-outline", "mdi:monitor-star", "mdi:brightness-6", "mdi:cursor-move", "mdi:exit-run", "mdi:blur", "mdi:animation-outline", "mdi:check-bold", "mdi:border-radius", "mdi:home-plus-outline", "mdi:logout", "mdi:home-remove-outline", "mdi:home-switch-outline", "mdi:home-outline", "mdi:arrow-right", "mdi:web", "mdi:dots-horizontal-circle-outline", "mdi:close", "mdi:pencil-outline"];
 const params = new URLSearchParams(location.search);
 let instances = loadInstances();
 let instance = currentInstance(instances);
@@ -227,6 +227,8 @@ function act(el) {
     // OK on the address field: the TV's own keyboard comes up for the <input>; Enter there connects (see keydown).
     case "add-focus": { const input = document.getElementById("addr"); if (input) { input.focus(); input.select?.(); } return; }
     case "add-go": return addHome();
+    case "inst-rename": return openPanel({ type: "rename", id: d.id });
+    case "rename-save": return renameHome(d.id);
     case "inst-del":
       instances = removeInstance(instances, d.id);
       saveInstances(instances);
@@ -342,7 +344,7 @@ window.addEventListener("keydown", (ev) => {
   // Typing an address: the keys belong to the field (and the TV's keyboard); Enter connects, Back leaves the field.
   if (document.activeElement?.tagName === "INPUT") {
     S.lastInput = Date.now();
-    if (ev.key === "Enter" || ev.keyCode === 13) { ev.preventDefault(); addHome(); }
+    if (ev.key === "Enter" || ev.keyCode === 13) { ev.preventDefault(); if (S.panel?.type === "rename") renameHome(S.panel.id); else addHome(); }
     else if (isBack(ev)) { ev.preventDefault(); S.addAddr = document.activeElement.value; document.activeElement.blur(); }
     return;
   }
@@ -647,6 +649,16 @@ async function mountCamera(h) {
   }, { once: true });
   stage.appendChild(v);
   setTimeout(() => { if (alive() && !started) { stopCamera(); v.remove(); stills(); } }, 12000);
+}
+
+function renameHome(id) {
+  const input = document.getElementById("addr");
+  if (input) input.blur();
+  instances = renameInstance(instances, id, input?.value || "");
+  saveInstances(instances);
+  instance = instances.find((x) => x.id === instance.id) || instance;
+  closeLayer();
+  render();
 }
 
 // --- another home: an address typed with the remote, checked, added to the list and opened (it pairs the TV there)

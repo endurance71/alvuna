@@ -56,9 +56,13 @@ WASHDATA = {"washer_state": "state", "washer_program": "program", "current_phase
 LIST_SECTIONS = ("rooms", "scenes", "security", "cameras", "media", "persons")
 
 
+IP_IN_NAME = re.compile(r"\b\d{1,3}([._-])\d{1,3}\1\d{1,3}\1\d{1,3}\b[\s:_-]*")
+
+
 def readable(name: str | None, fallback: str) -> str:
-    """A name a person would write: "kontaktron-szafa" -> "Szafa", "motion_sensor_kitchen" -> "Kitchen"."""
-    name = (name or "").strip() or fallback
+    """A name a person would write: "kontaktron-szafa" -> "Szafa", "motion_sensor_kitchen" -> "Kitchen",
+    "192_168_10_193 Garaż przód" -> "Garaż przód" (cameras often carry their address)."""
+    name = IP_IN_NAME.sub("", (name or "").strip()).strip() or fallback
     if " " in name or not re.search(r"[-_]", name):
         return name
     words = [w for w in re.split(r"[-_]+", name) if w and w.lower() not in SENSOR_WORDS and not w.isdigit()]

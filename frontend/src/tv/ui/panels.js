@@ -2,6 +2,7 @@
 // has the same height and the same parts (icon, name, state, value on the right), and a thin bar for values set with
 // left/right ([data-adjust]: brightness, blind, volume, temperature). Back closes the panel and focus goes back to
 // the tile that opened it.
+import { displayName } from "../instances.js";
 import { esc, num, wIcon, wxWord, alertWord, calmWord, time, shortDay, fmtTime, ago, age, since, isNum } from "../model/format.js";
 import { t, table } from "../../shared/i18n.js";
 import { icon } from "./icons.js";
@@ -41,6 +42,7 @@ export function renderPanel(h, p, ctx) {
   if (p.type === "settings") return settingsPanel(h, ctx);
   if (p.type === "addhome") return addHomePanel(ctx);
   if (p.type === "hold") return holdPanel(p);
+  if (p.type === "rename") return renamePanel(p, ctx);
   if (p.type === "wallpapers") return wallpapersPanel();
   if (p.type === "accents") return accentsPanel();
   return "";
@@ -567,7 +569,8 @@ function instancesPanel(ctx) {
     return `<div class="p-line" data-line="inst:${esc(x.id)}">
       <div class="p-row ${here ? "on" : ""}" data-f="inst:${esc(x.id)}" data-act="switch" data-id="${esc(x.id)}">
         <div class="ic ${here ? "lime" : ""}">${icon("mdi:home-outline")}</div>
-        <div class="t"><b>${esc(x.name)}</b><span>${here ? t("tv.instances.current") : esc(x.url.replace(/^https?:\/\//, ""))}</span></div></div>
+        <div class="t"><b>${esc(displayName(x, ctx.instances))}</b><span>${here ? t("tv.instances.current") : esc(x.url.replace(/^https?:\/\//, ""))}</span></div></div>
+      <div class="btn round small" data-f="ren:${esc(x.id)}" data-act="inst-rename" data-id="${esc(x.id)}">${icon("mdi:pencil-outline")}</div>
       ${here ? "" : `<div class="btn round small" data-f="del:${esc(x.id)}" data-act="inst-del" data-id="${esc(x.id)}">${icon("mdi:home-remove-outline")}</div>`}</div>`;
   });
   const add = row({ key: "inst:add", act: "add-home", ic: "mdi:home-plus-outline", title: t("tv.home.add"), sub: t("tv.home.add_hint"), value: icon("mdi:chevron-right") });
@@ -579,6 +582,15 @@ function holdPanel(p) {
   return shell("", head("mdi:dots-horizontal-circle-outline", p.name, t("tv.hold.sub")),
     row({ key: "hold:hide", act: "hold-hide", attrs: `data-item="${esc(p.item)}"`, ic: "mdi:eye-off-outline", title: t("tv.hold.hide"), sub: t("tv.hold.hide_hint") })
     + row({ key: "hold:cancel", act: "close", ic: "mdi:close", title: t("tv.hold.cancel") }));
+}
+
+// A home's name on this TV, typed with the remote.
+function renamePanel(p, ctx) {
+  const x = ctx.instances.find((i) => i.id === p.id);
+  return shell("", head("mdi:pencil-outline", t("tv.home.rename"), esc(x ? x.url.replace(/^https?:\/\//, "") : "")),
+    `<div class="p-line" data-line="name"><label class="p-input" data-f="name" data-act="add-focus">${icon("mdi:home-outline")}
+      <input id="addr" type="text" value="${esc(x?.name || "")}" spellcheck="false" autocomplete="off" maxlength="40"></label></div>`
+    + row({ key: "name:save", act: "rename-save", attrs: `data-id="${esc(p.id)}"`, ic: "mdi:check", icOn: true, title: t("tv.home.save") }));
 }
 
 // Another home by its address: typed with the remote on the TV's own keyboard (OK on the field), then Połącz.

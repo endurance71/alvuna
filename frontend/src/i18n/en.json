@@ -178,7 +178,6 @@
         "other": "changed {n} days ago"
       }
     },
-    "card_description": "Home dashboard for a wall tablet",
     "close": "Close",
     "settings": "Settings",
     "unavailable_m": "Unavailable",
@@ -836,7 +835,7 @@
     "instances": {
       "current": "Showing now",
       "title": "Homes",
-      "sub": "OK switches, the bin removes from the list"
+      "sub": "OK switches, the pencil renames, the bin removes"
     },
     "camera": {
       "preview": "Preview"
@@ -946,12 +945,14 @@
       "address_hint": "For example 192.168.1.20, homeassistant.local or https://home.example.com. Without a port, 8123.",
       "connect": "Connect",
       "connect_hint": "The TV goes there and asks to be paired",
-      "bad_address": "That does not look like an address"
+      "bad_address": "That does not look like an address",
+      "rename": "Home name",
+      "save": "Save"
     },
     "hold": {
       "sub": "OK held",
       "hide": "Hide in Alvuna",
-      "hide_hint": "Gone from TVs and tablets; bring it back in the Alvuna panel in HA",
+      "hide_hint": "Gone from the TVs; bring it back in the Alvuna panel in HA",
       "cancel": "Cancel",
       "hidden": "Hidden. Bring it back in the Alvuna panel in Home Assistant.",
       "failed": "Could not hide it"

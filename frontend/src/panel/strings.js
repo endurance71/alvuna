@@ -4,8 +4,8 @@
 const STRINGS = {
   pl: {
     menu: "Menu",
-    intro: "Alvuna sama buduje ekrany tabletu i telewizora z Twoich obszarów i urządzeń. Tu ukryjesz to, czego nie chcesz, zmienisz nazwy i kolejność, albo dodasz np. skrypt jako scenę.",
-    intro_save: "Zmiany zapisują się same i od razu trafiają na tablety i telewizory.",
+    intro: "Alvuna sama buduje ekran telewizora z Twoich obszarów i urządzeń. Tu ukryjesz to, czego nie chcesz, zmienisz nazwy i kolejność, albo dodasz np. skrypt jako scenę.",
+    intro_save: "Zmiany zapisują się same i od razu trafiają na telewizory.",
     sections: { rooms: "Pokoje", scenes: "Sceny", security: "Ochrona", cameras: "Kamery", media: "Media", persons: "Osoby", found: "Wykryte automatycznie" },
     notes: {
       rooms: "Pokoje to obszary Home Assistanta. Rozwiń pokój, żeby ukryć lub nazwać jego światła, rolety i nawilżacze.",
@@ -47,8 +47,8 @@ const STRINGS = {
   },
   en: {
     menu: "Menu",
-    intro: "Alvuna builds the tablet and TV screens by itself from your areas and devices. Here you can hide what you don't want, change names and order, or add, say, a script as a scene.",
-    intro_save: "Changes save by themselves and reach the tablets and TVs right away.",
+    intro: "Alvuna builds the TV screen by itself from your areas and devices. Here you can hide what you don't want, change names and order, or add, say, a script as a scene.",
+    intro_save: "Changes save by themselves and reach the TVs right away.",
     sections: { rooms: "Rooms", scenes: "Scenes", security: "Security", cameras: "Cameras", media: "Media", persons: "People", found: "Found automatically" },
     notes: {
       rooms: "Rooms are Home Assistant areas. Expand a room to hide or rename its lights, covers and humidifiers.",

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Alvuna",
-        "description": "Dodaje kartę Alvuna na tablety ścienne i aplikację Alvuna na telewizory."
+        "description": "Alvuna pokazuje Twój Home Assistant na telewizorze, z układem zbudowanym sama z Twoich obszarów i urządzeń."
       },
       "pair": {
         "title": "Parowanie telewizora",
@@ -28,6 +28,9 @@
     "flow_title": "{name}",
     "error": {
       "wrong_code": "To nie jest kod z telewizora."
+    },
+    "create_entry": {
+      "default": "Alvuna działa. Otwórz aplikację Alvuna na telewizorze (albo http://<ten Home Assistant>/alvuna/tv/ w jego przeglądarce): pokaże kod, który wpiszesz w sekcji Wykryte. Panel Alvuna w menu bocznym zmienia to, co widać na TV."
     }
   },
   "options": {

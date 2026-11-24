@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Alvuna",
-        "description": "Adds the Alvuna card for wall tablets and the Alvuna app for TVs."
+        "description": "Alvuna puts your Home Assistant on the TV, laid out by itself from your areas and devices."
       },
       "pair": {
         "title": "Pair a TV",
@@ -28,6 +28,9 @@
     "flow_title": "{name}",
     "error": {
       "wrong_code": "That is not the code on the TV."
+    },
+    "create_entry": {
+      "default": "Alvuna is ready. Open the Alvuna app on your TV (or http://<this Home Assistant>/alvuna/tv/ in its browser): it shows a code to type under Discovered. The Alvuna panel in the sidebar adjusts what the TV shows."
     }
   },
   "options": {

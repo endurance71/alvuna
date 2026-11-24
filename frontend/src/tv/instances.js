@@ -5,7 +5,9 @@
 // sends to a server), so the list follows the TV from home to home; that server pairs the TV if it does not know it yet.
 const KEY = "homedeck-instances";
 
-const clean = (x) => ({ id: String(x.id), name: String(x.name || x.id), url: String(x.url).replace(/\/$/, "") });
+// custom: the name was given on this TV (and is kept over the name the home has in Home Assistant).
+const clean = (x) => ({ id: String(x.id), name: String(x.name || x.id), url: String(x.url).replace(/\/$/, ""),
+  ...(x.custom ? { custom: true } : {}) });
 
 export function loadInstances() {
   let list = [];
@@ -34,7 +36,8 @@ export function currentInstance(list) {
 
 // The list with this server first, named after its home, so the TV can come back here from any other home.
 export function withHere(list, here, name) {
-  return [{ ...here, name: name || here.name }, ...list.filter((x) => !sameOrigin(x.url))];
+  const mine = list.find((x) => sameOrigin(x.url));
+  return [{ ...here, ...(mine || {}), name: mine?.custom ? mine.name : name || here.name }, ...list.filter((x) => !sameOrigin(x.url))];
 }
 
 // An address typed with the remote: "192.168.1.20", "ha.local:8123", "https://ha.example.com". Without a scheme it is
@@ -53,6 +56,17 @@ export function addInstance(list, url) {
 }
 
 export const removeInstance = (list, id) => list.filter((x) => x.id !== id);
+
+// A home renamed on this TV (Domy → Zmień nazwę); the name travels with the list to every home.
+export const renameInstance = (list, id, name) => list.map((x) => (x.id === id && String(name).trim() ? { ...x, name: String(name).trim(), custom: true } : x));
+
+// The name to show: with the address added while another home has the same name (two Home Assistants both called
+// "Dom" would otherwise be two identical rows).
+export function displayName(inst, list) {
+  if (!inst) return "";
+  const twin = list.some((x) => x.id !== inst.id && x.name === inst.name);
+  return twin ? `${inst.name} · ${new URL(inst.url).hostname}` : inst.name;
+}
 
 // Resolves false when the server does not answer within 4 s (switching then stays on this one).
 export async function reachable(inst) {

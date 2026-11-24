@@ -186,7 +186,6 @@
         "other": "zmiana {n} dni temu"
       }
     },
-    "card_description": "Pulpit domu na tablet",
     "close": "Zamknij",
     "settings": "Ustawienia",
     "unavailable_m": "Niedostępny",
@@ -872,7 +871,7 @@
     "instances": {
       "current": "Teraz wyświetlany",
       "title": "Domy",
-      "sub": "OK przełącza, kosz usuwa z listy"
+      "sub": "OK przełącza, ołówek zmienia nazwę, kosz usuwa"
     },
     "camera": {
       "preview": "Podgląd"
@@ -982,12 +981,14 @@
       "address_hint": "Na przykład 192.168.1.20, homeassistant.local albo https://dom.example.com. Bez portu przyjmuję 8123.",
       "connect": "Połącz",
       "connect_hint": "Telewizor przejdzie tam i poprosi o sparowanie",
-      "bad_address": "To nie wygląda na adres"
+      "bad_address": "To nie wygląda na adres",
+      "rename": "Nazwa domu",
+      "save": "Zapisz"
     },
     "hold": {
       "sub": "Przytrzymany OK",
       "hide": "Ukryj w Alvunie",
-      "hide_hint": "Zniknie z telewizorów i tabletów; przywrócisz w panelu Alvuna w HA",
+      "hide_hint": "Zniknie z telewizorów; przywrócisz w panelu Alvuna w HA",
       "cancel": "Anuluj",
       "hidden": "Ukryte. Przywrócisz je w panelu Alvuna w Home Assistancie.",
       "failed": "Nie udało się ukryć"

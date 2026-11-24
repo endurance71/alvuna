@@ -44,7 +44,8 @@ python -m venv .venv && .venv/bin/pip install -r requirements_test.txt
 scripts/dev-deploy.sh <ssh-host>                # copy to a test Home Assistant, then restart it
 ```
 
-The built frontend is not committed. The release workflow builds it and attaches `alvuna.zip` to each GitHub release.
+The built frontend (`custom_components/alvuna/www`) is committed, so an install from any commit works; CI fails when it
+does not match the sources, so rebuild and commit it with every frontend change. Releases also attach `alvuna.zip`.
 
 ---
 

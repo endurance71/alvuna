@@ -133,6 +133,8 @@ def test_readable_names() -> None:
     assert readable("kontaktron-szafa", "x") == "Szafa"
     assert readable("Drzwi wejściowe", "x") == "Drzwi wejściowe"
     assert readable("motion_sensor_kitchen", "x") == "Motion kitchen"
+    assert readable("192_168_10_193 Garaż przód", "x") == "Garaż przód"
+    assert readable("192.168.1.20", "kamera") == "kamera"
 
 
 async def test_overrides_rename_order_add(hass: HomeAssistant) -> None:

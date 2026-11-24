@@ -2,7 +2,5 @@
 node_modules/
 __pycache__/
 .pytest_cache/
-# Built by frontend/build.mjs; the release zip carries it.
-custom_components/alvuna/www/
 *.zip
 .DS_Store

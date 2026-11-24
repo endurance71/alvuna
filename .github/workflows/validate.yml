@@ -29,6 +29,12 @@ jobs:
           node-version: 22
       - run: npm ci --no-audit --no-fund && node build.mjs
         working-directory: frontend
+      # The built frontend is committed (an install from a plain commit must work too); it must match the sources.
+      - name: Built frontend is up to date
+        run: |
+          git add -A custom_components/alvuna/www
+          git diff --cached --exit-code --stat -- custom_components/alvuna/www ':!*.br' ':!*.gz' || {
+            echo "::error::custom_components/alvuna/www is stale: run 'cd frontend && node build.mjs' and commit it"; exit 1; }
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"

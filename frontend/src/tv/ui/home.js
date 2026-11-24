@@ -1,5 +1,6 @@
 // The home screen: a header (clock, what the house is doing, weather, people) and rows of tiles, Google TV style.
 // Every tile is an item for the remote ([data-f] key, [data-act] what OK does); rows are lines ([data-line]).
+import { displayName } from "../instances.js";
 import { esc, num, wIcon, wxWord, alertWord, time, longDate, fmtTime } from "../model/format.js";
 import { t } from "../../shared/i18n.js";
 import { icon } from "./icons.js";
@@ -41,7 +42,7 @@ function heroParts(h, ctx) {
   const people = h.persons().map((p) => `<div class="avatar ${p.home ? "home" : ""}" ${p.pic ? `style="background-image:url('${esc(p.pic)}')"` : ""}>
     ${p.pic ? "" : esc(p.name[0] || "?")}<i></i></div>`).join("");
   const others = ctx.instances.length > 1
-    ? `<div class="instance" data-f="instance" data-act="instances">${icon("mdi:home-switch-outline")}<span>${esc(ctx.instance?.name || t("tabs.home"))}</span></div>` : "";
+    ? `<div class="instance" data-f="instance" data-act="instances">${icon("mdi:home-switch-outline")}<span>${esc(displayName(ctx.instance, ctx.instances) || t("tabs.home"))}</span></div>` : "";
   const today = ctx.forecast?.daily?.[0];
   return { lit, headline, alerts, notes, w, cond, people, others, today,
     clock: `<div class="date" data-date>${esc(longDate(new Date()))}</div><div class="clock" data-clock>${time(new Date())}</div>` };
