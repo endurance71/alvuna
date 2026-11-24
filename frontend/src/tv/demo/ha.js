@@ -2,7 +2,7 @@
 // (frontend/build-site.mjs), so every tile, panel and animation is the app's own. A made-up home answers instead of
 // Home Assistant: its states change when the remote switches something, as they would in a real home.
 // window.__demo lets the page around it drive a tour: notifications, the doorbell camera, the clock.
-import { HOME, layout, forecast } from "./home.js";
+import { HOME, layout, forecast, LANG, tr } from "./home.js";
 
 // The look of the room the website shows the TV in: the demo's own photo wallpaper (site/img/wallpapers, a generated
 // misty fjord in the app's "Mgła" slot) and the oak accent. Frosted glass stays the app's setting; demo.css draws it.
@@ -93,7 +93,7 @@ function scene(id) {
 }
 
 export async function userLocale() {
-  return { language: "pl", currency: "PLN", locationName: "Dom" };
+  return { language: LANG, currency: LANG === "en" ? "EUR" : "PLN", locationName: tr("Dom") };
 }
 export const subscribeLayout = async (_conn, cb) => { setTimeout(() => cb({ source: "auto", config: layout() })); return () => {}; };
 export const hideItem = async () => {};

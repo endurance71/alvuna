@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alvuna · Home Assistant on your TV</title>
+<meta name="description" content="Alvuna puts your Home Assistant home on the TV: rooms, lights, scenes, cameras and weather, laid out for the remote. Paired with a code, no dashboard to build.">
+<meta name="theme-color" content="#165566">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="preload" href="../fonts/figtree-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../img/livingroom.jpg" as="image">
+<link rel="alternate" hreflang="pl" href="https://alvuna.shipapp.pl/">
+<link rel="alternate" hreflang="en" href="https://alvuna.shipapp.pl/en/">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="arrow-right" viewBox="0 0 24 24"><path d="M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z"/></symbol><symbol id="check" viewBox="0 0 24 24"><path d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"/></symbol><symbol id="email-outline" viewBox="0 0 24 24"><path d="M22 6C22 4.9 21.1 4 20 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6M20 6L12 11L4 6H20M20 18H4V8L12 13L20 8V18Z"/></symbol><symbol id="github" viewBox="0 0 24 24"><path d="M12,2A10,10 0 0,0 2,12C2,16.42 4.87,20.17 8.84,21.5C9.34,21.58 9.5,21.27 9.5,21C9.5,20.77 9.5,20.14 9.5,19.31C6.73,19.91 6.14,17.97 6.14,17.97C5.68,16.81 5.03,16.5 5.03,16.5C4.12,15.88 5.1,15.9 5.1,15.9C6.1,15.97 6.63,16.93 6.63,16.93C7.5,18.45 8.97,18 9.54,17.76C9.63,17.11 9.89,16.67 10.17,16.42C7.95,16.17 5.62,15.31 5.62,11.5C5.62,10.39 6,9.5 6.65,8.79C6.55,8.54 6.2,7.5 6.75,6.15C6.75,6.15 7.59,5.88 9.5,7.17C10.29,6.95 11.15,6.84 12,6.84C12.85,6.84 13.71,6.95 14.5,7.17C16.41,5.88 17.25,6.15 17.25,6.15C17.8,7.5 17.45,8.54 17.35,8.79C18,9.5 18.38,10.39 18.38,11.5C18.38,15.32 16.04,16.16 13.81,16.41C14.17,16.72 14.5,17.33 14.5,18.26C14.5,19.6 14.5,20.68 14.5,21C14.5,21.27 14.66,21.59 15.17,21.5C19.14,20.16 22,16.42 22,12A10,10 0 0,0 12,2Z"/></symbol><symbol id="pause" viewBox="0 0 24 24"><path d="M14,19H18V5H14M6,19H10V5H6V19Z"/></symbol><symbol id="play" viewBox="0 0 24 24"><path d="M8,5.14V19.14L19,12.14L8,5.14Z"/></symbol></svg>
+
+<div class="top">
+  <header class="wrap nav">
+    <a class="brand" href="./"><img src="../icon.svg" alt="">Alvuna</a>
+    <nav class="nav-links" aria-label="Site">
+      <a class="wide" href="#jak">How it works</a>
+      <a class="opt" href="#co">Features</a>
+      <a class="opt" href="#pilot">Remote</a>
+      <a href="#prywatnosc">Privacy</a>
+      <a href="#pomoc">Help</a>
+      <a class="lang" href="../" hreflang="pl" lang="pl">PL</a>
+    </nav>
+  </header>
+
+  <main>
+  <div class="wrap hero">
+    <h1>Your home on the TV.</h1>
+    <p class="lede">Alvuna brings Home Assistant to the big screen: rooms, lights, scenes, cameras and weather, laid out for
+      the remote. No dashboard to build, nothing to type on the TV.</p>
+    <div class="cta">
+      <a class="btn primary" href="#jak">Get started<svg class="i"><use href="#arrow-right"/></svg></a>
+      <a class="btn ghost" href="https://github.com/endurance71/alvuna"><svg class="i"><use href="#github"/></svg>Code on GitHub</a>
+    </div>
+    <p class="avail">LG webOS · Google TV soon · also runs in the TV's browser</p>
+  </div>
+
+  <section class="show" aria-label="Alvuna on a TV in a living room">
+    <div class="stage">
+      <div class="room"><div class="room-in">
+        <img class="room-photo" src="../img/livingroom.jpg" alt="A living room with a wall-mounted TV showing Alvuna" width="1600" height="1000">
+        <!-- The room's own lights, added to the photo as light (plus-lighter): the lamp on the sideboard and the LED strip
+             behind the TV follow "Lampa stojąca" and "Listwa LED" in the demo's Salon. -->
+        <img class="light" id="light-lamp" src="../img/light-lamp.jpg" alt="" width="1600" height="1000">
+        <img class="light" id="light-led" src="../img/light-led.jpg" alt="" width="1600" height="1000">
+        <div class="screen" style="left:23.29%; top:18.52%; width:48.02%; height:44.99%">
+          <iframe id="tv" src="../app/?lang=en" title="Alvuna on the TV, live demo" width="1920" height="1080" tabindex="-1"></iframe>
+          <div class="glare" aria-hidden="true"></div>
+        </div>
+      </div></div>
+    </div>
+    <div class="wrap tour" id="tour">
+      <div class="tour-caption" aria-live="polite">
+        <b id="tour-title">The whole home on one screen</b>
+        <span id="tour-text">Security, cameras, what is running, scenes and rooms. The layout builds itself from Home Assistant's areas.</span>
+      </div>
+      <div class="tour-bar">
+        <button type="button" class="tour-play" id="tour-play" aria-label="Pause the tour"><svg class="i"><use href="#pause"/></svg></button>
+        <div class="tour-steps" id="tour-steps" role="tablist" aria-label="Features shown on the TV"></div>
+      </div>
+      <p class="tour-hint" id="tour-hint">This is the real app with a sample home. Move the mouse onto the screen to drive it yourself.</p>
+    </div>
+  </section>
+  </main>
+</div>
+
+<section id="jak">
+  <div class="wrap">
+    <div class="kicker">How it works</div>
+    <h2>Three steps and your home is on screen.</h2>
+    <p class="sub">The TV never gets your password. It shows a code, and you confirm it in Home Assistant, where you are already
+      signed in.</p>
+    <div class="steps">
+      <div class="step">
+        <h3>Add Alvuna</h3>
+        <p>In Home Assistant: Settings → Marketplace. No restart needed to install.</p>
+        <div class="shot"><div class="shot-box">
+          <div class="ha-row"><img src="../icon.svg" alt=""><div>Alvuna<small>Integration · Home Assistant on your TV</small></div><span class="tag">Download</span></div>
+        </div></div>
+      </div>
+      <div class="step">
+        <h3>Open the app on the TV</h3>
+        <p>Alvuna finds Home Assistant on your network and shows a code.</p>
+        <div class="shot"><div class="shot-box code-screen">
+          <small>Pair this TV</small>
+          <div class="code" aria-label="Code K7M4QX"><span>K</span><span>7</span><span>M</span><span>4</span><span>Q</span><span>X</span></div>
+        </div></div>
+      </div>
+      <div class="step">
+        <h3>Type the code in Home Assistant</h3>
+        <p>Settings → Devices &amp; services → Discovered → Alvuna TV. A moment later the TV shows your home.</p>
+        <div class="shot"><div class="shot-box">
+          <div class="field-label">Code from the TV</div>
+          <div class="field">K7M4QX</div>
+          <div class="ha-ok"><span>Submit</span></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="co">
+  <div class="wrap">
+    <div class="kicker">Features</div>
+    <h2>A ready layout that knows your home.</h2>
+    <div class="cards">
+      <article class="card wide">
+        <figure class="shot-tv"><img src="../img/feat/en/home.jpg" alt="Alvuna's home screen: security, cameras, the washer, scenes and rooms" loading="lazy" width="1280" height="720"></figure>
+        <div><h3>Lays itself out</h3><p>Rooms from Home Assistant's areas and floors, each with its lights, blinds and thermometer. Cameras, people, weather and whatever is running fall into place. Add a device and the TV shows it right away.</p></div>
+      </article>
+      <article class="card">
+        <figure class="shot-tv"><img src="../img/feat/en/pokoj.jpg" alt="The living room panel with its lights and brightness" loading="lazy" width="1280" height="720"></figure>
+        <h3>A room in a side panel</h3><p>Lights with brightness, blinds, temperature and humidity. All with the remote, no menus to dig through.</p>
+      </article>
+      <article class="card">
+        <figure class="shot-tv"><img src="../img/feat/en/dzwonek.jpg" alt="The front door camera with a doorbell notification" loading="lazy" width="1280" height="720"></figure>
+        <h3>Cameras and the doorbell</h3><p>Every camera full screen. When someone rings, an automation puts the front door on every TV.</p>
+      </article>
+      <article class="card">
+        <figure class="shot-tv"><img src="../img/feat/en/podsumowanie.jpg" alt="The summary: an open window, a low battery, the washer" loading="lazy" width="1280" height="720"></figure>
+        <h3>Knows what needs attention</h3><p>An open window, a leak, a low battery, finished laundry, tomorrow's bin collection. All in one panel on the left.</p>
+      </article>
+      <article class="card">
+        <figure class="shot-tv"><img src="../img/feat/en/ukryj.jpg" alt="The hold-OK menu with Hide in Alvuna" loading="lazy" width="1280" height="720"></figure>
+        <h3>Hide what you don't need</h3><p>Hold OK on a tile, or use the Alvuna panel in Home Assistant: hide, rename and reorder. No YAML.</p>
+      </article>
+      <article class="card">
+        <figure class="shot-tv"><img src="../img/feat/en/domy.jpg" alt="The Homes panel with two homes and an option to add one" loading="lazy" width="1280" height="720"></figure>
+        <h3>Several homes on one screen</h3><p>Your flat, your parents' house, the summer cabin. Each paired on its own, one press to switch.</p>
+      </article>
+      <article class="card">
+        <figure class="shot-tv"><img src="../img/feat/en/wygaszacz.jpg" alt="The screensaver: a clock on black" loading="lazy" width="1280" height="720"></figure>
+        <h3>Kind to OLED screens</h3><p>Dimming, a screensaver with a wandering clock and an invisible pixel shift. Smooth animation even on an ordinary TV.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section id="pilot">
+  <div class="wrap">
+    <div class="kicker">Made for the remote</div>
+    <h2>Designed for the sofa, not the mouse.</h2>
+    <p class="sub">Alvuna is not a Home Assistant page blown up for the TV. Every screen was designed from scratch for the remote
+      and for a few metres away.</p>
+    <div class="remote-grid">
+      <div class="remote">
+          <svg viewBox="0 0 440 520" role="img" aria-label="Remote: arrows, OK and Back">
+            <defs><linearGradient id="rb" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#34312c"/><stop offset="1" stop-color="#1f1d1a"/></linearGradient></defs>
+            <g transform="translate(50 0)">
+              <rect x="110" y="10" width="120" height="500" rx="60" fill="url(#rb)"/>
+              <rect x="110.5" y="10.5" width="119" height="499" rx="59.5" fill="none" stroke="rgba(255,255,255,.08)"/>
+              <circle cx="170" cy="62" r="9" fill="#8f877b"/>
+              <circle cx="170" cy="200" r="50" fill="#3b3833"/>
+              <g fill="#F4F0EA"><path d="M170 160l9 11h-18z"/><path d="M170 240l9-11h-18z"/><path d="M130 200l11-9v18z"/><path d="M210 200l-11-9v18z"/></g>
+              <circle cx="170" cy="200" r="24" fill="#E2BE8A"/>
+              <text x="170" y="206" text-anchor="middle" font-family="Figtree, sans-serif" font-size="15" font-weight="700" fill="#2B1E0C">OK</text>
+              <circle cx="140" cy="292" r="17" fill="#3b3833"/><path d="M147 292h-13m0 0l5-5m-5 5l5 5" stroke="#F4F0EA" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="200" cy="292" r="17" fill="#3b3833"/><path d="M192 296v-6l8-6 8 6v6" stroke="#F4F0EA" stroke-width="2.2" fill="none" stroke-linejoin="round"/>
+              <g fill="#3b3833"><rect x="148" y="340" width="44" height="12" rx="6"/><rect x="148" y="368" width="44" height="12" rx="6"/></g>
+            </g>
+            <g font-family="Figtree, sans-serif" fill="#24211C">
+              <path d="M112 168H172" stroke="#968E82" stroke-width="1.2"/>
+              <text x="104" y="164" text-anchor="end" font-size="15" font-weight="600">Arrows</text><text x="104" y="182" text-anchor="end" font-size="12.5" fill="#6A6358">between tiles</text>
+              <path d="M248 200H300" stroke="#968E82" stroke-width="1.2"/>
+              <text x="308" y="196" font-size="15" font-weight="600">OK</text><text x="308" y="213" font-size="12.5" fill="#6A6358">open, switch</text><text x="308" y="229" font-size="12.5" fill="#6A6358">hold: hide</text>
+              <path d="M112 292H172" stroke="#968E82" stroke-width="1.2"/>
+              <text x="104" y="288" text-anchor="end" font-size="15" font-weight="600">Back</text><text x="104" y="306" text-anchor="end" font-size="12.5" fill="#6A6358">closes a panel</text>
+            </g>
+          </svg>
+      </div>
+      <div class="remote-points">
+        <div class="point"><span class="num">01</span><h3>Arrows, OK and Back</h3><p>Every screen works with the arrows alone. Back always closes what opened, and from the first row returns to the TV.</p></div>
+        <div class="point"><span class="num">02</span><h3>Focus you can always see</h3><p>The focused tile grows and lights up. Settings add an outline in the accent colour.</p></div>
+        <div class="point"><span class="num">03</span><h3>Readable from the sofa</h3><p>Drawn for 1920 × 1080 seen from a few metres: no text smaller than 24 pixels, large tiles.</p></div>
+        <div class="point"><span class="num">04</span><h3>Panels instead of pages</h3><p>Details slide in from the side while the home stays behind. You never get lost and always know the way back.</p></div>
+        <div class="point"><span class="num">05</span><h3>Hold OK</h3><p>A tile's menu without going into settings: hide what you don't need.</p></div>
+        <div class="point"><span class="num">06</span><h3>Magic Remote works too</h3><p>The pointer focuses a tile, a click is OK and the wheel scrolls the rows.</p></div>
+      </div>
+    </div>
+
+    <div class="perf">
+      <article class="card wide">
+        <figure class="shot-tv"><img src="../img/feat/en/ustawienia.jpg" alt="Settings on the TV: look, screen and OLED, performance" loading="lazy" width="1280" height="720"></figure>
+        <h3>Smooth on an ordinary TV too</h3>
+        <p>Only movement and opacity animate, and the graphics chip does that work. The screen redraws only what changed, and
+          the frosted glass is painted once instead of blurred live every frame. The app's files are compressed, and its icons
+          come from your own Home Assistant.</p>
+      </article>
+      <div class="levels">
+        <h3>Options for slower TVs</h3>
+        <p>In Settings on the TV, with the remote:</p>
+        <ul class="levels-list" style="list-style:none;margin:0;padding:0">
+          <li><b>Tiles</b><span>Frosted glass (the prettiest), Transparent or Solid colour (the lightest).</span></li>
+          <li><b>Animations</b><span>Turn them off under Performance when the TV can't keep up.</span></li>
+          <li><b>Screensaver</b><span>After 1 to 60 minutes or never, with dimming before it.</span></li>
+          <li><b>OLED care</b><span>Every 3 minutes the picture moves a few pixels.</span></li>
+          <li><b>Exit</b><span>The app closes itself when nobody uses the remote.</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="prywatnosc">
+  <div class="wrap promise">
+    <div>
+      <div class="kicker">Privacy</div>
+      <h2>Your home stays yours.</h2>
+      <p class="sub">Alvuna has no cloud of its own. The TV talks only to your Home Assistant, and we receive no data at
+        all.</p>
+      <a class="more" href="privacy.html">Privacy policy<svg class="i"><use href="#arrow-right"/></svg></a>
+    </div>
+    <ul class="facts">
+      <li><svg class="i"><use href="#check"/></svg>No account, no sign-up, no ads.</li>
+      <li><svg class="i"><use href="#check"/></svg>No analytics or tracking, on this page either.</li>
+      <li><svg class="i"><use href="#check"/></svg>Each TV gets its own user, without admin rights.</li>
+      <li><svg class="i"><use href="#check"/></svg>Remove a TV in Home Assistant and its access is gone at once.</li>
+      <li><svg class="i"><use href="#check"/></svg>Open source: anyone can check what it does.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="pomoc">
+  <div class="wrap">
+    <div class="kicker">Help</div>
+    <h2>Questions</h2>
+    <div class="faq">
+      <details><summary>What do I need?</summary><p>Home Assistant 2025.1 or newer and an LG TV with webOS. The Google TV app is in the works; until then Alvuna runs in the TV's browser at your Home Assistant's address followed by /alvuna/tv/.</p></details>
+      <details><summary>Do I have to set anything up?</summary><p>No. The layout comes from the areas, floors and devices you already have in Home Assistant. Anything you don't need you hide in the Alvuna panel, or by holding OK on its tile.</p></details>
+      <details><summary>Can the TV control everything?</summary><p>The TV gets a user of its own without admin rights. By default it connects only on your local network; access from outside the home is something you allow yourself when pairing.</p></details>
+      <details><summary>How do I disconnect a TV?</summary><p>Delete the Alvuna TV device under Settings → Devices &amp; services; its access ends immediately. On the TV itself you can also sign out under Settings → Connection.</p></details>
+      <details><summary>What does it cost?</summary><p>The Home Assistant integration is free and open source under the MIT licence.</p></details>
+    </div>
+    <div class="contact">
+      <a class="btn ghost" href="https://github.com/endurance71/alvuna/issues"><svg class="i"><use href="#github"/></svg>Report a problem</a>
+      <a class="btn ghost" href="mailto:kontakt@shipapp.pl"><svg class="i"><use href="#email-outline"/></svg>kontakt@shipapp.pl</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <span>© 2026 ShipApp</span>
+      <nav aria-label="Footer"><a href="privacy.html">Privacy policy</a><a href="https://github.com/endurance71/alvuna">GitHub</a><a href="mailto:kontakt@shipapp.pl">Contact</a></nav>
+    </div>
+    <p class="legal-note">The photos of the room, the cameras and the people are generated, and the home in the demo is a sample. Home Assistant is
+      a trademark of the Open Home Foundation; LG and webOS are trademarks of LG Electronics. Alvuna is an independent project
+      and is not affiliated with them.</p>
+  </div>
+</footer>
+
+<script src="../tour.js"></script>
+<script>
+// The TV in the photo: the demo app at 1920×1080, scaled into the screen of the photo. A tour walks it through the
+// features, with a bar to pause it and pick a step; a visitor who moves the mouse onto the TV takes over (the tour
+// pauses, the TV shows a ring for the pointer) and gets it back on leaving, unless they clicked or typed in it.
+(() => {
+  const frame = document.getElementById("tv"), slot = frame.parentElement;
+  const fit = () => { frame.style.transform = `scale(${slot.clientWidth / 1920}, ${slot.clientHeight / 1080})`; };
+  new ResizeObserver(fit).observe(slot); fit();
+
+  const $ = (id) => document.getElementById(id);
+  const box = $("tour"), title = $("tour-title"), text = $("tour-text"), list = $("tour-steps"), btn = $("tour-play"), hint = $("tour-hint");
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const HINT = hint.textContent, DRIVING = "You're driving: click a tile or use the arrows, Enter is OK, Esc is Back. ▶ resumes the tour.";
+  const short = { pulpit: "Home", pokoj: "Room", sceny: "Scenes", kamery: "Cameras", dzwonek: "Doorbell", podsumowanie: "Attention", ukryj: "Hide", powiadomienia: "Notifications", ustawienia: "Settings", wygaszacz: "Screensaver" };
+  let steps = [], at = 0, busy = false, ready = false, visible = true;
+  // Paused by the button (`held`) or by a visitor driving the TV (`driving`); `left` is what remains of the wait.
+  let held = reduced, driving = false, touched = false, timer = 0, left = 0, since = 0;
+  const dwell = () => (steps[at]?.id === "wygaszacz" ? 4500 : 5500);
+  const paused = () => held || driving || !visible || document.hidden;
+
+  const chips = () => [...list.children];
+  const show = (i) => {
+    at = i;
+    title.textContent = steps[i].title; text.textContent = steps[i].text;
+    chips().forEach((b, j) => { b.setAttribute("aria-selected", String(j === i)); b.classList.toggle("on", j === i); b.classList.remove("run"); });
+    const c = chips()[i];
+    if (c) list.scrollTo({ left: c.offsetLeft - list.clientWidth / 2 + c.clientWidth / 2, behavior: "smooth" });
+  };
+  const paint = () => {
+    box.classList.toggle("paused", paused());
+    btn.setAttribute("aria-label", held || driving ? "Resume the tour" : "Pause the tour");
+    btn.querySelector("use").setAttribute("href", held || driving ? "#play" : "#pause");
+    hint.textContent = driving ? DRIVING : HINT;
+  };
+  // The wait after a step: the active chip fills over it (CSS), and pausing stops both where they are.
+  const arm = (ms) => {
+    clearTimeout(timer); left = ms; since = Date.now();
+    const c = chips()[at];
+    if (c && !c.classList.contains("run")) { c.style.setProperty("--dur", `${ms}ms`); c.classList.add("run"); }
+    if (!paused()) timer = setTimeout(() => play((at + 1) % steps.length), ms);
+  };
+  const stop = () => { if (timer) { clearTimeout(timer); timer = 0; left = Math.max(0, left - (Date.now() - since)); } };
+  const go = () => { if (!busy && !paused() && !timer && steps.length) arm(left || dwell()); };
+  const play = async (i) => {
+    if (busy) return;
+    busy = true; clearTimeout(timer); timer = 0; show(i);
+    try { await steps[i].run(); } catch (e) { /* the app was busy: the next step starts from the home screen again */ }
+    busy = false; left = 0;
+    if (paused()) { left = dwell(); const c = chips()[at]; if (c) { c.style.setProperty("--dur", `${left}ms`); c.classList.add("run"); } } else arm(dwell());
+  };
+  const update = () => { paint(); if (paused()) stop(); else go(); };
+
+  btn.addEventListener("click", () => {
+    if (held || driving) { held = false; driving = false; touched = false; } else held = true;
+    update();
+  });
+  list.addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; held = false; driving = false; touched = false; paint(); play(Number(b.dataset.i)); });
+
+  frame.addEventListener("load", () => {
+    const win = frame.contentWindow;
+    const start = () => {
+      if (!win.__hd || !win.__demo) return setTimeout(start, 200);
+      if (ready) return;
+      ready = true;
+      steps = window.AlvunaTour(win, () => driving, "en");
+      list.innerHTML = steps.map((s, i) => `<button type="button" role="tab" data-i="${i}"><i class="fill"></i><span>${short[s.id] || s.title}</span></button>`).join("");
+      // The mouse on the TV pauses the tour; leaving resumes it unless the visitor clicked or typed in there.
+      const touch = () => { touched = true; driving = true; update(); };
+      slot.addEventListener("mouseenter", () => { if (matchMedia("(pointer: fine)").matches) { driving = true; update(); } });
+      slot.addEventListener("mouseleave", () => { if (!touched) { driving = false; update(); } });
+      win.addEventListener("pointerdown", touch, true);
+      win.addEventListener("keydown", (e) => { if (e.isTrusted) touch(); }, true);
+      // The lamp and the LEDs in the photo light up with their brightness in the demo, as the real ones would.
+      const lamp = $("light-lamp"), led = $("light-led");
+      const level = (st) => (st?.state === "on" ? Math.min(1, .45 + .65 * (st.attributes.brightness ?? 204) / 255) : 0);
+      win.__demo.watch((st) => { lamp.style.opacity = level(st["light.salon_lampa"]); led.style.opacity = level(st["light.salon_led"]); });
+      show(0); paint();
+      setTimeout(() => play(0), 900);
+    };
+    start();
+  });
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; update(); }).observe(slot);
+  document.addEventListener("visibilitychange", update);
+})();
+</script>
+</body>
+</html>

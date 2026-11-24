@@ -2,7 +2,10 @@
 
 A static site (`site/`), served by Caddy on the ShipApp VPS from `/srv/alvuna-site`, the same way as nix.shipapp.pl.
 
-- `index.html` and `privacy.html` (Polish), `style.css`, `tour.js`: the page around the TV.
+- `index.html` and `privacy.html` (Polish) and `en/` (English, the same pages), `style.css`, `tour.js`: the page around
+  the TV. Each page links the other language (`hreflang`). The English page runs the demo as `app/?lang=en`: the app's
+  own texts in English and the sample home's names translated (`src/tv/demo/home.js`, `tr`), and `tour.js` takes the
+  language for its captions and notifications. `img/feat/en/` holds the English demo's screenshots.
 - `app/`: the real TV app in demo mode, built by `cd frontend && node build-site.mjs`. It bundles `src/tv/main.js` with
   `src/tv/demo/ha.js` in place of `ha.js`: a made-up home (`src/tv/demo/home.js`) answers instead of Home Assistant,
   so every tile, panel and animation on the page is the app's own. `demo.css` frosts the tiles with backdrop-filter
@@ -22,4 +25,5 @@ A static site (`site/`), served by Caddy on the ShipApp VPS from `/srv/alvuna-si
    demo, `X-Frame-Options: SAMEORIGIN`) and the `/srv/alvuna-site` read-only mount in its `compose.yaml`. After
    merging, on the host: `git pull`, then `docker compose up -d --force-recreate caddy`.
 2. Every change: `scripts/deploy-site.sh` streams `site/` to `/srv/alvuna-site` over SSH (`contabo-mtle`). Static
-   files need no Caddy restart.
+   files need no Caddy restart. Cloudflare caches CSS and JS for hours, so the script links `style.css` and `tour.js`
+   with a hash of their content (`?v=`) on a staged copy; the demo's own files carry one from `build-site.mjs`.

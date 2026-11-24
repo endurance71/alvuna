@@ -1,6 +1,32 @@
 // The made-up home of the website demo: what the Alvuna integration would build from a real Home Assistant (its
 // layout) and the states of the entities in it. Pictures are the site's own generated images (site/img).
 const IMG = "/img";
+
+// The demo speaks the page's language: /app/?lang=en for the English page (the app's own texts follow userLocale in
+// ha.js; the home's names are translated here).
+export const LANG = new URLSearchParams(location.search).get("lang") === "en" ? "en" : "pl";
+const EN = {
+  "Słońce": "Sun", "Sufit": "Ceiling", "Lampa stojąca": "Floor lamp", "Listwa LED": "LED strip", "Kinkiet": "Wall light",
+  "Roleta": "Blind", "Temperatura": "Temperature", "Wilgotność": "Humidity", "Nad wyspą": "Island", "Pod szafkami": "Under cabinets",
+  "Lampka nocna": "Bedside lamp", "Lampa biurkowa": "Desk lamp", "Gwiazdki": "Star lights", "Lustro": "Mirror", "Girlanda": "String lights",
+  "Temperatura na zewnątrz": "Outdoor temperature", "Wieczór": "Evening", "Kino": "Movie", "Dobranoc": "Good night",
+  "Drzwi wejściowe": "Front door", "Okno w sypialni": "Bedroom window", "Łazienka zalanie": "Bathroom leak", "Czujnik dymu": "Smoke detector",
+  "Wejście": "Entrance", "Ogród": "Garden", "Podjazd": "Driveway", "Korytarz": "Hallway", "Marek": "Mark", "Telewizor": "TV",
+  "Głośnik w kuchni": "Kitchen speaker", "Spokojny wieczór": "Quiet evening", "Głośnik w sypialni": "Bedroom speaker", "Dom": "Home",
+  "Ogrzewanie": "Heating", "Odkurzacz": "Vacuum", "Pralka": "Washer", "Pralka stan": "Washer state", "Pralka program": "Washer program",
+  "Pralka pozostało": "Washer time left", "Pralka czas": "Washer duration", "Pralka postęp": "Washer progress", "Bawełna 40°": "Cotton 40°",
+  "Papier": "Paper", "Jakość powietrza": "Air quality", "Czujnik okna w łazience": "Bathroom window sensor", "Salon": "Living room",
+  "Kuchnia": "Kitchen", "Sypialnia": "Bedroom", "Gabinet": "Study", "Pokój Zosi": "Zoe's room", "Łazienka": "Bathroom", "Taras": "Terrace",
+};
+export const tr = (x) => (LANG === "en" && EN[x]) || x;
+// Every name in the states and the layout, in place: friendly names, item names, rooms, a calendar's event, a title.
+const NAMED = new Set(["friendly_name", "name", "message", "media_title", "room"]);
+const localize = (v) => {
+  if (LANG !== "en") return v;
+  if (Array.isArray(v)) return v.map(localize);
+  if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, NAMED.has(k) && typeof x === "string" ? tr(x) : localize(x)]));
+  return v;
+};
 const iso = (d) => d.toISOString();
 const day = (offset) => { const d = new Date(); d.setDate(d.getDate() + offset); return d; };
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -62,13 +88,14 @@ export function HOME() {
   ];
   const out = {};
   for (const [entity_id, state, attributes] of list) {
-    out[entity_id] = { entity_id, state, attributes, last_changed: t, last_updated: t, context: { id: entity_id, parent_id: null, user_id: null } };
+    out[entity_id] = { entity_id, state: entity_id === "sensor.pralka_program" ? tr(state) : state, attributes: localize(attributes),
+      last_changed: t, last_updated: t, context: { id: entity_id, parent_id: null, user_id: null } };
   }
   return out;
 }
 
 const L = (entity, name) => ({ entity, name });
-export const layout = () => ({
+export const layout = () => localize({
   rooms: [
     { id: "area:salon", name: "Salon", area: "salon", icon: "mdi:sofa-outline",
       lights: [L("light.salon_sufit", "Sufit"), L("light.salon_lampa", "Lampa stojąca"), L("light.salon_led", "Listwa LED"), L("light.salon_kinkiet", "Kinkiet")],

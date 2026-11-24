@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy policy · Alvuna</title>
+<meta name="description" content="What data Alvuna, the Home Assistant app for TVs, processes, and why none of it reaches us.">
+<meta name="theme-color" content="#165566">
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="preload" href="../fonts/figtree-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="alternate" hreflang="pl" href="https://alvuna.shipapp.pl/privacy.html">
+<link rel="alternate" hreflang="en" href="https://alvuna.shipapp.pl/en/privacy.html">
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="top" style="padding-bottom: 8px">
+  <header class="wrap nav">
+    <a class="brand" href="./"><img src="../icon.svg" alt="">Alvuna</a>
+    <nav class="nav-links" aria-label="Site"><a href="./#jak">How it works</a><a href="./#pomoc">Help</a><a class="lang" href="../privacy.html" hreflang="pl" lang="pl">PL</a></nav>
+  </header>
+</div>
+
+<main class="wrap doc">
+  <h1>Privacy policy</h1>
+  <div class="meta">The Alvuna TV app and the Alvuna integration for Home Assistant · effective 24 November 2026</div>
+
+  <div class="short">In short: Alvuna connects your TV to your own Home Assistant and nothing else. We have no server your data
+    could reach, we collect no statistics and we show no ads.</div>
+
+  <h2>Who is responsible</h2>
+  <p>Alvuna is published by ShipApp, a brand of MT Hub Damian Motyliński, 76-200 Słupsk, Poland, tax ID (NIP) 8393229228,
+    REGON 521882353. For privacy questions write to <a href="mailto:kontakt@shipapp.pl">kontakt@shipapp.pl</a>.</p>
+
+  <h2>How Alvuna works</h2>
+  <p>Alvuna has two parts: an integration you install in your Home Assistant and an app on the TV. The TV reads the
+    state of your home (rooms, devices, weather, camera images) directly from your Home Assistant and sends it commands,
+    such as turning on a light. None of this passes through a server of ours.</p>
+
+  <h2>What data is processed, and where</h2>
+  <ul>
+    <li><b>On the TV:</b> the addresses of the Home Assistants the TV is paired with, the names you gave them, access
+      tokens and look settings (wallpaper, tiles, screensaver). They stay in the app's storage on the TV until you remove
+      the app or sign out.</li>
+    <li><b>In your Home Assistant:</b> when you pair a TV, the integration creates a separate user for it (without admin
+      rights) and stores your layout adjustments (hidden items, names, order). You control these as the administrator of
+      your Home Assistant.</li>
+    <li><b>On your local network:</b> the app looks for Home Assistant on your network (mDNS), so you don't have to type an
+      address with the remote.</li>
+  </ul>
+
+  <h2>What we don't do</h2>
+  <ul>
+    <li>We don't collect personal data or data about your home.</li>
+    <li>We use no analytics, no crash reports sent to us, no ads and no tracking tools.</li>
+    <li>We don't sell or share data, because we have none.</li>
+    <li>The TV never learns your Home Assistant password: pairing uses a code that you confirm yourself.</li>
+  </ul>
+
+  <h2>Other companies' services</h2>
+  <p>Alvuna uses no third-party services. If you connect the TV to Home Assistant through remote access (for example
+    Home Assistant Cloud or your own proxy), that traffic goes through that service on its provider's terms. You get the
+    app from your TV maker's store, which processes data under its own policy.</p>
+
+  <h2>Deleting data</h2>
+  <ul>
+    <li>On the TV: Settings → Connection → Sign out, or remove the app.</li>
+    <li>In Home Assistant: deleting the Alvuna TV device removes the TV's user and its tokens. Removing the Alvuna
+      integration also deletes the layout adjustments.</li>
+  </ul>
+
+  <h2>This website</h2>
+  <p>alvuna.shipapp.pl uses no cookies, analytics or forms, and our server in the European Union keeps no log of visits
+    to it. Traffic passes through Cloudflare (content delivery and protection), which may briefly process a visitor's IP
+    address for security, including outside the European Economic Area, under standard contractual clauses.</p>
+
+  <h2>Children</h2>
+  <p>Alvuna is not aimed at children and collects no data about any user, children included.</p>
+
+  <h2>Your rights and changes</h2>
+  <p>Under the GDPR you may ask whether we process your data and lodge a complaint with the Polish data protection
+    authority, the President of the Personal Data Protection Office (ul. Stawki 2, 00-193 Warsaw), or the authority where
+    you live. Since we keep no user data, in practice all data stays under your control on the TV and in Home Assistant.
+    We will announce changes to this policy on this page, with a new effective date.</p>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <span>© 2026 ShipApp</span>
+      <nav aria-label="Footer"><a href="./">Alvuna</a><a href="https://github.com/endurance71/alvuna">GitHub</a><a href="mailto:kontakt@shipapp.pl">Contact</a></nav>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

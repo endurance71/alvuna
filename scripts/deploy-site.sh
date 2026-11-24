@@ -16,7 +16,7 @@ trap 'rm -rf "$STAGE"' EXIT
 COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata -C site --exclude '.DS_Store' --exclude './img/src' --exclude './preview' -cf - . | tar -C "$STAGE" -xf -
 for f in style.css tour.js; do
   v=$(shasum "$STAGE/$f" | cut -c1-8)
-  sed -i '' -e "s|href=\"$f\"|href=\"$f?v=$v\"|g" -e "s|src=\"$f\"|src=\"$f?v=$v\"|g" "$STAGE"/*.html
+  sed -i '' -E -e "s#(href|src)=\"((\.\./)?)$f\"#\1=\"\2$f?v=$v\"#g" "$STAGE"/*.html "$STAGE"/en/*.html
 done
 
 COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata -C "$STAGE" -czf - . |
