@@ -15,28 +15,33 @@ const SEL = "#home .tile:not(.on):not(.cam):not(.alert), #home .td-card, #home .
 const W = 480, H = 270;
 let master = null, masterFor = "";
 
-// The blurred wallpaper once, at 480×270: a photo's blurred copy with its shade, or a gradient drawn through SVG.
+// The blurred wallpaper once, at 480×270, as Apple's glass shows it: the colours behind come through, toned down and
+// under a white veil, so the tile reads as a lighter pane of frosted glass over the wallpaper (not a darker hole, and
+// not a neon slab either: full brightness and extra saturation made blue wallpapers glow). Done once per wallpaper.
+const GLASS = { saturate: 1.0, brightness: .75, veilTop: .20, veilBottom: .14, floor: 0 };
+function glaze(x) {
+  const v = x.createLinearGradient(0, 0, 0, H);
+  v.addColorStop(0, `rgba(255,255,255,${GLASS.veilTop})`); v.addColorStop(1, `rgba(255,255,255,${GLASS.veilBottom})`);
+  x.fillStyle = v; x.fillRect(0, 0, W, H);
+  // A faint dark floor keeps white text readable where the wallpaper is bright (a sunset, snow).
+  x.fillStyle = `rgba(4,12,18,${GLASS.floor})`; x.fillRect(0, 0, W, H);
+}
 async function buildMaster(w) {
   const c = document.createElement("canvas");
   c.width = W; c.height = H;
   const x = c.getContext("2d");
-  if (w.photo) {
-    const im = new Image();
-    im.src = w.frostImg;
-    await im.decode();
-    x.drawImage(im, 0, 0, W, H);
-    const g = x.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, "rgba(4,12,18,.30)"); g.addColorStop(.4, "rgba(4,12,18,.38)"); g.addColorStop(1, "rgba(4,12,18,.55)");
-    x.fillStyle = g; x.fillRect(0, 0, W, H);
-  } else {
-    const bg = w.bg.startsWith("#") ? `background:${w.bg}` : `background:${w.bg}`;
+  const im = new Image();
+  if (w.photo) im.src = w.frostImg;
+  else {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080"><foreignObject width="100%" height="100%">
-      <div xmlns="http://www.w3.org/1999/xhtml" style="width:1920px;height:1080px;${bg.replace(/"/g, "'")}"></div></foreignObject></svg>`;
-    const im = new Image();
+      <div xmlns="http://www.w3.org/1999/xhtml" style="width:1920px;height:1080px;background:${w.bg.replace(/"/g, "'")}"></div></foreignObject></svg>`;
     im.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    await im.decode();
-    x.drawImage(im, 0, 0, W, H);
   }
+  await im.decode();
+  x.filter = `saturate(${GLASS.saturate}) brightness(${GLASS.brightness})`;
+  x.drawImage(im, 0, 0, W, H);
+  x.filter = "none";
+  glaze(x);
   return c;
 }
 
@@ -49,6 +54,8 @@ function paint(canvas) {
 }
 
 // The wallpaper changed (or the app started): a new master, every glass repainted from it.
+// GLASS tuning from the console: window.__glass({ brightness: 1.4 }) rebuilds every pane.
+window.__glass = (o) => { Object.assign(GLASS, o); masterFor = ""; return refreshFrost(); };
 export async function refreshFrost() {
   const w = currentWallpaper();
   if (masterFor === w.id && master) return;

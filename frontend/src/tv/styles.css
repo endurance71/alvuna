@@ -497,8 +497,9 @@ body.has-panel #edge { opacity: 0; }
 .wprev { position: relative; height: 180px; border-radius: 18px; margin-bottom: 14px; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.08); }
 .wcheck { position: absolute; right: 12px; top: 12px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
   background: var(--lime); color: var(--lime-ink); font-size: 26px; }
-.wcard b { display: block; font-size: 28px; font-weight: 600; padding: 0 6px; }
-.wcard span { display: block; font-size: 22px; color: var(--muted); padding: 0 6px; }
+.wcard > b { display: block; font-size: 28px; font-weight: 600; padding: 0 6px; }
+/* Direct children only: the check mark is a span too, and must keep its own grid, colour and size. */
+.wcard > span { display: block; font-size: 22px; color: var(--muted); padding: 0 6px; }
 .adot { display: inline-block; width: 26px; height: 26px; border-radius: 50%; margin-right: 12px; vertical-align: -4px; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.2); }
 .acgrid .p-line { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px; }
 .acard { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 12px 20px; border-radius: 28px;
@@ -510,7 +511,9 @@ body.has-panel #edge { opacity: 0; }
 
 /* --- frosted glass (body.frost, see src/ui/frost.js) and no animations (body.no-anim) ------------------------ */
 body.frost #home .tile:not(.on):not(.cam):not(.alert), body.frost #home .td-card, body.frost #home .instance, body.frost #edge .edge {
-  position: relative; background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.16); isolation: isolate; }
+  position: relative; background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.22); isolation: isolate;
+  /* The lit top edge of a pane of glass. Painted once with the tile; it does not move on its own. */
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,.16); }
 .fzw { position: absolute; inset: 0; z-index: -1; border-radius: inherit; overflow: hidden; pointer-events: none; }
 /* Same curve and duration as the page and the rows (.page, .track), so the counter-move cancels theirs exactly. */
 .fzw canvas { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; will-change: transform;
