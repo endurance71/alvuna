@@ -1,0 +1,42 @@
+notify:
+  fields:
+    message:
+      required: true
+      example: "Someone is at the door"
+      selector:
+        text:
+          multiline: true
+    title:
+      selector:
+        text:
+    seconds:
+      default: 10
+      selector:
+        number:
+          min: 2
+          max: 600
+          unit_of_measurement: s
+    device_id:
+      selector:
+        device:
+          multiple: true
+          integration: alvuna
+show_camera:
+  fields:
+    entity_id:
+      required: true
+      selector:
+        entity:
+          domain: camera
+    seconds:
+      default: 60
+      selector:
+        number:
+          min: 5
+          max: 3600
+          unit_of_measurement: s
+    device_id:
+      selector:
+        device:
+          multiple: true
+          integration: alvuna

@@ -21,3 +21,9 @@ DEFAULT_TV_SAVER = 2
 DEFAULT_TV_IDLE = 10
 
 SIGNAL_LAYOUT = f"{DOMAIN}_layout_changed"
+
+# Config entries: Alvuna itself (no kind) and one per paired TV.
+CONF_KIND = "kind"
+KIND_TV = "tv"
+CONF_USER_ID = "user_id"
+SIGNAL_TV = f"{DOMAIN}_tv_{{}}"  # .format(entry_id): the TV connected or left

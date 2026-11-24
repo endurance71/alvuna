@@ -12,6 +12,9 @@ from homeassistant.helpers import selector
 
 from .const import (
     CONF_DASHBOARD,
+    CONF_KIND,
+    CONF_USER_ID,
+    KIND_TV,
     CONF_HIDDEN_AREAS,
     CONF_HIDDEN_ENTITIES,
     CONF_SOURCE,
@@ -24,12 +27,14 @@ from .const import (
     SOURCE_AUTO,
     SOURCE_DASHBOARD,
 )
+from .pairing import DATA_PAIRING, Pairing
 
 
 class AlvunaConfigFlow(ConfigFlow, domain=DOMAIN):
     """Adds Alvuna once per Home Assistant."""
 
     VERSION = 1
+    _request: dict[str, Any]
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         await self.async_set_unique_id(DOMAIN)
@@ -37,6 +42,35 @@ class AlvunaConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             return self.async_create_entry(title="Alvuna", data={}, options={CONF_SOURCE: SOURCE_AUTO})
         return self.async_show_form(step_id="user")
+
+    async def async_step_integration_discovery(self, discovery_info: dict[str, Any]) -> ConfigFlowResult:
+        """A TV asked to be paired (pairing.py): show it under Discovered with its code."""
+        self._request = discovery_info
+        await self.async_set_unique_id(f"tv-{discovery_info['request_id']}")
+        self.context["title_placeholders"] = {"name": discovery_info["name"]}
+        return await self.async_step_pair()
+
+    async def async_step_pair(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        pairing: Pairing | None = self.hass.data.get(DATA_PAIRING)
+        if pairing is None or pairing.get(self._request["request_id"]) is None:
+            return self.async_abort(reason="pairing_expired")
+        if user_input is not None:
+            name = user_input["name"].strip() or self._request["name"]
+            user = await pairing.async_approve(self._request["request_id"], name)
+            if user is None:
+                return self.async_abort(reason="pairing_expired")
+            return self.async_create_entry(title=name, data={CONF_KIND: KIND_TV, CONF_USER_ID: user.id})
+        return self.async_show_form(
+            step_id="pair",
+            data_schema=vol.Schema({vol.Required("name", default=self._request["name"]): selector.TextSelector()}),
+            description_placeholders={"code": self._request["code"]},
+        )
+
+    @classmethod
+    @callback
+    def async_supports_options_flow(cls, config_entry: ConfigEntry) -> bool:
+        """Only Alvuna itself has options; a paired TV has none."""
+        return config_entry.data.get(CONF_KIND) != KIND_TV
 
     @staticmethod
     @callback

@@ -4,11 +4,23 @@
       "user": {
         "title": "Alvuna",
         "description": "Dodaje kartę Alvuna na tablety ścienne i aplikację Alvuna na telewizory."
+      },
+      "pair": {
+        "title": "Parowanie telewizora",
+        "description": "Telewizor prosi o dostęp do Alvuny. Sparuj go tylko, jeśli na ekranie widać kod **{code}**. Dostanie własnego użytkownika Home Assistanta: bez uprawnień administratora, tylko w sieci lokalnej.",
+        "data": {
+          "name": "Nazwa telewizora"
+        },
+        "data_description": {
+          "name": "Widoczna w Home Assistancie, np. TV w salonie."
+        }
       }
     },
     "abort": {
-      "already_configured": "Alvuna jest już skonfigurowana."
-    }
+      "already_configured": "Alvuna jest już skonfigurowana.",
+      "pairing_expired": "Prośba o parowanie wygasła. Otwórz Alvunę na telewizorze jeszcze raz, żeby dostać nowy kod."
+    },
+    "flow_title": "{name}"
   },
   "options": {
     "step": {
@@ -45,6 +57,60 @@
         "auto": "Automatyczny",
         "dashboard": "Z dashboardu"
       }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "connected": {
+        "name": "Połączony"
+      }
+    }
+  },
+  "services": {
+    "notify": {
+      "name": "Pokaż powiadomienie",
+      "description": "Pokazuje wiadomość na sparowanych telewizorach z Alvuną.",
+      "fields": {
+        "message": {
+          "name": "Wiadomość",
+          "description": "Treść."
+        },
+        "title": {
+          "name": "Tytuł",
+          "description": "Krótki nagłówek nad nią."
+        },
+        "seconds": {
+          "name": "Sekundy",
+          "description": "Jak długo zostaje."
+        },
+        "device_id": {
+          "name": "Telewizory",
+          "description": "Puste = wszystkie sparowane."
+        }
+      }
+    },
+    "show_camera": {
+      "name": "Pokaż kamerę",
+      "description": "Otwiera kamerę na pełnym ekranie na sparowanych telewizorach z Alvuną.",
+      "fields": {
+        "entity_id": {
+          "name": "Kamera",
+          "description": "Która kamera."
+        },
+        "seconds": {
+          "name": "Sekundy",
+          "description": "Po jakim czasie sama się zamknie."
+        },
+        "device_id": {
+          "name": "Telewizory",
+          "description": "Puste = wszystkie sparowane."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "not_a_tv": {
+      "message": "Urządzenie {device_id} nie jest telewizorem sparowanym z Alvuną."
     }
   }
 }
