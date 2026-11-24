@@ -10,7 +10,7 @@ import { setLocale, t, language } from "../shared/i18n.js";
 import { renderHome, refreshCamStills } from "./ui/home.js";
 import { applyWallpaper, setWallpaper } from "./ui/wallpapers.js";
 import { applyAccent, setAccent } from "./ui/accents.js";
-import { applyPrefs, setPref, prefs, animOn } from "./ui/prefs.js";
+import { applyPrefs, setPref, prefs, animOn, stepPref, minutesFor } from "./ui/prefs.js";
 import { alignFrost, refreshFrost } from "./ui/frost.js";
 import { renderPanel, renderCamera, attentionCount, attnKey } from "./ui/panels.js";
 import { patch } from "./ui/morph.js";
@@ -28,7 +28,7 @@ const APP_ICONS = ["mdi:alert", "mdi:alert-circle", "mdi:alert-circle-outline", 
   "mdi:television", "mdi:thermometer", "mdi:thermostat", "mdi:tree-outline", "mdi:volume-high", "mdi:volume-off",
   "mdi:water-outline", "mdi:water-percent", "mdi:weather-windy", "mdi:weather-sunset-up", "mdi:weather-sunset-down",
   "mdi:gauge", "mdi:eye-outline", "mdi:sun-wireless-outline", "mdi:umbrella-outline", "mdi:navigation", "mdi:wifi-off",
-  "mdi:keyboard-return", "mdi:arrow-left", "mdi:home-thermometer-outline", "mdi:play-circle-outline", "mdi:history", "mdi:shield-off-outline", "mdi:bell-outline", "mdi:bell-ring-outline", "mdi:battery-low", "mdi:battery-alert-variant-outline", "mdi:package-up", "mdi:account-group-outline", "mdi:trash-can-outline", "mdi:check-circle-outline", "mdi:check", "mdi:eye-off-outline", "mdi:debug-step-over", "mdi:bell-check-outline"];
+  "mdi:keyboard-return", "mdi:arrow-left", "mdi:home-thermometer-outline", "mdi:play-circle-outline", "mdi:history", "mdi:shield-off-outline", "mdi:bell-outline", "mdi:bell-ring-outline", "mdi:battery-low", "mdi:battery-alert-variant-outline", "mdi:package-up", "mdi:account-group-outline", "mdi:trash-can-outline", "mdi:check-circle-outline", "mdi:check", "mdi:eye-off-outline", "mdi:debug-step-over", "mdi:bell-check-outline", "mdi:monitor-star", "mdi:brightness-6", "mdi:cursor-move", "mdi:exit-run", "mdi:blur", "mdi:animation-outline"];
 const params = new URLSearchParams(location.search);
 const instances = loadInstances();
 // ?dashboard=<path> reads the Alvuna card written on that dashboard; without it the layout comes from the integration.
@@ -219,7 +219,8 @@ function act(el) {
     case "wallpaper": setWallpaper(d.id); refreshFrost(); return render();
     case "accents": return openPanel({ type: "accents" });
     case "accent": setAccent(d.id); return render();
-    case "pref": setPref(d.key, !prefs()[d.key]); render(); return alignFrost();
+    case "pref": setPref(d.key, !prefs()[d.key]); if (d.key === "shift") oledShift(new Date()); render(); return alignFrost();
+    case "pref-step": stepPref(d.key, 1, S.config); render(); return alignFrost();
     case "summary": return openPanel({ type: "summary", side: "left" });
     case "device": return openPanel({ type: "device", dev: d.dev === "vac" ? "vac" : Number(d.dev) });
     case "press": svc("button", "press", { entity_id: d.entity }); return;
@@ -287,6 +288,10 @@ function adjust(el, step) {
       render();
       later(m.tv, 300, () => svc("media_player", "volume_set", { entity_id: m.tv, volume_level: value / 100 }));
     } else svc("media_player", step > 0 ? "volume_up" : "volume_down", { entity_id: m.tv });
+  } else if (d.adjust === "pref") {
+    stepPref(d.key, step, S.config);
+    render();
+    if (d.key === "glass") alignFrost();
   } else if (d.adjust === "playing") {
     S.playIdx = (S.playIdx || 0) + step + 100;
     render();
@@ -353,10 +358,20 @@ window.addEventListener("click", (ev) => {
 });
 
 // --- screensaver and idle exit ----------------------------------------------------------------------
-const minutes = (key, cfg, dflt) => Number(params.get(key) ?? S.config?.[cfg] ?? dflt) * 60000;
+// ?saver= / ?idle= (tests) override this TV's setting, which overrides Alvuna's options in Home Assistant. 0 = never.
+const minutes = (key) => Number(params.get(key === "exit" ? "idle" : key) ?? minutesFor(key, S.config)) * 60000;
+// OLED care: every three minutes the picture moves a few pixels around a small loop, so static parts (the clock, the
+// row titles, tile edges) never sit on the same pixels for hours. Moves whole layers (CSS translate), nothing repaints.
+const SHIFTS = [[0, 0], [4, 2], [2, -3], [-3, -2], [-2, 3], [3, -1]];
+function oledShift(now) {
+  const [x, y] = prefs().shift ? SHIFTS[Math.floor((now.getHours() * 60 + now.getMinutes()) / 3) % SHIFTS.length] : [0, 0];
+  document.body.style.setProperty("--sx", `${x}px`);
+  document.body.style.setProperty("--sy", `${y}px`);
+}
 
 function wake() {
   S.lastInput = Date.now();
+  document.body.classList.remove("dimmed");
   if (!S.saver) return false;
   S.saver = false;
   saverEl.hidden = true;
@@ -383,14 +398,17 @@ function tick() {
       if (m?.duration) el.style.width = `${Math.min(100, (h.mediaPosition(m) / m.duration) * 100).toFixed(1)}%`;
     }
   }
-  const idle = Date.now() - S.lastInput;
-  if (!S.saver && S.config && idle > minutes("saver", "tv_screensaver_minutes", 2)) {
+  const idle = Date.now() - S.lastInput, saverMs = minutes("saver"), exitMs = minutes("exit");
+  // Halfway to the screensaver (at least half a minute in) the screen dims, a first step that saves the panel.
+  document.body.classList.toggle("dimmed", !!(prefs().dim && S.config && !S.saver && saverMs > 0 && idle > Math.max(30000, saverMs / 2)));
+  if (now.getSeconds() === 0 && now.getMinutes() % 3 === 0) oledShift(now);
+  if (!S.saver && S.config && saverMs > 0 && idle > saverMs) {
     S.saver = true;
     drawSaver();
     saverEl.hidden = false;
     document.body.classList.add("saving");
   } else if (S.saver && now.getSeconds() === 0) drawSaver();
-  if (WEBOS && idle > minutes("idle", "tv_idle_minutes", 10)) window.close();
+  if (WEBOS && exitMs > 0 && idle > exitMs) window.close();
   if (now.getSeconds() === 0) schedule();
   if (S.config && !S.saver && now.getSeconds() % 15 === 0) refreshCamStills(home(), schedule);
   for (const [id, p] of Object.entries(S.pending)) if (Date.now() - p.at > 6000) delete S.pending[id];

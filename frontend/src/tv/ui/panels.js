@@ -8,7 +8,7 @@ import { icon } from "./icons.js";
 import { mediaArt, camUrl, ring } from "./home.js";
 import { WALLPAPERS, currentWallpaper } from "./wallpapers.js";
 import { ACCENTS, currentAccent } from "./accents.js";
-import { prefs } from "./prefs.js";
+import { prefs, minutesFor } from "./prefs.js";
 
 const F = { PAUSE: 1, VOLUME_SET: 4, VOLUME_MUTE: 8, PREVIOUS: 16, NEXT: 32, TURN_ON: 128, TURN_OFF: 256, VOLUME_STEP: 1024, PLAY: 16384 };
 
@@ -38,7 +38,7 @@ export function renderPanel(h, p, ctx) {
   if (p.type === "summary") return summaryPanel(h, ctx);
   if (p.type === "attn") return attnPanel(h, p, ctx);
   if (p.type === "device") return devicePanel(h, p);
-  if (p.type === "settings") return settingsPanel();
+  if (p.type === "settings") return settingsPanel(h);
   if (p.type === "wallpapers") return wallpapersPanel();
   if (p.type === "accents") return accentsPanel();
   return "";
@@ -495,17 +495,31 @@ function devicePanel(h, p) {
 
 // --- settings ---------------------------------------------------------------------------------------
 // One row per option, each opening its own panel; this TV's choices, kept in its storage.
-function settingsPanel() {
-  const w = currentWallpaper();
-  const a = currentAccent(), p = prefs();
+function settingsPanel(h) {
+  const w = currentWallpaper(), a = currentAccent(), p = prefs();
   const toggle = (key, ic, title, sub) => row({ key: `pref:${key}`, act: "pref", attrs: `data-key="${key}"`, ic, icOn: p[key], title, sub,
     value: p[key] ? t("common.on_n") : t("common.off_n"), cls: p[key] ? "on" : "" });
+  // ←/→ steps through the values (STEPS in prefs.js); "z Home Assistanta" marks minutes this TV has not set itself.
+  const minutes = (key, ic, title, sub, zero) => {
+    const v = minutesFor(key, h.c), own = p[key] != null;
+    return row({ key: `pref:${key}`, adjust: "pref", attrs: `data-key="${key}"`, ic, icOn: v > 0, title,
+      sub: own ? sub : `${sub} · ${t("tv.settings.from_ha")}`, value: v === 0 ? zero : t("tv.settings.min", { n: v }) });
+  };
+  const sec = (key) => `<div class="wx-sec">${t(`tv.settings.${key}`)}</div>`;
   return shell("summary", head("mdi:cog-outline", t("common.settings"), t("tv.settings.subtitle")),
-    `<div class="wx-sec">${t("tv.settings.look")}</div>` + row({ key: "wallpaper", act: "wallpapers", ic: "mdi:image-outline", title: t("tv.settings.wallpaper"), sub: esc(w.sub), value: `${esc(w.name)} ${icon("mdi:chevron-right")}` })
+    sec("look")
+    + row({ key: "wallpaper", act: "wallpapers", ic: "mdi:image-outline", title: t("tv.settings.wallpaper"), sub: esc(w.sub), value: `${esc(w.name)} ${icon("mdi:chevron-right")}` })
     + row({ key: "accent", act: "accents", ic: "mdi:palette-outline", title: t("tv.settings.accent"), sub: t("tv.settings.accent_hint"),
       value: `<i class="adot" style="background:${a.c}"></i>${esc(a.name)} ${icon("mdi:chevron-right")}` })
-    + `<div class="wx-sec">${t("tv.settings.performance")}</div>`
-    + toggle("frost", "mdi:blur", t("tv.settings.frost"), t("tv.settings.frost_hint"))
+    // OK or ←/→ go round the three looks; each is shown on the home screen behind the panel at once.
+    + row({ key: "pref:glass", act: "pref-step", adjust: "pref", attrs: `data-key="glass"`, ic: "mdi:blur", title: t("tv.settings.glass"),
+      sub: t(`tv.settings.glass_${p.glass}_hint`), value: t(`tv.settings.glass_${p.glass}`) })
+    + sec("screen")
+    + minutes("saver", "mdi:monitor-star", t("tv.settings.saver"), t("tv.settings.saver_hint"), t("tv.settings.off"))
+    + toggle("dim", "mdi:brightness-6", t("tv.settings.dim"), t("tv.settings.dim_hint"))
+    + toggle("shift", "mdi:cursor-move", t("tv.settings.shift"), t("tv.settings.shift_hint"))
+    + minutes("exit", "mdi:exit-run", t("tv.settings.exit"), t("tv.settings.exit_hint"), t("tv.settings.never"))
+    + sec("performance")
     + toggle("anim", "mdi:animation-outline", t("tv.settings.anim"), t("tv.settings.anim_hint")));
 }
 

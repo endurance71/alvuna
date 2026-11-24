@@ -30,6 +30,14 @@ hd-icon.xl { font-size: 120px; }
 
 /* --- page and header ----------------------------------------------------------------------------- */
 #home { position: absolute; inset: 0; }
+/* OLED care (main.js oledShift): the home screen moves a few pixels with the independent translate property, so the
+   focus engine's transforms are untouched and nothing repaints. Only layers that are positioned themselves: a translate
+   on #panel would make that empty wrapper the containing block of the absolute panel inside it (and squash it to 0 px).
+   Panels are open briefly; they need no shift. */
+#home, #edge { translate: var(--sx, 0) var(--sy, 0); }
+/* Dimmed halfway to the screensaver: one black layer fades in over everything; at 0 opacity the TV skips it. */
+body::after { content: ""; position: fixed; inset: 0; z-index: 45; background: #000; opacity: 0; pointer-events: none; transition: opacity 2s; }
+body.dimmed::after { opacity: .55; }
 .page { position: relative; padding: 54px 0 40px; transition: transform .32s var(--ease); will-change: transform; }
 .hero { display: flex; justify-content: space-between; align-items: flex-start; padding: 0 96px; min-height: 330px; }
 .date { font-size: 26px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
@@ -164,7 +172,7 @@ hd-icon.xl { font-size: 120px; }
 .p-line:first-child { margin-top: 0; }
 
 /* A list row: same height for every kind of row; the value sits right, a thin bar runs along the bottom edge. */
-.p-row { position: relative; flex: 1; display: flex; align-items: center; gap: 24px; height: 112px; padding: 0 30px 0 24px; border-radius: 26px;
+.p-row { position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: 24px; height: 112px; padding: 0 30px 0 24px; border-radius: 26px;
   background: var(--glass); border: 1.5px solid var(--glass-line); transition: transform .22s var(--ease); }
 .p-row .ic { width: 60px; height: 60px; font-size: 32px; }
 .p-row .t { flex: 1; min-width: 0; }
@@ -508,6 +516,10 @@ body.frost #home .tile:not(.on):not(.cam):not(.alert), body.frost #home .td-card
 .fzw canvas { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; will-change: transform;
   transition: transform .32s var(--ease); }
 body:not(.frost) .fzw { display: none; }
+/* Tiles in full colour (Ustawienia → Kafle → Pełny kolor): opaque, in the wallpaper's hue like the panels, the lightest
+   option for the TV. Without frost or solid the tiles are the plain translucent glass (Przezroczyste). */
+body.solid #home .tile:not(.on):not(.cam):not(.alert), body.solid #home .td-card, body.solid #home .instance, body.solid #edge .edge {
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), var(--sheet-bg); border-color: rgba(255,255,255,.10); }
 /* Under an open panel the home screen is dimmed to 20%: its glass would cost every frame of the panel for nothing. */
 body.has-panel #home .fzw { visibility: hidden; }
 body.frost #home .tile.sec.off { opacity: .7; }
