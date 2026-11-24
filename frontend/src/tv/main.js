@@ -111,10 +111,18 @@ function fatal(text) {
   homeEl.innerHTML = `<div class="fatal">${icon("mdi:alert-circle-outline", "xl")}<h1>Alvuna</h1><p>${esc(text)}</p></div>`;
 }
 
-function toast(text) {
-  toastEl.innerHTML = `<div class="pill">${icon("mdi:alert-circle-outline")}${esc(text)}</div>`;
+function toast(text, ms = 4000, html) {
+  toastEl.innerHTML = html || `<div class="pill">${icon("mdi:alert-circle-outline")}${esc(text)}</div>`;
   clearTimeout(toast.t);
-  toast.t = setTimeout(() => { toastEl.innerHTML = ""; }, 4000);
+  toast.t = setTimeout(hideToast, ms);
+}
+// Notifications leave the way they came, softly, and only then are removed.
+function hideToast() {
+  const pill = toastEl.firstElementChild;
+  if (!pill || !animOn()) { toastEl.innerHTML = ""; return; }
+  pill.classList.add("out");
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => { toastEl.innerHTML = ""; }, 460);
 }
 
 // --- actions --------------------------------------------------------------------------------------
@@ -374,16 +382,24 @@ function wake() {
   document.body.classList.remove("dimmed");
   if (!S.saver) return false;
   S.saver = false;
-  saverEl.hidden = true;
+  // The black fades away (#saver.out) and is hidden once the fade is over.
+  saverEl.classList.add("out");
+  clearTimeout(wake.t);
+  wake.t = setTimeout(() => { if (!S.saver) { saverEl.hidden = true; saverEl.classList.remove("out"); } }, animOn() ? 520 : 0);
   document.body.classList.remove("saving");
   return true;
 }
 
+// Each minute the clock glides to a new place (the box is kept, so its transform transition plays) instead of jumping.
 function drawSaver() {
-  const h = home(), w = h.weatherNow();
-  saverEl.innerHTML = `<div class="saver-box" style="transform:translate(${Math.round(Math.random() * 1100) + 120}px,${Math.round(Math.random() * 560) + 120}px)">
-    <div class="clock">${time(new Date())}</div>
-    <div class="saver-wx">${icon(wIcon(w.cond, w.night))}${w.temp != null ? `${Math.round(w.temp)}°` : ""}<span>${esc(longDate(new Date()))}</span></div></div>`;
+  const h = home(), w = h.weatherNow(), now = new Date();
+  const at = `translate(${Math.round(Math.random() * 1100) + 120}px,${Math.round(Math.random() * 560) + 120}px)`;
+  const inner = `<div class="clock">${time(now)}</div>
+    <div class="saver-wx">${icon(wIcon(w.cond, w.night))}${w.temp != null ? `${Math.round(w.temp)}°` : ""}<span>${esc(longDate(now))}</span></div>`;
+  const box = saverEl.querySelector(".saver-box");
+  if (box && !S.saverFresh) { box.innerHTML = inner; box.style.transform = at; return; }
+  S.saverFresh = false;
+  saverEl.innerHTML = `<div class="saver-box" style="transform:${at}">${inner}</div>`;
 }
 
 // --- clock, progress, idle (once a second) -----------------------------------------------------------
@@ -404,7 +420,10 @@ function tick() {
   if (now.getSeconds() === 0 && now.getMinutes() % 3 === 0) oledShift(now);
   if (!S.saver && S.config && saverMs > 0 && idle > saverMs) {
     S.saver = true;
+    S.saverFresh = true; // the first draw places the clock without a glide
     drawSaver();
+    clearTimeout(wake.t);
+    saverEl.classList.remove("out");
     saverEl.hidden = false;
     document.body.classList.add("saving");
   } else if (S.saver && now.getSeconds() === 0) drawSaver();
@@ -574,9 +593,8 @@ async function mountCamera(h) {
 // --- messages from Home Assistant (alvuna.notify, alvuna.show_camera) ----------------------------------
 function tvMessage(ev) {
   if (ev.type === "notify") {
-    toastEl.innerHTML = `<div class="pill note">${icon("mdi:bell-ring-outline")}<span>${ev.title ? `<b>${esc(ev.title)}</b> ` : ""}${esc(ev.message)}</span></div>`;
-    clearTimeout(toast.t);
-    toast.t = setTimeout(() => { toastEl.innerHTML = ""; }, (ev.seconds || 10) * 1000);
+    toast("", (ev.seconds || 10) * 1000,
+      `<div class="pill note">${icon("mdi:bell-ring-outline")}<span>${ev.title ? `<b>${esc(ev.title)}</b> ` : ""}${esc(ev.message)}</span></div>`);
     wake();
   } else if (ev.type === "camera") {
     const i = home().cameras().findIndex((c) => c.entity === ev.entity_id);

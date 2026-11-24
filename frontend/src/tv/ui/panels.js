@@ -25,7 +25,7 @@ const row = ({ key, act, attrs = "", ic, icOn, title, sub, value = "", bar, adju
     <div class="ic ${icOn ? "lime" : ""}">${icon(ic)}</div>
     <div class="t"><b>${esc(title)}</b>${sub ? `<span>${sub}</span>` : ""}</div>
     ${value !== "" ? `<div class="v">${adjust ? icon("mdi:chevron-left", "chev") : ""}<b>${value}</b>${adjust ? icon("mdi:chevron-right", "chev") : ""}</div>` : ""}
-    ${bar != null ? `<i class="rbar"><i style="width:${Math.max(0, Math.min(100, bar))}%"></i></i>` : ""}</div>`);
+    ${bar != null ? `<i class="rbar"><i style="transform:scaleX(${(Math.max(0, Math.min(100, bar)) / 100).toFixed(3)})"></i></i>` : ""}</div>`);
 
 export function renderPanel(h, p, ctx) {
   if (!p) return "";
