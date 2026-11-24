@@ -119,7 +119,7 @@ async def test_remote_tv(hass: HomeAssistant, hass_client_no_auth) -> None:
     client = await hass_client_no_auth()
     req = await (await client.post("/api/alvuna/pair", json={"name": "Dom 2"})).json()
     flow = _flow(hass, req["request_id"])
-    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {"code": req["code"], "name": "TV Słupsk", "local_only": False})
+    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {"code": req["code"], "name": "TV w drugim domu", "local_only": False})
     user = await hass.auth.async_get_user(result["result"].data["user_id"])
     assert not user.local_only
 
