@@ -56,6 +56,11 @@ node service/discovery.js
 address. On the TV, with the app installed, the service answers over the Luna bus (Developer Mode shell):
 `luna-send-pub -i luna://app.alvuna.tv.service/discover '{"subscribe":true}'`.
 
+All web apps on a webOS TV share one browser profile, so `localStorage` belongs to the origin, not to the app. If
+another app (or the TV's browser) already signed in to the same Home Assistant address, `/alvuna/tv/` finds its
+`hassTokens` and opens the home without pairing. To see the pairing screen on such a TV, remove `hassTokens` for that
+origin (`ares-inspect --app app.alvuna.tv`, then in the console) and reload.
+
 ## Files
 
 - `app/`: `appinfo.json`, `index.html`, `shell.js`, `style.css`, icons and splash.
