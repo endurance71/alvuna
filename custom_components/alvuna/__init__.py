@@ -11,6 +11,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import CONF_KIND, CONF_USER_ID, DOMAIN, KIND_TV, SIGNAL_LAYOUT
 from .frontend import async_register_frontend, async_unregister_frontend
+from .overrides import DATA_OVERRIDES, Overrides
 from .pairing import async_setup_pairing, async_unload_pairing
 from .tv import async_register as async_register_tv
 from .websocket import async_register_commands
@@ -31,6 +32,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if entry.data.get(CONF_KIND) == KIND_TV:
         await hass.config_entries.async_forward_entry_setups(entry, TV_PLATFORMS)
         return True
+    store = Overrides(hass)
+    await store.async_load()
+    hass.data[DATA_OVERRIDES] = store
     await async_register_frontend(hass)
     async_setup_pairing(hass)
     entry.async_on_unload(entry.add_update_listener(_options_updated))
@@ -48,6 +52,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # The static paths stay until Home Assistant restarts; the card stops loading on new pages.
     async_unregister_frontend(hass)
     async_unload_pairing(hass)
+    hass.data.pop(DATA_OVERRIDES, None)
     return True
 
 

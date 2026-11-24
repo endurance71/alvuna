@@ -6,6 +6,7 @@ DOMAIN = "alvuna"
 URL_STATIC = "/alvuna/static"  # the tablet card and the fonts
 URL_TV = "/alvuna/tv"  # the TV app
 CARD_FILE = "alvuna-card.js"
+PANEL_FILE = "alvuna-panel.js"
 
 # Options (Settings → Integrations → Alvuna → Configure).
 CONF_SOURCE = "source"  # where the layout comes from

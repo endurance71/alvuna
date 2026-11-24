@@ -8,17 +8,19 @@ from pathlib import Path
 
 from aiohttp import web
 
-from homeassistant.components.frontend import add_extra_js_url, remove_extra_js_url
+from homeassistant.components import panel_custom
+from homeassistant.components.frontend import add_extra_js_url, async_remove_panel, remove_extra_js_url
 from homeassistant.components.http import HomeAssistantView, StaticPathConfig
 from homeassistant.core import HomeAssistant, callback
 
-from .const import CARD_FILE, DOMAIN, URL_STATIC, URL_TV
+from .const import CARD_FILE, DOMAIN, PANEL_FILE, URL_STATIC, URL_TV
 
 _LOGGER = logging.getLogger(__name__)
 
 WWW = Path(__file__).parent / "www"
 DATA_PATHS = f"{DOMAIN}_static_paths"
 DATA_CARD_URL = f"{DOMAIN}_card_url"
+DATA_PANEL = f"{DOMAIN}_panel"
 
 
 def _file_hash(path: Path) -> str:
@@ -46,6 +48,20 @@ async def async_register_frontend(hass: HomeAssistant) -> None:
     url = f"{URL_STATIC}/{CARD_FILE}?v={version}"
     add_extra_js_url(hass, url)
     hass.data[DATA_CARD_URL] = url
+    # The Alvuna panel in the sidebar (administrators only): the automatic layout, with hiding, names, order, additions.
+    panel = WWW / "static" / PANEL_FILE
+    if panel.is_file():
+        panel_version = await hass.async_add_executor_job(_file_hash, panel)
+        await panel_custom.async_register_panel(
+            hass,
+            webcomponent_name="alvuna-panel",
+            frontend_url_path=DOMAIN,
+            module_url=f"{URL_STATIC}/{PANEL_FILE}?v={panel_version}",
+            sidebar_title="Alvuna",
+            sidebar_icon="mdi:view-dashboard-variant-outline",
+            require_admin=True,
+        )
+        hass.data[DATA_PANEL] = True
 
 
 @callback
@@ -53,6 +69,8 @@ def async_unregister_frontend(hass: HomeAssistant) -> None:
     """Stop adding the card to frontend pages."""
     if url := hass.data.pop(DATA_CARD_URL, None):
         remove_extra_js_url(hass, url)
+    if hass.data.pop(DATA_PANEL, None):
+        async_remove_panel(hass, DOMAIN)
 
 
 class TvIndexView(HomeAssistantView):

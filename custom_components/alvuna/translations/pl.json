@@ -34,36 +34,17 @@
     "step": {
       "init": {
         "title": "Alvuna",
-        "description": "Alvuna buduje ekrany tabletu i telewizora z Twoich obszarów, pięter i encji. Tu ukryjesz to, czego ma nie być, i wybierzesz kilka rzeczy; resztę bierze z Home Assistanta.",
+        "description": "Co i gdzie się pokazuje, zmienisz w panelu Alvuna w menu bocznym. Tu tylko pogoda i czasy dla telewizorów.",
         "data": {
-          "source": "Układ",
-          "dashboard": "Dashboard",
-          "hidden_areas": "Ukryte obszary",
-          "hidden_entities": "Ukryte encje",
           "weather": "Pogoda",
           "tv_screensaver_minutes": "Wygaszacz TV po",
           "tv_idle_minutes": "Aplikacja TV zamyka się po"
         },
         "data_description": {
-          "source": "Automatyczny idzie za obszarami. Z dashboardu bierze ustawienia karty Alvuna zapisane na tym dashboardzie.",
-          "dashboard": "Jego ścieżka URL, np. dashboard-dom. Tylko dla układu z dashboardu.",
-          "hidden_areas": "Obszary bez kafla pokoju.",
-          "hidden_entities": "Encje pominięte wszędzie.",
           "weather": "Puste = pierwsza encja pogody.",
           "tv_screensaver_minutes": "Minuty bez naciśnięcia klawisza. 0 wyłącza.",
           "tv_idle_minutes": "Minuty bez naciśnięcia klawisza. 0 = nie zamyka."
         }
-      }
-    },
-    "error": {
-      "dashboard_required": "Wpisz ścieżkę URL dashboardu."
-    }
-  },
-  "selector": {
-    "source": {
-      "options": {
-        "auto": "Automatyczny",
-        "dashboard": "Z dashboardu"
       }
     }
   },
