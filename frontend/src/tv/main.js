@@ -423,7 +423,9 @@ window.addEventListener("pointermove", (ev) => { wake(); document.body.classList
 window.addEventListener("click", (ev) => {
   if (wake()) return;
   const item = ev.target.closest?.("[data-f]");
-  if (item) { focus.pointAt(item); act(item); }
+  if (item) { focus.pointAt(item); act(item); return; }
+  // A click on the dimmed screen beside an open side panel closes it, as Back does (Magic Remote, a mouse).
+  if (S.panel && ev.target.closest?.(".panel-wrap") && !ev.target.closest(".panel")) closeLayer();
 });
 
 // --- screensaver and idle exit ----------------------------------------------------------------------

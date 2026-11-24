@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Polityka prywatności · Alvuna</title>
+<meta name="description" content="Jakie dane przetwarza Alvuna, aplikacja Home Assistant na telewizor, i dlaczego nie trafiają do nas.">
+<meta name="theme-color" content="#165566">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/figtree-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="top" style="padding-bottom: 8px">
+  <header class="wrap nav">
+    <a class="brand" href="./"><img src="icon.svg" alt="">Alvuna</a>
+    <nav class="nav-links" aria-label="Strona"><a href="./#jak">Jak działa</a><a href="./#pomoc">Pomoc</a></nav>
+  </header>
+</div>
+
+<main class="wrap doc">
+  <h1>Polityka prywatności</h1>
+  <div class="meta">Aplikacja Alvuna na telewizory i integracja Alvuna dla Home Assistanta · obowiązuje od 24 listopada 2026</div>
+
+  <div class="short">W skrócie: Alvuna łączy telewizor wyłącznie z Twoim Home Assistantem. Nie mamy serwera, do którego
+    trafiałyby Twoje dane, nie zbieramy statystyk i nie wyświetlamy reklam.</div>
+
+  <h2>Kto odpowiada za aplikację</h2>
+  <p>Alvunę wydaje ShipApp, <em class="todo">[pełna nazwa firmy, adres, NIP]</em>. W sprawach prywatności napisz na
+    <a href="mailto:kontakt@shipapp.pl">kontakt@shipapp.pl</a>.</p>
+
+  <h2>Jak działa Alvuna</h2>
+  <p>Alvuna składa się z dwóch części: integracji instalowanej w Twoim Home Assistancie i aplikacji na telewizorze.
+    Telewizor pobiera stan domu (pokoje, urządzenia, pogodę, obraz z kamer) bezpośrednio z Twojego Home Assistanta
+    i wysyła do niego polecenia, na przykład włączenie światła. Te dane nie przechodzą przez żaden nasz serwer.</p>
+
+  <h2>Jakie dane są przetwarzane i gdzie</h2>
+  <ul>
+    <li><b>Na telewizorze:</b> adresy Home Assistantów, z którymi telewizor jest sparowany, nadane im nazwy, tokeny
+      dostępu oraz ustawienia wyglądu (tapeta, kafle, wygaszacz). Zostają w pamięci aplikacji na telewizorze, dopóki jej
+      nie usuniesz albo się nie wylogujesz.</li>
+    <li><b>W Twoim Home Assistancie:</b> przy parowaniu integracja tworzy osobnego użytkownika dla telewizora (bez uprawnień
+      administratora) i zapisuje Twoje ustawienia układu (ukryte elementy, nazwy, kolejność). Kontrolujesz to Ty, jako
+      administrator Home Assistanta.</li>
+    <li><b>W sieci lokalnej:</b> aplikacja wyszukuje Home Assistanta w Twojej sieci (mDNS), żeby nie trzeba było wpisywać
+      adresu pilotem.</li>
+  </ul>
+
+  <h2>Czego nie robimy</h2>
+  <ul>
+    <li>Nie zbieramy danych osobowych ani danych o Twoim domu.</li>
+    <li>Nie używamy analityki, raportów o błędach wysyłanych do nas, reklam ani narzędzi śledzących.</li>
+    <li>Nie sprzedajemy ani nie udostępniamy danych, bo ich nie mamy.</li>
+    <li>Telewizor nie poznaje Twojego hasła do Home Assistanta: parowanie odbywa się kodem, który zatwierdzasz sam.</li>
+  </ul>
+
+  <h2>Usługi innych firm</h2>
+  <p>Alvuna nie korzysta z usług zewnętrznych. Jeśli łączysz telewizor z Home Assistantem przez dostęp zdalny (na
+    przykład Home Assistant Cloud albo własny serwer pośredniczący), ruch przechodzi przez tę usługę na zasadach jej
+    dostawcy. Aplikację pobierasz ze sklepu producenta telewizora, który przetwarza dane według własnej polityki.</p>
+
+  <h2>Jak usunąć dane</h2>
+  <ul>
+    <li>Na telewizorze: Ustawienia → Połączenie → Wyloguj albo usunięcie aplikacji.</li>
+    <li>W Home Assistancie: usunięcie urządzenia Alvuna TV kasuje użytkownika telewizora i jego tokeny. Usunięcie
+      integracji Alvuna kasuje też ustawienia układu.</li>
+  </ul>
+
+  <h2>Ta strona</h2>
+  <p>alvuna.shipapp.pl nie używa plików cookie ani analityki. Serwer hostingu zapisuje standardowe logi (adres IP, czas,
+    adres strony) w celach bezpieczeństwa, <em class="todo">[nazwa hostingu i czas przechowywania logów]</em>.</p>
+
+  <h2>Dzieci</h2>
+  <p>Alvuna nie jest skierowana do dzieci i nie zbiera danych o żadnych użytkownikach, również o dzieciach.</p>
+
+  <h2>Twoje prawa i zmiany</h2>
+  <p>Na podstawie RODO masz prawo zapytać, czy przetwarzamy Twoje dane, i złożyć skargę do Prezesa UODO. Ponieważ
+    nie przechowujemy danych użytkowników, w praktyce wszystkie dane są pod Twoją kontrolą na telewizorze i w Home
+    Assistancie. O zmianach tej polityki poinformujemy na tej stronie, z nową datą obowiązywania.</p>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <span>© 2026 ShipApp</span>
+      <nav aria-label="Stopka"><a href="./">Alvuna</a><a href="https://github.com/endurance71/alvuna">GitHub</a><a href="mailto:kontakt@shipapp.pl">Kontakt</a></nav>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

@@ -4,3 +4,7 @@ __pycache__/
 .pytest_cache/
 *.zip
 .DS_Store
+
+# Website: raw generated images and local previews stay out of git (site/img holds the web-sized copies).
+site/img/src/
+site/preview/

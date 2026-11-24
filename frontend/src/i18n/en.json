@@ -929,7 +929,8 @@
       "roz": "Pink",
       "koral": "Coral",
       "zloto": "Gold",
-      "bialy": "White"
+      "bialy": "White",
+      "dab": "Oak"
     },
     "pair_title": "Pair this TV",
     "pair_asking": "Asking Home Assistant for a code…",

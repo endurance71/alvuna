@@ -12,6 +12,8 @@ export const ACCENTS = [
   { id: "koral", c: "#FF8A6B", rgb: "255,138,107", ink: "#3D1408", deep: "#C04A2A", deeper: "#9E3C22" },
   { id: "zloto", c: "#FFD84A", rgb: "255,216,74", ink: "#3A2E00", deep: "#9A7A00", deeper: "#7D6300" },
   { id: "bialy", c: "#F2F4F5", rgb: "242,244,245", ink: "#12232C", deep: "#3D5260", deeper: "#2F404B" },
+  // Light oak: the warm, quiet accent of a Scandinavian room (lamplight on wood), calmer than the gold.
+  { id: "dab", c: "#E2BE8A", rgb: "226,190,138", ink: "#2B1E0C", deep: "#8A6230", deeper: "#704E25" },
 ];
 
 // The colour's name reads tv.accents.<id> in the user's language.

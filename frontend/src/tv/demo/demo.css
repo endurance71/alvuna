@@ -1,0 +1,24 @@
+/* The website demo's frosted glass. On the TV the app draws frost with one small canvas per tile (src/ui/frost.js),
+   because a live backdrop-filter costs the C4 most of its frames. In a desktop or phone browser, where the whole screen
+   is scaled down into a photo, those canvas layers flickered, while backdrop-filter is cheap there. So the demo keeps
+   the app's setting (Kafle → Szronione szkło), hides the canvases (display: none makes no layer) and frosts the same
+   surfaces here. Under an open panel the home screen is dimmed and its blur is off. */
+.fzw { display: none !important; }
+body.frost #home .tile:not(.on):not(.cam):not(.alert), body.frost #home .td-card, body.frost #home .instance, body.frost #edge .edge {
+  background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.22);
+  -webkit-backdrop-filter: blur(32px) saturate(1.4); backdrop-filter: blur(32px) saturate(1.4);
+}
+body.frost #home .tile.alert { background: rgba(255,90,78,.24); -webkit-backdrop-filter: blur(32px) saturate(1.4); backdrop-filter: blur(32px) saturate(1.4); }
+body.has-panel #home .tile, body.has-panel #home .td-card, body.has-panel #home .instance { -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* The focused tile lights up (the app does it inside the hidden canvas layer, .fzw::after). */
+body.frost #home .tile.f:not(.on):not(.cam):not(.alert), body.frost #home .td-card.f, body.frost #home .instance.f, body.frost #edge .edge.f { background: rgba(255,255,255,.26); }
+body.frost #home .tile.alert.f { background: rgba(255,90,78,.45); }
+/* A visitor driving the demo with the mouse: a ring like a touch indicator instead of the arrow (the TV has no cursor;
+   the Magic Remote's pointer is a dot that focuses what it is over). Hidden until the mouse moves over the TV. */
+html.pointing, html.pointing * { cursor: none !important; }
+#demo-cursor { position: fixed; left: 0; top: 0; z-index: 1000; width: 84px; height: 84px; margin: -42px 0 0 -42px; border-radius: 50%;
+  border: 5px solid rgba(255,255,255,.95); background: rgba(255,255,255,.22); box-shadow: 0 6px 24px rgba(0,0,0,.35);
+  pointer-events: none; opacity: 0; transition: opacity .25s ease, scale .15s ease; will-change: translate; }
+html.pointing #demo-cursor { opacity: 1; }
+#demo-cursor.down { scale: .8; background: rgba(255,255,255,.4); }
+@media (pointer: coarse) { #demo-cursor { display: none; } }
