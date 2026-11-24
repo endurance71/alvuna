@@ -1,0 +1,14 @@
+{
+  "name": "alvuna-frontend",
+  "private": true,
+  "description": "Alvuna's tablet card and TV app, built into custom_components/alvuna/www",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "hls.js": "^1.7.4",
+    "home-assistant-js-websocket": "9.9.0"
+  }
+}

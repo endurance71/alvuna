@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Alvuna",
+        "description": "Dodaje kartę Alvuna na tablety ścienne i aplikację Alvuna na telewizory."
+      }
+    },
+    "abort": {
+      "already_configured": "Alvuna jest już skonfigurowana."
+    }
+  }
+}

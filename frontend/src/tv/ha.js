@@ -1,0 +1,121 @@
+// Connection to the Home Assistant that serves this page. The app lives in HA's own www folder
+// (/local/homedeck-tv/), so REST, camera stills, icons and fonts are all same-origin.
+//
+// Sign-in reads the frontend's own token store ("hassTokens"): on the TV, the shell's sign-in page put a long-lived
+// token there; in a browser that is already signed in to HA, the normal session (with its refresh token) is used.
+import { getAuth, createConnection, subscribeEntities, callService as haCall, ERR_INVALID_AUTH } from "home-assistant-js-websocket";
+
+const loadTokens = async () => {
+  try { return JSON.parse(localStorage.getItem("hassTokens")) || null; } catch (e) { return null; }
+};
+const saveTokens = (t) => {
+  try { localStorage.setItem("hassTokens", JSON.stringify(t)); } catch (e) { /* storage blocked */ }
+};
+
+export async function connect({ onStates, onStatus }) {
+  // Without any token getAuth sends the browser to HA's login page and comes back here.
+  const auth = await getAuth({ hassUrl: location.origin, loadTokens, saveTokens });
+  let conn;
+  try {
+    conn = await createConnection({ auth });
+  } catch (e) {
+    if (e === ERR_INVALID_AUTH) { saveTokens(null); location.reload(); }
+    throw e;
+  }
+  conn.addEventListener("disconnected", () => onStatus("offline"));
+  conn.addEventListener("ready", () => onStatus("online"));
+  conn.addEventListener("reconnect-error", () => onStatus("offline"));
+  subscribeEntities(conn, onStates);
+  return conn;
+}
+
+export const call = (conn, domain, service, data = {}, target) => haCall(conn, domain, service, data, target);
+
+// The Alvuna card config from a Lovelace dashboard: the first `custom:alvuna-card` (or the older custom:homedeck-card) anywhere in it.
+export async function loadDeckConfig(conn, dashboard) {
+  const cfg = await conn.sendMessagePromise({ type: "lovelace/config", url_path: dashboard || null });
+  const find = (v) => {
+    if (Array.isArray(v)) { for (const x of v) { const f = find(x); if (f) return f; } return null; }
+    if (!v || typeof v !== "object") return null;
+    if (v.type === "custom:alvuna-card" || v.type === "custom:homedeck-card") return v;
+    for (const x of Object.values(v)) { const f = find(x); if (f) return f; }
+    return null;
+  };
+  const card = find(cfg);
+  if (!card) throw new Error(`Na dashboardzie „${dashboard}” nie ma karty Alvuna`);
+  return card;
+}
+
+export const onDashboardChange = (conn, cb) => conn.subscribeEvents(cb, "lovelace_updated");
+
+// Hourly and daily forecast (one-shot, like the tablet card's _loadForecast), with twice-daily folded into days.
+// `ids`: the weather entity shown, then the others listed in `weather`: when the first gives only a few days (IMGW: 3),
+// the longest daily forecast of the others is used for the days.
+export async function loadForecast(conn, ids) {
+  const [id, ...more] = [].concat(ids);
+  const get = async (type, id) => {
+    try {
+      const res = await conn.sendMessagePromise({ type: "call_service", domain: "weather", service: "get_forecasts",
+        service_data: { type }, target: { entity_id: id }, return_response: true });
+      return res?.response?.[id]?.forecast || [];
+    } catch (e) { return []; }
+  };
+  const days = async (id) => { const d = await get("daily", id); return d.length ? d : foldTwiceDaily(await get("twice_daily", id)); };
+  const [hourly, own] = await Promise.all([get("hourly", id), days(id)]);
+  let daily = own;
+  if (daily.length < 5) for (const d of await Promise.all(more.map(days))) if (d.length > daily.length) daily = d;
+  return { hourly, daily, at: Date.now() };
+}
+
+function foldTwiceDaily(parts) {
+  const days = new Map();
+  for (const p of parts) {
+    const key = new Date(p.datetime).toDateString();
+    const d = days.get(key) || { datetime: p.datetime, temperature: -Infinity, templow: Infinity, precipitation: 0 };
+    d.temperature = Math.max(d.temperature, p.temperature);
+    d.templow = Math.min(d.templow, p.templow ?? p.temperature);
+    d.precipitation += p.precipitation || 0;
+    if (!d.condition || p.is_daytime) d.condition = p.condition;
+    days.set(key, d);
+  }
+  return [...days.values()];
+}
+
+// A live stream URL (HLS) for a camera, or null when the camera has none.
+export async function cameraStream(conn, id) {
+  try {
+    const res = await conn.sendMessagePromise({ type: "camera/stream", entity_id: id, format: "hls" });
+    return res?.url || null;
+  } catch (e) { return null; }
+}
+
+// State history of a few entities over the last `hours` (one-shot, like the tablet card's history loads):
+// { start, end, data: { id: [{ s, t }] } } with t in ms.
+export async function loadHistory(conn, ids, hours = 24) {
+  const end = new Date(), start = new Date(end.getTime() - hours * 3600e3);
+  const res = await conn.sendMessagePromise({ type: "history/history_during_period", start_time: start.toISOString(),
+    end_time: end.toISOString(), entity_ids: ids, minimal_response: true, no_attributes: true, significant_changes_only: false });
+  const data = {};
+  for (const id of ids) data[id] = (res?.[id] || []).map((x) => ({ s: x.s, t: (x.lu ?? x.lc) * 1000 }));
+  return { at: Date.now(), start: start.getTime(), end: end.getTime(), data };
+}
+
+// HA's persistent notifications (the bell in HA's sidebar), kept current: cb receives the whole map each time.
+export function subscribeNotifications(conn, cb) {
+  let all = {};
+  return conn.subscribeMessage((ev) => {
+    if (ev.type === "removed") for (const id of Object.keys(ev.notifications)) delete all[id];
+    else all = { ...(ev.type === "current" ? {} : all), ...ev.notifications };
+    cb(all);
+  }, { type: "persistent_notification/subscribe" });
+}
+
+// Which integration each entity comes from ({ entity_id: platform }), from the registry list HA's own UI uses.
+export async function entityPlatforms(conn) {
+  try {
+    const res = await conn.sendMessagePromise({ type: "config/entity_registry/list_for_display" });
+    const out = {};
+    for (const e of res?.entities || []) out[e.ei] = e.pl;
+    return out;
+  } catch (e) { return {}; }
+}

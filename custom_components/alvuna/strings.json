@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Alvuna",
+        "description": "Adds the Alvuna card for wall tablets and the Alvuna app for TVs."
+      }
+    },
+    "abort": {
+      "already_configured": "Alvuna is already set up."
+    }
+  }
+}
