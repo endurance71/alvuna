@@ -4,6 +4,33 @@ Checklist for submitting `app.alvuna.tv` through [LG Seller Lounge](https://sell
 public developer pages, read 2026-11-24; Seller Lounge itself is behind a login, so items marked **(check in the form)**
 could not be confirmed and must be read off the submission form.
 
+## Submission log
+
+**1.0.0 submitted for QA on 2026-11-24** (status "App Packaging Request"). What went into the form:
+
+- **File Upload:** `app.alvuna.tv_1.0.0_all.ipk`, File Type Web, chipset All, service platform "2024 and later"
+  (SDK 9.0.0), graphics resolution 1920×1080 only. LG warned that this leaves out FHD models (1280×720 graphics
+  plane); the user chose to submit UHD-only. **Next:** a 1280×720 package (`resolution` in appinfo, and the LG shell's
+  `style.css` scaled, since it is drawn for 1920×1080; the TV app already scales in `main.js`), added in File Upload.
+- **Images:** 400×400 icon flattened onto `#1A6676` (LG wants the icon background equal to the tile colour), tile colour
+  `#1A6676`, screenshots `screenshots/en/01`–`06` (LG takes at most 6), splash taken from the package.
+- **Service Country:** "Select Available Countries" minus China, China (CNTV), China (WASU) and Russia (Hong Kong and
+  Taiwan stay); service languages English and Polish.
+- **Display Info:** English (default) and Polish (All) title and description from section 4.
+- **Service Info:** category Life → Utility, version 1.0.0, General Audiences in all 189 countries, Brazil self-check
+  (all 75 "No", rating All), no adult content, keywords separated by spaces (commas are refused), contact URL
+  https://alvuna.shipapp.pl/en/ and kontakt@shipapp.pl, UK data: privacy policy Yes (the URL, shown as plain text on
+  TVs), data collected No, shared data No (the "country where data is stored" field only appears for Yes).
+- **Feature Info:** no device requirements, standard and Magic Remote, no DIAL.
+- **Test Info:** note for tester (section 5, condensed), UX scenario `store/Alvuna-UX-scenario.pdf`, no test account,
+  no voucher, no Geo IP block, no billing, no ads, player HLS + H.264 + AAC.
+- **Self-check list (v5.0):** 31 Pass, 22 N/A. Keys checked on the C4 the same day through HA `webostv.button`
+  (colour keys, digits, Info, CH+, HOME, EXIT), the TV keyboard in the address field, and a power cycle (off by HA, on by
+  Wake-on-LAN). Marked Pass without a direct check: 16 (`\` on the LG keyboard), 17 (voice key on the LG keyboard),
+  53 (after a factory reset), all system features.
+- **Submit page:** seller agreement, Korea QA IP note and the re-submission rule agreed; "minor defects may be released
+  upon QA approval": I agree.
+
 ## 0. Decided (2026-11-24)
 
 - [x] **How LG QA tests without Home Assistant:** "Try a sample home" on the "not found" and "Alvuna is not installed"
@@ -13,8 +40,8 @@ could not be confirmed and must be read off the submission form.
 - [x] **Privacy policy URL:** https://alvuna.shipapp.pl/en/privacy.html (Polish: https://alvuna.shipapp.pl/privacy.html).
 - [x] **Support:** https://alvuna.shipapp.pl/en/#pomoc, e-mail kontakt@shipapp.pl, issues https://github.com/endurance71/alvuna/issues.
 - [x] **Publisher:** ShipApp, a brand of MT Hub Damian Motyliński (76-200 Słupsk, NIP 8393229228). `vendor`: ShipApp.
-- [ ] **Lowest webOS version:** the TV app is built for Chromium 108, which is **webOS TV 24 and later**; pick that
-  unless the frontend is tested on 22/23 (Chromium 87/94). Tested: OLED55C4 (webOS TV 26 platform).
+- [x] **Lowest webOS version:** the TV app is built for Chromium 108, which is **webOS TV 24 and later** ("2024 and
+  later" in the form). Tested: OLED55C4 (webOS TV 26 platform).
 - [x] **Countries and languages:** English and Polish (the LG app by the TV's language, the TV app by the Home Assistant
   user's language, the sample home by the TV's language).
 

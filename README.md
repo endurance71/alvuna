@@ -4,6 +4,10 @@ Home Assistant on the TV. Install it, add the integration, open the app on the T
 the remote. Rooms from your areas, lights, scenes, weather, media, climate, cameras, the washing machine, waste
 collection. Nobody builds a dashboard, and nothing is typed on the TV.
 
+**Website and live demo: [alvuna.shipapp.pl](https://alvuna.shipapp.pl/en/)** ([po polsku](https://alvuna.shipapp.pl/))
+
+![Alvuna's home screen on a TV: clock, weather, security with cameras, appliances running](docs/screenshots/home.jpg)
+
 - **A ready layout**: Alvuna builds it from Home Assistant's areas, floors and devices, and keeps it current as they
   change. It picks each room's thermometer, one player per TV, readable names, and recognises WashData appliances,
   waste calendars, air quality and weather warnings.
@@ -13,6 +17,19 @@ collection. Nobody builds a dashboard, and nothing is typed on the TV.
 - **Pairing by code**: the TV shows a code; in Home Assistant, under Discovered, type it. Each TV gets its own user
   (not an administrator; local network only unless you allow a TV in another home), and removing it revokes it.
 - **Several homes** on one TV, each paired on its own; **English and Polish**.
+
+## Screenshots
+
+From the sample home (made-up devices) that also runs on the [website](https://alvuna.shipapp.pl/en/).
+
+| | |
+|---|---|
+| ![Scenes, rooms and media rows](docs/screenshots/scenes.jpg) | ![A room's side panel with lights, brightness and a blind](docs/screenshots/room.jpg) |
+| **Scenes and rooms**: OK runs a scene or opens a room | **A room**: lights, brightness, blinds |
+| ![A camera full screen with a doorbell notification](docs/screenshots/doorbell.jpg) | ![The overview panel with what needs attention](docs/screenshots/overview.jpg) |
+| **Doorbell**: the camera opens full screen | **Overview**: what needs attention, what is on |
+| ![Settings on the TV: wallpaper, accent, tiles, screensaver](docs/screenshots/settings.jpg) | |
+| **Settings on the TV**: wallpaper, accent, frosted glass, OLED care | |
 
 ## Install
 
@@ -53,6 +70,7 @@ does not match the sources, so rebuild and commit it with every frontend change.
 ## Po polsku
 
 Alvuna to Home Assistant na telewizorze: gotowy układ z obszarów i urządzeń, bez tworzenia dashboardów.
+Strona i pokaz na żywo: [alvuna.shipapp.pl](https://alvuna.shipapp.pl/).
 
 1. Zainstaluj ją z **Ustawienia → Marketplace** (albo z HACS) i dodaj integrację **Alvuna**. Instalacja nie wymaga
    restartu; aktualizacja o niego poprosi.
