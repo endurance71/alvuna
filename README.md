@@ -18,14 +18,15 @@ collection. Nobody builds a dashboard, and nothing is typed on the TV.
 
 1. In Home Assistant open **Settings → Marketplace** (HACS on 2026.10 and older), add this repository as a custom
    repository (`https://github.com/endurance71/alvuna`, type *Integration*) and install **Alvuna**.
-2. Restart Home Assistant, then **Settings → Devices & services → Add integration → Alvuna**.
+2. Open **Settings → Devices & services → Add integration → Alvuna** (the Marketplace may offer to set it up right
+   away). No restart is needed to install; an update asks for one.
 
 ## TV
 
 Install the Alvuna app (LG webOS; Google TV is coming), or open `http://<your-home-assistant>:8123/alvuna/tv/` in the
 TV's browser. The app finds Home Assistant on the network and shows a code: in Home Assistant, **Settings → Devices &
 services → Discovered → Alvuna TV**, type the code and name the TV. Settings on the TV (gear in the summary panel): the
-look of the tiles, screensaver and OLED care, homes (switch, add, remove) and signing out.
+look of the tiles, screensaver and OLED care, homes (switch, rename, add, remove) and signing out.
 
 Each paired TV is a device with a **Connected** sensor, and the actions `alvuna.notify` (a message on the TV) and
 `alvuna.show_camera` (a camera full screen, e.g. when the doorbell rings) can target it.
@@ -53,8 +54,8 @@ does not match the sources, so rebuild and commit it with every frontend change.
 
 Alvuna to Home Assistant na telewizorze: gotowy układ z obszarów i urządzeń, bez tworzenia dashboardów.
 
-1. Zainstaluj ją z **Ustawienia → Marketplace** (albo z HACS), zrestartuj Home Assistanta i dodaj integrację
-   **Alvuna**.
+1. Zainstaluj ją z **Ustawienia → Marketplace** (albo z HACS) i dodaj integrację **Alvuna**. Instalacja nie wymaga
+   restartu; aktualizacja o niego poprosi.
 2. Telewizor: uruchom aplikację Alvuna (albo `/alvuna/tv/` w przeglądarce TV). W Home Assistancie, w sekcji
    *Wykryte*, wybierz **Alvuna TV** i wpisz kod z ekranu.
 
