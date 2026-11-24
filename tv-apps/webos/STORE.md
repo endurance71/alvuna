@@ -163,7 +163,7 @@ without it the app may be rejected before QA. LG also asks for a UX scenario doc
 - [x] **TV app Back on the first screen** uses the platform's back (`PalmSystem.platformBack()`, what webOSTV.js
   `webOS.platformBack()` calls), not `window.close()`, which LG reserves for an app's own exit popup. webOS 23–25 go
   Home, 6.x/22 show the system's exit prompt.
-- [ ] Press Back on the first row on the TV once the integration with this change is running on Home Assistant.
+- [x] Checked on the C4 (webOS 26 platform), 2026-11-24: Back on the first row brings up the system's exit prompt.
 - [ ] **TV app closes itself when idle** (`tv_idle_minutes`, `window.close()`). LG has no public rule against it, but QA
   may report the app "disappearing". Mention it in the reviewer notes or turn it off by default.
 - [ ] Re-test on the TV: every screen reachable and leavable with arrows, OK and Back only; again with the pointer only.
