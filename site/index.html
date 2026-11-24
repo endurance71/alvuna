@@ -2,6 +2,23 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
+<script>
+/* Language: open the version that matches the browser (Polish if it prefers Polish, otherwise English). A click on
+   PL/EN is remembered and wins over the browser; moves within the site and search engine robots are never redirected. */
+(function () { try {
+  var here = "pl", there = "en/", key = "alvuna-lang", saved = null;
+  try { saved = localStorage.getItem(key); } catch (e) {}
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest("a.lang");
+    if (a) try { localStorage.setItem(key, a.hreflang); } catch (x) {}
+  });
+  if (/bot|crawl|spider|slurp|lighthouse|preview/i.test(navigator.userAgent)) return;
+  if (!saved && document.referrer && new URL(document.referrer).host === location.host) return;
+  var want = saved || ((navigator.languages || [navigator.language || ""]).map(function (l) { return String(l).slice(0, 2).toLowerCase(); })
+    .filter(function (l) { return l === "pl" || l === "en"; })[0] || "en");
+  if (want !== here) location.replace(there + location.hash);
+} catch (e) {} })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Alvuna · Home Assistant na telewizorze</title>
 <meta name="description" content="Alvuna pokazuje Twój dom z Home Assistanta na telewizorze: pokoje, światła, sceny, kamery i pogodę, ułożone pod pilota. Parowanie kodem, bez budowania dashboardu.">
