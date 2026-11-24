@@ -40,6 +40,7 @@ export function renderPanel(h, p, ctx) {
   if (p.type === "device") return devicePanel(h, p);
   if (p.type === "settings") return settingsPanel(h, ctx);
   if (p.type === "addhome") return addHomePanel(ctx);
+  if (p.type === "hold") return holdPanel(p);
   if (p.type === "wallpapers") return wallpapersPanel();
   if (p.type === "accents") return accentsPanel();
   return "";
@@ -571,6 +572,13 @@ function instancesPanel(ctx) {
   });
   const add = row({ key: "inst:add", act: "add-home", ic: "mdi:home-plus-outline", title: t("tv.home.add"), sub: t("tv.home.add_hint"), value: icon("mdi:chevron-right") });
   return shell("", head("mdi:home-switch-outline", t("tv.instances.title"), t("tv.instances.sub")), rows.join("") + add);
+}
+
+// Held OK on a tile: what can be done with it beyond opening it.
+function holdPanel(p) {
+  return shell("", head("mdi:dots-horizontal-circle-outline", p.name, t("tv.hold.sub")),
+    row({ key: "hold:hide", act: "hold-hide", attrs: `data-item="${esc(p.item)}"`, ic: "mdi:eye-off-outline", title: t("tv.hold.hide"), sub: t("tv.hold.hide_hint") })
+    + row({ key: "hold:cancel", act: "close", ic: "mdi:close", title: t("tv.hold.cancel") }));
 }
 
 // Another home by its address: typed with the remote on the TV's own keyboard (OK on the field), then Połącz.

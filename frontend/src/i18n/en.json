@@ -947,6 +947,14 @@
       "connect": "Connect",
       "connect_hint": "The TV goes there and asks to be paired",
       "bad_address": "That does not look like an address"
+    },
+    "hold": {
+      "sub": "OK held",
+      "hide": "Hide in Alvuna",
+      "hide_hint": "Gone from TVs and tablets; bring it back in the Alvuna panel in HA",
+      "cancel": "Cancel",
+      "hidden": "Hidden. Bring it back in the Alvuna panel in Home Assistant.",
+      "failed": "Could not hide it"
     }
   }
 }

@@ -3,7 +3,7 @@
 // card's config (a `custom:homedeck-card` on the Lovelace dashboard named in ?dashboard=).
 import "./ui/icons.js";
 import { connect, call, loadDeckConfig, onDashboardChange, loadForecast, cameraStream, loadHistory, subscribeNotifications, entityPlatforms,
-  userLocale, hasTokens, pair, subscribeLayout, subscribeTv, signOut } from "./ha.js";
+  userLocale, hasTokens, pair, subscribeLayout, subscribeTv, signOut, hideItem } from "./ha.js";
 import { Home } from "./model/home.js";
 import { esc, time, longDate, fmtTime, wIcon } from "./model/format.js";
 import { setLocale, t, language } from "../shared/i18n.js";
@@ -28,7 +28,7 @@ const APP_ICONS = ["mdi:alert", "mdi:alert-circle", "mdi:alert-circle-outline", 
   "mdi:television", "mdi:thermometer", "mdi:thermostat", "mdi:tree-outline", "mdi:volume-high", "mdi:volume-off",
   "mdi:water-outline", "mdi:water-percent", "mdi:weather-windy", "mdi:weather-sunset-up", "mdi:weather-sunset-down",
   "mdi:gauge", "mdi:eye-outline", "mdi:sun-wireless-outline", "mdi:umbrella-outline", "mdi:navigation", "mdi:wifi-off",
-  "mdi:keyboard-return", "mdi:arrow-left", "mdi:home-thermometer-outline", "mdi:play-circle-outline", "mdi:history", "mdi:shield-off-outline", "mdi:bell-outline", "mdi:bell-ring-outline", "mdi:battery-low", "mdi:battery-alert-variant-outline", "mdi:package-up", "mdi:account-group-outline", "mdi:trash-can-outline", "mdi:check-circle-outline", "mdi:check", "mdi:eye-off-outline", "mdi:debug-step-over", "mdi:bell-check-outline", "mdi:monitor-star", "mdi:brightness-6", "mdi:cursor-move", "mdi:exit-run", "mdi:blur", "mdi:animation-outline", "mdi:check-bold", "mdi:border-radius", "mdi:home-plus-outline", "mdi:logout", "mdi:home-remove-outline", "mdi:home-switch-outline", "mdi:home-outline", "mdi:arrow-right", "mdi:web"];
+  "mdi:keyboard-return", "mdi:arrow-left", "mdi:home-thermometer-outline", "mdi:play-circle-outline", "mdi:history", "mdi:shield-off-outline", "mdi:bell-outline", "mdi:bell-ring-outline", "mdi:battery-low", "mdi:battery-alert-variant-outline", "mdi:package-up", "mdi:account-group-outline", "mdi:trash-can-outline", "mdi:check-circle-outline", "mdi:check", "mdi:eye-off-outline", "mdi:debug-step-over", "mdi:bell-check-outline", "mdi:monitor-star", "mdi:brightness-6", "mdi:cursor-move", "mdi:exit-run", "mdi:blur", "mdi:animation-outline", "mdi:check-bold", "mdi:border-radius", "mdi:home-plus-outline", "mdi:logout", "mdi:home-remove-outline", "mdi:home-switch-outline", "mdi:home-outline", "mdi:arrow-right", "mdi:web", "mdi:dots-horizontal-circle-outline", "mdi:close"];
 const params = new URLSearchParams(location.search);
 let instances = loadInstances();
 // ?dashboard=<path> reads the Alvuna card written on that dashboard; without it the layout comes from the integration.
@@ -223,6 +223,9 @@ function act(el) {
     case "entity": return openPanel({ type: "entity", kind: d.kind, entity: d.entity, entity2: d.entity2 || "", name: d.name || "", icon: d.icon || "" });
     case "instances": return openPanel({ type: "instances" });
     case "add-home": S.addAddr = ""; return openPanel({ type: "addhome" });
+    case "hold-hide":
+      closeLayer();
+      return hideItem(conn, d.item).then(() => toast(t("tv.hold.hidden"), 6000)).catch(() => toast(t("tv.hold.failed")));
     // OK on the address field: the TV's own keyboard comes up for the <input>; Enter there connects (see keydown).
     case "add-focus": { const input = document.getElementById("addr"); if (input) { input.focus(); input.select?.(); } return; }
     case "add-go": return addHome();
@@ -357,7 +360,14 @@ window.addEventListener("keydown", (ev) => {
     if (S.camera != null) cameraFollowFocus();
     return;
   }
-  if (ev.key === "Enter" || ev.keyCode === 13) { ev.preventDefault(); focus.activate(); return; }
+  // OK: a short press acts on release; held for 0.65 s it opens the item's menu (hide it from Alvuna's screens).
+  if (ev.key === "Enter" || ev.keyCode === 13) {
+    ev.preventDefault();
+    if (ev.repeat || hold.t) return;
+    hold.fired = false;
+    hold.t = setTimeout(() => { hold.t = 0; hold.fired = true; openHold(); }, 650);
+    return;
+  }
   if (isBack(ev)) {
     ev.preventDefault();
     if (closeLayer()) return;
@@ -365,6 +375,33 @@ window.addEventListener("keydown", (ev) => {
     if (WEBOS) platformBack();
   }
 });
+window.addEventListener("keyup", (ev) => {
+  if (!(ev.key === "Enter" || ev.keyCode === 13) || document.activeElement?.tagName === "INPUT") return;
+  ev.preventDefault();
+  if (hold.t) { clearTimeout(hold.t); hold.t = 0; if (!hold.fired) focus.activate(); }
+});
+const hold = { t: 0, fired: false };
+
+// What a held tile stands for: a room ("area:<id>"), a scene, a sensor, a camera or a player. Nothing for the rest
+// (panels, settings), where holding OK simply does what pressing it does.
+function holdTarget(el) {
+  const d = el?.dataset || {}, h = home();
+  if (d.act === "room") { const r = h.rooms()[Number(d.room)]; return r?.area ? `area:${r.area}` : null; }
+  if (d.act === "scene") return d.entity || null;
+  if (d.f?.startsWith("sec:")) return d.f.slice(4);
+  if (d.act === "camera") return h.cameras()[Number(d.cam)]?.entity || null;
+  if (d.act === "media") return h.mediaItems()[Number(d.media)]?.tv || null;
+  return null;
+}
+
+function openHold() {
+  const el = document.querySelector(".f");
+  const item = !S.panel && S.camera == null ? holdTarget(el) : null;
+  if (!item) return focus.activate();
+  const name = el.querySelector(".name, b, .title")?.textContent?.trim() || item;
+  openPanel({ type: "hold", item, name });
+}
+
 // Back on the first row leaves the way the TV does it (webOS 23 and later go Home, older ones show the system's exit
 // prompt), as LG's app review requires; window.close() is meant only for an app's own exit popup. This is what
 // webOSTV.js webOS.platformBack() calls.

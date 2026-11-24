@@ -983,6 +983,14 @@
       "connect": "Połącz",
       "connect_hint": "Telewizor przejdzie tam i poprosi o sparowanie",
       "bad_address": "To nie wygląda na adres"
+    },
+    "hold": {
+      "sub": "Przytrzymany OK",
+      "hide": "Ukryj w Alvunie",
+      "hide_hint": "Zniknie z telewizorów i tabletów; przywrócisz w panelu Alvuna w HA",
+      "cancel": "Anuluj",
+      "hidden": "Ukryte. Przywrócisz je w panelu Alvuna w Home Assistancie.",
+      "failed": "Nie udało się ukryć"
     }
   }
 }

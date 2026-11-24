@@ -122,6 +122,9 @@ export const onDashboardChange = (conn, cb) => conn.subscribeEvents(cb, "lovelac
 // The layout from the integration (alvuna/layout/subscribe), now and after every change; rejects without the integration.
 export const subscribeLayout = (conn, cb) => conn.subscribeMessage(cb, { type: "alvuna/layout/subscribe" });
 
+// Hides one item (an entity, or "area:<id>" for a room) on every screen of this home; the panel can show it again.
+export const hideItem = (conn, item) => conn.sendMessagePromise({ type: "alvuna/layout/hide", item, hidden: true });
+
 // This TV's channel: notifications and cameras sent by the alvuna.notify / alvuna.show_camera actions.
 export const subscribeTv = (conn, cb) => conn.subscribeMessage(cb, { type: "alvuna/tv/subscribe" });
 
