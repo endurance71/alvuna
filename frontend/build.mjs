@@ -1,5 +1,6 @@
 // Builds Alvuna's frontend into the integration's www folder, which Home Assistant serves:
-//   www/static/  at /alvuna/static/  the tablet card (alvuna-card.js, loaded with ?v=<content hash>) and the fonts
+//   www/static/  at /alvuna/static/  the tablet card and the sidebar panel (alvuna-card.js, alvuna-panel.js, loaded with
+//                                    ?v=<content hash>) and the fonts
 //   www/tv/      at /alvuna/tv/      the TV app: index.html (never cached) and content-hashed main-*.js / styles-*.css
 // Everything under both paths is served with a long cache, so a file's content may only change with its name or ?v=.
 import { build } from "esbuild";
@@ -17,6 +18,9 @@ mkdirSync(`${WWW}tv`, { recursive: true });
 cpSync("static/fonts", `${WWW}static/fonts`, { recursive: true });
 
 await build({ entryPoints: ["src/card/alvuna-card.js"], outfile: `${WWW}static/alvuna-card.js`, bundle: true, minify: true,
+  format: "esm", target: "es2022", external, logLevel: "warning" });
+// The Alvuna panel in the sidebar (administrators only), registered by frontend.py through panel_custom.
+await build({ entryPoints: ["src/panel/alvuna-panel.js"], outfile: `${WWW}static/alvuna-panel.js`, bundle: true, minify: true,
   format: "esm", target: "es2022", external, logLevel: "warning" });
 
 // hls.js (plays HA's fMP4 HLS through MSE; the TV's own player cannot) is loaded only when a camera opens.
