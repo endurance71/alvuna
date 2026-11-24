@@ -97,7 +97,13 @@ export async function userLocale() {
 }
 export const subscribeLayout = async (_conn, cb) => { setTimeout(() => cb({ source: "auto", config: layout() })); return () => {}; };
 export const hideItem = async () => {};
-export const subscribeTv = async (_conn, cb) => { tvCb = cb; return () => {}; };
+export const subscribeTv = async (_conn, cb) => {
+  tvCb = cb;
+  // On a TV, once the app listens for messages (a slow TV may take seconds to get here): say this is a sample home.
+  if (TV) setTimeout(() => cb({ type: "notify", title: LANG === "en" ? "Sample home" : "Przykładowy dom", seconds: 10,
+    message: LANG === "en" ? "Made-up devices. Back on the first row returns to the search." : "Urządzenia są przykładowe. Wstecz na pierwszym rzędzie wraca do wyszukiwania." }), 1500);
+  return () => {};
+};
 export async function loadForecast() { return forecast(); }
 export async function cameraStream() { return null; }
 export async function loadHistory(_conn, list, hours = 24) {
@@ -122,8 +128,7 @@ window.__demo = {
 // leaving the app (main.js asks window.webOS.platformBack first), and a note says this is a sample home.
 if (TV) {
   window.webOS = { ...(window.webOS || {}), platformBack: () => history.back() };
-  setTimeout(() => window.__demo.notify(LANG === "en" ? "Sample home" : "Przykładowy dom",
-    LANG === "en" ? "Made-up devices. Back on the first row returns to the search." : "Urządzenia są przykładowe. Wstecz na pierwszym rzędzie wraca do wyszukiwania.", 10), 2500);
+
 } else {
   document.documentElement.classList.add("web");
 }

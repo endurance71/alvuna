@@ -34,7 +34,8 @@ could not be confirmed and must be read off the submission form.
 | Back key | `disableBackHistoryAPI: true`: the app handles Back (keyCode 461) itself |
 
 - [ ] `./build.sh` passes (it also refuses to package anything that looks like a token or a fixed server address).
-- [ ] Installed and run on a real TV once more from the exact `.ipk` being uploaded.
+- [x] Installed and run on a real TV from the exact `.ipk` being uploaded: 1.0.0 on the C4, 2026-11-24 (opens the saved
+  home; Try a sample home loads the demo in TV mode with the note; Back on its first row returns to the previous page).
 - [ ] The service's code stays Node 8.12 compatible (webOS TV 5/6). Node by webOS TV version: 22 → 12.21, 23 → 12.22,
   24 → 16.19, 25 → 16.20, 26 → 20.12.
 
