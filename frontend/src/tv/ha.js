@@ -4,6 +4,7 @@
 // Sign-in reads the frontend's own token store ("hassTokens"): on the TV, the shell's sign-in page put a long-lived
 // token there; in a browser that is already signed in to HA, the normal session (with its refresh token) is used.
 import { getAuth, createConnection, subscribeEntities, callService as haCall, ERR_INVALID_AUTH } from "home-assistant-js-websocket";
+import { t } from "../shared/i18n.js";
 
 const loadTokens = async () => {
   try { return JSON.parse(localStorage.getItem("hassTokens")) || null; } catch (e) { return null; }
@@ -42,8 +43,17 @@ export async function loadDeckConfig(conn, dashboard) {
     return null;
   };
   const card = find(cfg);
-  if (!card) throw new Error(`Na dashboardzie „${dashboard}” nie ma karty Alvuna`);
+  if (!card) throw new Error(t("tv.no_card", { dashboard }));
   return card;
+}
+
+// The signed-in user's language and number/time formats (what HA's own frontend shows them), with the server's language
+// as the fallback, and the server's currency: what setLocale takes.
+export async function userLocale(conn) {
+  const ask = (msg) => conn.sendMessagePromise(msg).catch(() => null);
+  const [user, config] = await Promise.all([ask({ type: "frontend/get_user_data", key: "language" }), ask({ type: "get_config" })]);
+  const v = user?.value || {};
+  return { language: v.language || config?.language, numberFormat: v.number_format, timeFormat: v.time_format, currency: config?.currency };
 }
 
 export const onDashboardChange = (conn, cb) => conn.subscribeEvents(cb, "lovelace_updated");

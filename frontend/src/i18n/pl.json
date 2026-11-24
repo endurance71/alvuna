@@ -1,1 +1,944 @@
-{}
+{
+  "weather": {
+    "conditions": {
+      "clear-night": "Pogodnie",
+      "cloudy": "Pochmurno",
+      "exceptional": "Nietypowo",
+      "fog": "Mgła",
+      "hail": "Grad",
+      "lightning": "Burza",
+      "lightning-rainy": "Burza z deszczem",
+      "partlycloudy": "Częściowe zachm.",
+      "pouring": "Ulewa",
+      "rainy": "Deszcz",
+      "snowy": "Śnieg",
+      "snowy-rainy": "Deszcz ze śniegiem",
+      "sunny": "Słonecznie",
+      "windy": "Wietrznie",
+      "windy-variant": "Wietrznie"
+    },
+    "wind": [
+      "Pn",
+      "Pn-Wsch",
+      "Wsch",
+      "Pd-Wsch",
+      "Pd",
+      "Pd-Zach",
+      "Zach",
+      "Pn-Zach"
+    ],
+    "air": {
+      "very_good": "bardzo dobre",
+      "good": "dobre",
+      "moderate": "umiarkowane",
+      "sufficient": "dostateczne",
+      "bad": "złe",
+      "very_bad": "bardzo złe"
+    },
+    "imgw": {
+      "storms": "Burze",
+      "dense_fog": "Gęsta mgła",
+      "heavy_rainfall": "Intensywne opady deszczu",
+      "heavy_snowfall": "Intensywne opady śniegu",
+      "icing": "Oblodzenie",
+      "freezing_rain": "Marznący deszcz",
+      "snowfall": "Opady śniegu",
+      "frosts": "Przymrozki",
+      "thaw": "Roztopy",
+      "heavy_rain_with_storms": "Ulewy z burzami",
+      "heavy_frost": "Silny mróz",
+      "strong_wind": "Silny wiatr",
+      "heat": "Upał",
+      "snow_blizzard": "Zamieć śnieżna"
+    },
+    "warning": "Ostrzeżenie: {alert}",
+    "smog": "Smog",
+    "imgw_line": "Ostrzeżenie IMGW:",
+    "air_line": "Powietrze {label}",
+    "no_airing": "Lepiej nie wietrzyć",
+    "wind_label": "Wiatr",
+    "pressure": "Ciśnienie",
+    "clouds": "Zachmurzenie",
+    "air_label": "Powietrze",
+    "no_forecast": "Brak prognozy",
+    "loading": "Ładowanie prognozy…",
+    "title": "Pogoda",
+    "night": "noc",
+    "high_low": "Maks. {hi}° · Min. {lo}°",
+    "imgw_source": "Komunikat IMGW-PIB",
+    "hours": "Najbliższe godziny",
+    "days": "Kolejne dni",
+    "partlycloudy_long": "Częściowe zachmurzenie"
+  },
+  "security": {
+    "alert": {
+      "door": "otwarte",
+      "window": "otwarte",
+      "opening": "otwarte",
+      "garage_door": "otwarta",
+      "moisture": "zalanie",
+      "smoke": "dym",
+      "gas": "gaz",
+      "carbon_monoxide": "czad",
+      "safety": "alarm",
+      "problem": "problem"
+    },
+    "attention": "uwaga",
+    "more": "i {n} więcej",
+    "offline": {
+      "one": "{n} czujnik offline",
+      "few": "{n} czujniki offline",
+      "many": "{n} czujników offline",
+      "other": "{n} czujników offline"
+    },
+    "safe": "Bezpiecznie",
+    "monitored": {
+      "one": "{n} monitorowany czujnik",
+      "few": "{n} monitorowane czujniki",
+      "many": "{n} monitorowanych czujników",
+      "other": "{n} monitorowanych czujników"
+    },
+    "offline_word": "offline",
+    "ok": "OK",
+    "sensors": "Czujniki",
+    "no_sensors": "Brak czujników",
+    "people": "Domownicy",
+    "no_people": "Brak osób",
+    "calm": {
+      "door": "zamknięte",
+      "window": "zamknięte",
+      "opening": "zamknięte",
+      "garage_door": "zamknięta",
+      "moisture": "sucho",
+      "smoke": "brak dymu",
+      "gas": "brak gazu",
+      "carbon_monoxide": "brak czadu"
+    }
+  },
+  "tabs": {
+    "home": "Dom",
+    "rooms": "Pokoje",
+    "media": "Media",
+    "clean": "Porządki",
+    "heating": "Ogrzewanie",
+    "usage": "Zużycie",
+    "security": "Ochrona"
+  },
+  "media": {
+    "home_screen": "Ekran główny",
+    "tv_settings": "Ustawienia",
+    "playing_now": "Gra teraz",
+    "living_room": "Salon",
+    "nothing": "Nic nie gra",
+    "previous": "Poprzedni",
+    "play_pause": "Odtwórz/pauza",
+    "next": "Następny",
+    "playing": "Odtwarzanie",
+    "paused": "Wstrzymane",
+    "unmute": "Włącz dźwięk",
+    "mute": "Wycisz",
+    "vol_down": "Ciszej",
+    "volume": "Głośność",
+    "vol_up": "Głośniej"
+  },
+  "persons": {
+    "activity": {
+      "Stationary": "W spoczynku",
+      "Walking": "Spacer",
+      "Running": "Bieg",
+      "Automotive": "W samochodzie",
+      "Cycling": "Rower"
+    },
+    "home": "W domu",
+    "away": "Poza domem",
+    "unknown": "Nieznane",
+    "dist_m": "{d} m od domu",
+    "dist_km": "{d} km od domu",
+    "battery_charging": "Bateria · ładuje",
+    "steps": "Kroki dziś",
+    "activity_label": "Aktywność",
+    "connection": "Połączenie",
+    "cellular": "Komórkowe",
+    "map": "Mapa i historia",
+    "home_lc": "w domu",
+    "away_lc": "poza domem"
+  },
+  "common": {
+    "since": {
+      "now": "od chwili",
+      "min": "od {n} min",
+      "hour": "od {n} godz.",
+      "day": {
+        "one": "od {n} dnia",
+        "few": "od {n} dni",
+        "many": "od {n} dni",
+        "other": "od {n} dni"
+      }
+    },
+    "changed": {
+      "now": "zmiana przed chwilą",
+      "min": "zmiana {n} min temu",
+      "hour": "zmiana {n} godz. temu",
+      "day": {
+        "one": "zmiana {n} dzień temu",
+        "few": "zmiana {n} dni temu",
+        "many": "zmiana {n} dni temu",
+        "other": "zmiana {n} dni temu"
+      }
+    },
+    "config_rooms": "homedeck-card: zdefiniuj rooms",
+    "card_description": "Pulpit domu na tablet",
+    "close": "Zamknij",
+    "settings": "Ustawienia",
+    "unavailable_m": "Niedostępny",
+    "unavailable_f": "Niedostępna",
+    "unavailable_n": "Niedostępne",
+    "on_m": "Włączony",
+    "on_n": "Włączone",
+    "off_m": "Wyłączony",
+    "off_n": "Wyłączone",
+    "turn_on": "Włącz",
+    "turn_off": "Wyłącz",
+    "now_value": "Teraz {v}",
+    "humidity": "Wilgotność",
+    "temperature": "Temperatura",
+    "now": "Teraz",
+    "today": "Dziś",
+    "today_lc": "dziś",
+    "tomorrow_lc": "jutro",
+    "loading": "Ładowanie…",
+    "no_data": "Brak danych",
+    "all_ok": "Wszystko w porządku",
+    "battery": "Bateria",
+    "less": "Mniej",
+    "more": "Więcej",
+    "mode": "Tryb",
+    "pause": "Wstrzymaj",
+    "resume": "Wznów",
+    "power_draw": "Moc",
+    "this_month": "Ten miesiąc",
+    "month_cost": "Koszt w miesiącu",
+    "maintenance": "Konserwacja",
+    "power": "Zasilanie",
+    "ago": {
+      "now": "przed chwilą",
+      "min": "{n} min temu",
+      "hour": "{n} godz. temu",
+      "day": {
+        "one": "{n} dzień temu",
+        "few": "{n} dni temu",
+        "many": "{n} dni temu",
+        "other": "{n} dni temu"
+      }
+    },
+    "age": {
+      "now": "przed chwilą",
+      "min": "{n} min",
+      "hour": "{n} godz.",
+      "day": {
+        "one": "{n} dzień",
+        "few": "{n} dni",
+        "many": "{n} dni",
+        "other": "{n} dni"
+      }
+    }
+  },
+  "cleaning": {
+    "vacuum_state": {
+      "cleaning": "Sprząta",
+      "docked": "W stacji",
+      "returning": "Wraca do stacji",
+      "paused": "Wstrzymany",
+      "idle": "Gotowy",
+      "error": "Błąd",
+      "unavailable": "Niedostępny"
+    },
+    "suction": {
+      "quiet": "Cicho",
+      "silent": "Cicho",
+      "standard": "Standard",
+      "strong": "Mocno",
+      "turbo": "Turbo",
+      "max": "Max"
+    },
+    "vacuum_mode": {
+      "Sweeping": "Odkurzanie",
+      "Mopping": "Mopowanie",
+      "Sweeping and mopping": "Odkurzanie z mopem"
+    },
+    "wear": {
+      "main_brush_left": "Szczotka główna",
+      "side_brush_left": "Szczotka boczna",
+      "filter_left": "Filtr",
+      "mop_pad_left": "Mop",
+      "sensor_dirty_left": "Czujniki"
+    },
+    "start": "Sprzątaj",
+    "vacuum": "Odkurzacz",
+    "suction_label": "Moc ssania",
+    "map": "Mapa sprzątania",
+    "area": "Powierzchnia",
+    "time": "Czas",
+    "pause": "Pauza",
+    "start_btn": "Start",
+    "stop": "Stop",
+    "dock": "Do stacji",
+    "locate": "Znajdź",
+    "room": "Sprzątaj pokój",
+    "no_devices": "Brak urządzeń"
+  },
+  "appliances": {
+    "program": {
+      "detecting...": "Rozpoznaje program",
+      "detecting": "Rozpoznaje program"
+    },
+    "state": {
+      "off": "Wyłączona",
+      "idle": "Gotowa",
+      "starting": "Uruchamia się",
+      "running": "Pracuje",
+      "paused": "Wstrzymana",
+      "user_paused": "Wstrzymana",
+      "ending": "Kończy",
+      "finished": "Zakończona",
+      "anti_wrinkle": "Ochrona przed zagnieceniem",
+      "delay_wait": "Opóźniony start",
+      "interrupted": "Przerwana",
+      "force_stopped": "Zatrzymana",
+      "clean": "Gotowe do wyjęcia",
+      "unknown": "Brak danych"
+    },
+    "maint": "{n} cykli od ostatniego razu · co {every}",
+    "cycles": "{n} cykli",
+    "unloaded": "Wyjęte",
+    "left": "zostało {n} min",
+    "program_label": "Program",
+    "phase": "Faza",
+    "duration": "Czas cyklu",
+    "energy_today": "Energia dziś",
+    "cycles_label": "Cykle"
+  },
+  "plants": {
+    "metrics": {
+      "moisture": {
+        "label": "Wilgotność gleby",
+        "Low": "Sucho — podlej roślinę",
+        "High": "Za mokro — wstrzymaj podlewanie"
+      },
+      "illuminance": {
+        "label": "Światło",
+        "Low": "Za ciemno — przestaw bliżej okna",
+        "High": "Za jasno — odsuń od okna"
+      },
+      "dli": {
+        "label": "Światło dzienne (DLI)",
+        "Low": "Za mało światła w ciągu dnia — przestaw bliżej okna",
+        "High": "Za dużo słońca — odsuń od okna"
+      },
+      "temperature": {
+        "label": "Temperatura",
+        "Low": "Za zimno",
+        "High": "Za ciepło"
+      },
+      "humidity": {
+        "label": "Wilgotność powietrza",
+        "Low": "Za suche powietrze — zrosić liście",
+        "High": "Za wilgotne powietrze"
+      }
+    },
+    "attention": "Wymaga uwagi",
+    "ok": "W porządku",
+    "plant": "Roślina",
+    "range": "zakres {range}",
+    "in_range": "W normie",
+    "low": "Za mało",
+    "high": "Za dużo",
+    "sensor_battery": "Bateria czujnika"
+  },
+  "home": {
+    "battery_no_signal": "brak sygnału",
+    "battery_low": "słaba",
+    "kiosk_exit": "Wyjdź z trybu kiosku",
+    "kiosk": "Tryb kiosku",
+    "lights_on": {
+      "one": "{n} światło włączone w domu",
+      "few": "{n} światła włączone w domu",
+      "many": "{n} świateł włączonych w domu",
+      "other": "{n} świateł włączonych w domu"
+    },
+    "all_off": "Wszystkie światła wyłączone",
+    "status": "Status domu",
+    "all_on_btn": "Włącz wszystkie",
+    "all_off_btn": "Wyłącz wszystkie",
+    "attention": "Wymaga uwagi:"
+  },
+  "scenes": {
+    "title": "Sceny"
+  },
+  "waste": {
+    "today": "Dziś wywóz:",
+    "tomorrow": "Jutro wywóz:",
+    "in_days": "za {n} dni",
+    "title": "Wywóz śmieci",
+    "none": "Brak odbiorów w najbliższych 3 tygodniach",
+    "loading": "Wczytuję harmonogram…",
+    "note": "Pojemniki wystaw przed posesję do 6:00 w dniu odbioru."
+  },
+  "rooms": {
+    "humidity": "Wilgotność {v}%",
+    "humidity_none": "Wilgotność –",
+    "no_lights": "Brak świateł",
+    "all_off": "Wszystko wyłączone",
+    "all_on": "Wszystkie włączone",
+    "some_on": "Włączone {n} z {total}",
+    "power": "Zasilanie {name}",
+    "no_lights_room": "Brak świateł w tym pokoju",
+    "power_now": "Moc teraz"
+  },
+  "devices": {
+    "active": "Aktywny",
+    "asleep": "Uśpiony",
+    "charging": "ładuje",
+    "sleep_label": "Uśpij {name}",
+    "sleep": "Uśpij",
+    "sleeping": "Usypiam…"
+  },
+  "climate": {
+    "humidity_short": "{v}% wilg.",
+    "outside": "na zewnątrz {t}°",
+    "title": "Klimat",
+    "humidifier_off": "{name} wyłączony",
+    "heating_off": "Ogrzewanie wyłączone",
+    "heating_word": "Grzeje do",
+    "holding_word": "Utrzymuje",
+    "boost_note": "grzanie 1h",
+    "boost_left": ", jeszcze {n} min",
+    "manual": "ręcznie, harmonogram {t}°",
+    "cooler": "Chłodniej",
+    "warmer": "Cieplej",
+    "schedule": "Harmonogram",
+    "boost": "Grzanie 1h",
+    "outdoor": "Na zewnątrz",
+    "humid": "wilgotno",
+    "dry": "sucho",
+    "average": "Średnio {t}° w mieszkaniu",
+    "humidifier_modes": {
+      "auto": "auto",
+      "eco": "eko",
+      "laundry": "pranie",
+      "purify": "oczyszczanie",
+      "sleep": "noc",
+      "normal": "normalny",
+      "boost": "turbo"
+    },
+    "drying": "Osusza",
+    "humidifying": "Nawilża",
+    "holding_humidity": "Trzyma wilgotność",
+    "target": "cel {v}",
+    "humidity_lower": "Niższy cel wilgotności",
+    "humidity_higher": "Wyższy cel wilgotności"
+  },
+  "todo": {
+    "error": "Nie udało się wczytać listy",
+    "open": {
+      "one": "{n} pozycja do zrobienia",
+      "few": "{n} pozycje do zrobienia",
+      "many": "{n} pozycji do zrobienia",
+      "other": "{n} pozycji do zrobienia"
+    },
+    "all_done": "Wszystko zrobione",
+    "add_placeholder": "Dodaj pozycję…",
+    "new_item": "Nowa pozycja",
+    "add": "Dodaj",
+    "done": "Zrobione · {n}",
+    "clear": "Wyczyść"
+  },
+  "usage": {
+    "days": "{n} dni",
+    "prev_month": "Poprzedni miesiąc",
+    "approx": "≈ {v}",
+    "this_month": "W tym miesiącu",
+    "data_until": "Dane do"
+  },
+  "heating": {
+    "burner_starts": {
+      "one": "palnik · {n} zapalenie",
+      "few": "palnik · {n} zapalenia",
+      "many": "palnik · {n} zapaleń",
+      "other": "palnik · {n} zapaleń"
+    },
+    "burner_time": "pracy palnika",
+    "run_today": "Pracy dziś",
+    "starts_today": "Zapaleń dziś",
+    "loading": "Wczytywanie…",
+    "no_data_24h": "Brak danych z ostatniej doby",
+    "flow": "Zasilanie",
+    "return": "Powrót",
+    "target_short": "Zadane",
+    "burner": "Palnik",
+    "condense_line": "45° · poniżej kocioł kondensuje",
+    "goal": "cel {t}°",
+    "loop_aria": "Kocioł i grzejnik: zasilanie {flow}, powrót {ret}, grzejnik {rad}, w domu {room}",
+    "dhw_short": "CWU",
+    "gas_lc": "gaz",
+    "boiler_lc": "kocioł",
+    "radiator_lc": "grzejnik",
+    "indoors": "w domu",
+    "flow_lc": "zasilanie",
+    "return_lc": "powrót",
+    "water_lc": "woda",
+    "outside_lc": "na zewnątrz",
+    "thermostat": "Termostat",
+    "now_lc": "teraz {t}°",
+    "boiler_line": "Kocioł:",
+    "power_pct": "{n}% mocy",
+    "power_min": "minimalna moc",
+    "offline": "Brak połączenia",
+    "esp_silent": "ESP nie odpowiada",
+    "fault": "Awaria kotła",
+    "check_display": "sprawdź wyświetlacz kotła",
+    "heating_water": "Grzeje wodę",
+    "heating_home": "Grzeje dom",
+    "burner_resting": "Palnik odpoczywa",
+    "pump": "pompa krąży wodą",
+    "waiting": "Czeka",
+    "water_warmer": "woda w kotle {t}° – cieplejsza niż potrzeba",
+    "igniting": "zaraz zapali palnik",
+    "heating_off": "Grzanie wyłączone",
+    "no_demand": "termostat nie potrzebuje ciepła",
+    "condensing": "Kondensuje",
+    "partial": "Częściowa kondensacja",
+    "no_condensing": "Bez kondensacji",
+    "target_water_lc": "woda zadana",
+    "delta": "różnica {t}°",
+    "gas_cost": "gaz · ok. {v}",
+    "gas_estimate": "gaz (szacunek)",
+    "pressure_low": "ciśnienie · dolej wody",
+    "pressure_lc": "ciśnienie wody",
+    "hot_water_lc": "ciepła woda",
+    "since_morning": "Od rana",
+    "last_24h": "Ostatnie 24 h",
+    "curve": "Krzywa grzewcza",
+    "slope_lc": "nachylenie",
+    "offset_lc": "przesunięcie",
+    "from_room": "z pokoju",
+    "min": "Najniżej",
+    "avg": "Średnio",
+    "max": "Najwyżej",
+    "info": {
+      "flow": {
+        "title": "Zasilanie",
+        "hint": "Woda płynąca z kotła do grzejników. Na krzywej pogodowej zwykle 35–50°, im cieplej na zewnątrz, tym niżej."
+      },
+      "return": {
+        "title": "Powrót",
+        "hint": "Woda wracająca z grzejników do kotła. Poniżej 45° kocioł kondensuje i spala mniej gazu."
+      },
+      "setpoint": {
+        "title": "Woda zadana",
+        "hint": "Temperatura wody, którą sterownik zamawia u kotła: krzywa pogodowa plus korekta z pokoju dziennego."
+      },
+      "curve": {
+        "title": "Woda z krzywej",
+        "hint": "Wynik krzywej pogodowej razem z korektą pokojową."
+      },
+      "correction": {
+        "title": "Korekta z pokoju",
+        "hint": "Ile sterownik dokłada do krzywej, gdy w pokoju dziennym jest za zimno (albo ujmuje, gdy za ciepło). Narasta powoli."
+      },
+      "dhw": {
+        "title": "Ciepła woda",
+        "hint": "Temperatura ciepłej wody w kotle. Kocioł grzeje ją od razu, gdy ktoś odkręci kran."
+      },
+      "pressure": {
+        "title": "Ciśnienie wody",
+        "hint": "Zalecane 1,2–1,5 bar na zimnym kotle (na ciepłym trochę więcej). Poniżej 0,7 bar kocioł staje (E59), powyżej 2,7 bar też."
+      },
+      "outdoor": {
+        "title": "Na zewnątrz",
+        "hint": "Temperatura zewnętrzna, z której liczy się krzywa."
+      },
+      "radiator": {
+        "title": "Grzejnik",
+        "hint": "Czujnik na grzejniku w pokoju dziennym."
+      },
+      "modulation": {
+        "title": "Moc palnika",
+        "hint": "0% to najmniejszy płomień (ok. 4 kW), 100% to pełna moc."
+      },
+      "gas_today": {
+        "title": "Gaz dziś",
+        "hint": "Szacunek z mocy palnika (modulacja i dane z instrukcji kotła), liczony od północy. Dokładność poprawi kalibracja z licznikiem."
+      },
+      "flame": {
+        "title": "Palnik",
+        "hint": "Jak długo palnik pracował od północy i ile razy się zapalał. Na krzywej pali długo na małej mocy, z niewieloma zapaleniami."
+      },
+      "status": {
+        "title": "Stan kotła",
+        "hint": "Problemy, które widzi Home Assistant. Pilne (czerwone) przychodzą też jako alert krytyczny na iPhone'a."
+      },
+      "slope": {
+        "title": "Nachylenie krzywej",
+        "hint": "O ile stopni rośnie temperatura wody, gdy na zewnątrz robi się o stopień zimniej. Mniej = taniej, ale wolniej się nagrzewa."
+      },
+      "offset": {
+        "title": "Przesunięcie krzywej",
+        "hint": "Przesuwa całą krzywą w górę lub w dół. Gdy w domu stale za ciepło, zmniejsz o 1–2°."
+      }
+    },
+    "burning_pct": "pali · {n}%",
+    "not_burning": "nie pali",
+    "cost_today": "Koszt dziś",
+    "about": "ok. {v}",
+    "draw_now": "Pobór teraz",
+    "set_temp": "Ustawiona temperatura",
+    "setting": "Ustawienie",
+    "from_curve": "Z krzywej",
+    "correction": "Korekta",
+    "burning": "Pali",
+    "not_burning_big": "Nie pali",
+    "sensor_outdoor": "Czujnik na zewnątrz",
+    "room": "Pokój",
+    "boiler": "Kocioł",
+    "details": "Szczegóły i pełna historia"
+  },
+  "covers": {
+    "opening": "Podnosi się…",
+    "closing": "Opuszcza się…",
+    "closed": "Zamknięta",
+    "open": "Otwarta",
+    "open_pct": "Otwarta w {n}%",
+    "up": "Podnieś",
+    "stop": "Zatrzymaj",
+    "down": "Opuść",
+    "position": "Pozycja rolety"
+  },
+  "lights": {
+    "color_tone": "Kolor i barwa",
+    "tone": "Barwa światła",
+    "brightness": "Jasność",
+    "color_temp": "Temperatura barwowa",
+    "color": "Kolor"
+  },
+  "cameras": {
+    "count": "Kamery · {n}",
+    "title": "Kamery",
+    "fullscreen": "Pełny ekran",
+    "live": "Na żywo",
+    "connecting": "Łączenie…",
+    "exit_fullscreen": "Zamknij pełny ekran"
+  },
+  "tv": {
+    "lights_on": {
+      "one": "{n} światło włączone",
+      "few": "{n} światła włączone",
+      "many": "{n} świateł włączonych",
+      "other": "{n} świateł włączonych"
+    },
+    "min_left": "jeszcze {n} min",
+    "no_airing_lc": "lepiej nie wietrzyć",
+    "indoors": "W domu",
+    "off_lc": "wyłączone",
+    "on_short": "Wł.",
+    "off_short": "Wył.",
+    "scene_active": "aktywna",
+    "since_time": "od {t}",
+    "sensors_ok": {
+      "one": "{n} czujnik w porządku",
+      "few": "{n} czujniki w porządku",
+      "many": "{n} czujników w porządku",
+      "other": "{n} czujników w porządku"
+    },
+    "rows": {
+      "working": "Teraz pracuje",
+      "climate": "Klimat i pogoda"
+    },
+    "humidity_lc": "wilgotność {v}%",
+    "room_empty": "Brak urządzeń w tym pokoju",
+    "media": {
+      "muted_hint": "Wyciszone · OK włącza dźwięk",
+      "mute_hint": "OK wycisza",
+      "playing": "Odtwarza",
+      "now_playing": "Teraz gra",
+      "no_controls": "Brak sterowania dla tego urządzenia"
+    },
+    "rain": {
+      "showers": "Przelotne opady w najbliższych godzinach",
+      "showers_snow": "Przelotne opady śniegu w najbliższych godzinach",
+      "rain_on": "Opady przez najbliższe godziny",
+      "snow_on": "Śnieg przez najbliższe godziny",
+      "rain_until": "Opady do ok. {t}",
+      "snow_until": "Śnieg do ok. {t}",
+      "rain_from": "Deszcz od ok. {t}",
+      "snow_from": "Śnieg od ok. {t}",
+      "dry_until": "Bez opadów do {t}"
+    },
+    "weather": {
+      "feels": "odczuwalna {t}°",
+      "day_length": "dzień {h} h {m} min",
+      "gusts": "porywy {n}",
+      "clouds": "zachmurzenie {n}%",
+      "steady": "stałe",
+      "rising": "rośnie",
+      "falling": "spada",
+      "sun": "Słońce",
+      "precip": "Opady",
+      "in_24h": "w ciągu 24 godzin",
+      "next_24h": "Najbliższe 24 godziny",
+      "no_hourly": "Brak prognozy godzinowej",
+      "loading": "Wczytuję prognozę…",
+      "forecast_days": {
+        "one": "Prognoza na {n} dzień",
+        "few": "Prognoza na {n} dni",
+        "many": "Prognoza na {n} dni",
+        "other": "Prognoza na {n} dni"
+      }
+    },
+    "climate": {
+      "turn_off": "Wyłącz ogrzewanie",
+      "turn_on": "Włącz ogrzewanie",
+      "average": "Średnio {t}° w domu"
+    },
+    "history": {
+      "yesterday": "wczoraj {t}",
+      "loading": "Wczytuję historię z ostatnich 24 godzin…",
+      "error": "Nie udało się wczytać historii",
+      "total": "Łącznie",
+      "last": "Ostatnio",
+      "ongoing": "trwa",
+      "over_day": "ponad dobę temu",
+      "events": "Zdarzenia",
+      "from": "Od {t}",
+      "value": "Wartość",
+      "since_yesterday": "Od wczoraj",
+      "no_data": "Brak zapisanych pomiarów z ostatniej doby"
+    },
+    "binary": {
+      "unavailable": "niedostępny",
+      "ok": "w porządku",
+      "active": "aktywne"
+    },
+    "events": {
+      "open": {
+        "count": {
+          "one": "{n} otwarcie",
+          "few": "{n} otwarcia",
+          "many": "{n} otwarć",
+          "other": "{n} otwarć"
+        },
+        "none": "Bez otwarć"
+      },
+      "water": {
+        "count": {
+          "one": "{n} wykrycie wody",
+          "few": "{n} wykrycia wody",
+          "many": "{n} wykryć wody",
+          "other": "{n} wykryć wody"
+        },
+        "none": "Bez wykryć wody"
+      },
+      "motion": {
+        "count": {
+          "one": "{n} ruch",
+          "few": "{n} ruchy",
+          "many": "{n} ruchów",
+          "other": "{n} ruchów"
+        },
+        "none": "Bez ruchów"
+      },
+      "other": {
+        "count": {
+          "one": "{n} zdarzenie",
+          "few": "{n} zdarzenia",
+          "many": "{n} zdarzeń",
+          "other": "{n} zdarzeń"
+        },
+        "none": "Bez zdarzeń"
+      }
+    },
+    "notif": {
+      "title": "Powiadomienie",
+      "dismissed": "Powiadomienie odrzucone",
+      "gone": "Nie ma go już w Home Assistant.",
+      "dismiss": "Odrzuć",
+      "dismiss_hint": "Znika też z Home Assistanta"
+    },
+    "update": {
+      "skip": "Pomiń tę wersję",
+      "skip_hint": "Znika też z Home Assistanta, wróci przy następnej",
+      "hide": "Ukryj tylko tutaj",
+      "hide_hint": "Do następnej wersji"
+    },
+    "battery": "Bateria {n}%",
+    "battery_lc": "bateria {n}%",
+    "battery_hide": "Ukryj do wymiany baterii",
+    "battery_hide_hint": "Wróci, gdy po wymianie znów będzie słaba",
+    "alarm": {
+      "history": "Pokaż historię",
+      "history_hint": "Ostatnie 24 godziny",
+      "hide": "Ukryj, dopóki się nie zamknie",
+      "hide_hint": "Wróci przy następnym otwarciu"
+    },
+    "summary": {
+      "battery_low": "Słaba bateria",
+      "update_to": "Aktualizacja do {v}",
+      "update": "Aktualizacja",
+      "lights": "Światła",
+      "lights_on": {
+        "one": "{n} włączone",
+        "few": "{n} włączone",
+        "many": "{n} włączonych",
+        "other": "{n} włączonych"
+      },
+      "ok_off": "OK gasi",
+      "all_off": "Wszystkie zgaszone",
+      "people_home": "{n} z {total} w domu",
+      "nobody": "Nikogo",
+      "heating": "Grzeje",
+      "unload_hint": "OK, gdy wyjęte",
+      "waste_today": "Dziś wywóz",
+      "waste_tomorrow": "Jutro wywóz",
+      "imgw": "Ostrzeżenie IMGW",
+      "title": "Podsumowanie",
+      "attention": {
+        "one": "{n} sprawa wymaga uwagi",
+        "few": "{n} sprawy wymagają uwagi",
+        "many": "{n} spraw wymaga uwagi",
+        "other": "{n} spraw wymaga uwagi"
+      },
+      "all_clear": "Nic nie wymaga uwagi",
+      "attention_title": "Wymaga uwagi"
+    },
+    "vac": {
+      "resume": "Wznów sprzątanie",
+      "pause_hint": "Zostaje tam, gdzie jest",
+      "start_hint": "Cały dom, jak w aplikacji",
+      "dock": "Wróć do stacji",
+      "dock_hint": "Kończy sprzątanie",
+      "suction": "Ssanie"
+    },
+    "app": {
+      "pause_hint": "Cykl poczeka",
+      "resume_hint": "Cykl rusza dalej",
+      "unloaded_hint": "Znika z Podsumowania do następnego prania",
+      "total": "Cały cykl",
+      "to_go": "do końca"
+    },
+    "settings": {
+      "subtitle": "Na tym telewizorze",
+      "look": "Wygląd",
+      "wallpaper": "Tapeta",
+      "accent": "Kolor akcentu",
+      "accent_hint": "Ikony włączonych, postęp, zaznaczenia",
+      "performance": "Optymalizacja",
+      "frost": "Szronione szkło",
+      "frost_hint": "Kafle przepuszczają rozmytą tapetę; wyłączone są gładkie",
+      "anim": "Animacje",
+      "anim_hint": "Wysuwanie paneli, przejścia i powiększanie; wyłącz na słabszym TV",
+      "accent_sub": "To, co się świeci i jest zaznaczone",
+      "wallpaper_sub": "Tło całego ekranu",
+      "photos": "Zdjęcia",
+      "colors": "Kolory"
+    },
+    "instances": {
+      "current": "Teraz wyświetlany",
+      "title": "Przełącz dom",
+      "sub": "Inny serwer Home Assistant"
+    },
+    "camera": {
+      "preview": "Podgląd"
+    },
+    "reconnecting": "Łączę ponownie z Home Assistantem…",
+    "failed": "Nie udało się: {msg}",
+    "switching": "Łączę z: {name}…",
+    "unreachable": "{name}: serwer nie odpowiada z tej sieci",
+    "connecting": "Łączę z Home Assistantem…",
+    "connect_failed": "Nie mogę połączyć się z Home Assistantem.",
+    "no_card": "Na dashboardzie „{dashboard}” nie ma karty Alvuna",
+    "wallpapers": {
+      "homedeck": {
+        "name": "Alvuna",
+        "sub": "Morski, domyślny"
+      },
+      "glebia": {
+        "name": "Głębia",
+        "sub": "Ciemny błękit"
+      },
+      "noc": {
+        "name": "Noc",
+        "sub": "Granat z fioletem"
+      },
+      "zorza": {
+        "name": "Zorza",
+        "sub": "Zieleń i fiolet na granacie"
+      },
+      "las": {
+        "name": "Las",
+        "sub": "Głęboka zieleń"
+      },
+      "zachod": {
+        "name": "Zachód",
+        "sub": "Ciepły, wieczorny"
+      },
+      "grafit": {
+        "name": "Grafit",
+        "sub": "Neutralny szary"
+      },
+      "czern": {
+        "name": "Czerń",
+        "sub": "Prawdziwa czerń OLED"
+      },
+      "foto-zorza": {
+        "name": "Zorza polarna",
+        "sub": "Zielone światła nad jeziorem"
+      },
+      "foto-las": {
+        "name": "Mglisty las",
+        "sub": "Sosny we mgle"
+      },
+      "foto-morze": {
+        "name": "Księżyc nad morzem",
+        "sub": "Nocne morze"
+      },
+      "foto-gory": {
+        "name": "Góry o zmierzchu",
+        "sub": "Niebieskie grzbiety"
+      },
+      "foto-gwiazdy": {
+        "name": "Droga Mleczna",
+        "sub": "Nocne niebo nad górami"
+      },
+      "foto-baltyk": {
+        "name": "Zachód nad morzem",
+        "sub": "Ciepłe światło nad wodą"
+      },
+      "foto-miasto": {
+        "name": "Światła miasta",
+        "sub": "Rozmyte światła nocą"
+      },
+      "foto-snieg": {
+        "name": "Zimowa noc",
+        "sub": "Ośnieżony szczyt i gwiazdy"
+      },
+      "foto-fale": {
+        "name": "Turkusowe fale",
+        "sub": "Abstrakcja w kolorach Alvuna"
+      },
+      "foto-mgla": {
+        "name": "Mgła nad jeziorem",
+        "sub": "Brzeg o świcie"
+      }
+    },
+    "accents": {
+      "limonka": "Limonka",
+      "turkus": "Turkus",
+      "blekit": "Błękit",
+      "fiolet": "Fiolet",
+      "roz": "Róż",
+      "koral": "Koral",
+      "zloto": "Złoto",
+      "bialy": "Biel"
+    }
+  }
+}

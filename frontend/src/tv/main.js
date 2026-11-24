@@ -2,9 +2,11 @@
 // panels, a screensaver for the OLED and an exit after a long idle. The data and wording rules come from the tablet
 // card's config (a `custom:homedeck-card` on the Lovelace dashboard named in ?dashboard=).
 import "./ui/icons.js";
-import { connect, call, loadDeckConfig, onDashboardChange, loadForecast, cameraStream, loadHistory, subscribeNotifications, entityPlatforms } from "./ha.js";
+import { connect, call, loadDeckConfig, onDashboardChange, loadForecast, cameraStream, loadHistory, subscribeNotifications, entityPlatforms,
+  userLocale } from "./ha.js";
 import { Home } from "./model/home.js";
-import { esc, CLOCK_FMT, DATE_FMT, fmtTime, wIcon } from "./model/format.js";
+import { esc, time, longDate, fmtTime, wIcon } from "./model/format.js";
+import { setLocale, t, language } from "../shared/i18n.js";
 import { renderHome, refreshCamStills } from "./ui/home.js";
 import { applyWallpaper, setWallpaper } from "./ui/wallpapers.js";
 import { applyAccent, setAccent } from "./ui/accents.js";
@@ -43,6 +45,9 @@ function saveHidden() { hiddenVer++; try { localStorage.setItem("homedeck-hidden
 let conn = null, watched = new Set(), seen = {}, raf = 0, attnMemo = {};
 
 const $ = (sel) => document.querySelector(sel);
+// The browser's language until Home Assistant says which one the user picked (see the start below).
+setLocale({ language: navigator.language });
+document.documentElement.lang = language();
 applyWallpaper();
 applyAccent();
 document.body.innerHTML = `<main id="home"></main><div id="edge"></div><div id="panel"></div><div id="camera"></div>
@@ -87,7 +92,7 @@ function render() {
   else if (S.panel) focus.use(S.panel.scope, panelEl.querySelector(".panel"));
   else focus.use("home", homeEl);
   alignFrost();
-  statusEl.innerHTML = S.status === "offline" ? `<div class="pill">${icon("mdi:wifi-off")}Łączę ponownie z Home Assistantem…</div>` : "";
+  statusEl.innerHTML = S.status === "offline" ? `<div class="pill">${icon("mdi:wifi-off")}${t("tv.reconnecting")}</div>` : "";
 }
 
 // The Alvuna logo, as on the TV shell's start screen (the shell's largeIcon.png), so the picture does
@@ -112,7 +117,7 @@ function toast(text) {
 }
 
 // --- actions --------------------------------------------------------------------------------------
-const svc = (domain, service, data) => call(conn, domain, service, data).catch((e) => toast(`Nie udało się: ${e?.message || domain + "." + service}`));
+const svc = (domain, service, data) => call(conn, domain, service, data).catch((e) => toast(t("tv.failed", { msg: e?.message || domain + "." + service })));
 
 // A panel opened from another panel goes on top of it (Klimat → one sensor, Podsumowanie → a sensor or the media):
 // Back then steps down to the one below, with its focus where it was. A panel opened from the home screen starts a
@@ -238,8 +243,8 @@ function act(el) {
     case "switch": {
       const to = instances.find((x) => x.id === d.id);
       if (!to || to === instance) return closeLayer();
-      toast(`Łączę z: ${to.name}…`);
-      return reachable(to).then((ok) => (ok ? switchTo(to, instances) : toast(`${to.name}: serwer nie odpowiada z tej sieci`)));
+      toast(t("tv.switching", { name: to.name }));
+      return reachable(to).then((ok) => (ok ? switchTo(to, instances) : toast(t("tv.unreachable", { name: to.name }))));
     }
     case "room-power": {
       const lights = h.lights(h.rooms()[Number(d.room)]);
@@ -353,14 +358,14 @@ function wake() {
 function drawSaver() {
   const h = home(), w = h.weatherNow();
   saverEl.innerHTML = `<div class="saver-box" style="transform:translate(${Math.round(Math.random() * 1100) + 120}px,${Math.round(Math.random() * 560) + 120}px)">
-    <div class="clock">${CLOCK_FMT.format(new Date())}</div>
-    <div class="saver-wx">${icon(wIcon(w.cond, w.night))}${w.temp != null ? `${Math.round(w.temp)}°` : ""}<span>${esc(DATE_FMT.format(new Date()))}</span></div></div>`;
+    <div class="clock">${time(new Date())}</div>
+    <div class="saver-wx">${icon(wIcon(w.cond, w.night))}${w.temp != null ? `${Math.round(w.temp)}°` : ""}<span>${esc(longDate(new Date()))}</span></div></div>`;
 }
 
 // --- clock, progress, idle (once a second) -----------------------------------------------------------
 function tick() {
   const now = new Date();
-  for (const el of document.querySelectorAll("[data-clock]")) el.textContent = CLOCK_FMT.format(now);
+  for (const el of document.querySelectorAll("[data-clock]")) el.textContent = time(now);
   if (S.config) {
     const h = home(), items = h.mediaItems();
     for (const el of document.querySelectorAll("[data-elapsed]")) { const m = items[el.dataset.elapsed]; if (m) el.textContent = fmtTime(h.mediaPosition(m)); }
@@ -533,7 +538,7 @@ async function mountCamera(h) {
     stage.classList.add("playing");
     S.camUi.live = true;
     const tag = camEl.querySelector(".live");
-    if (tag) { tag.classList.add("on"); tag.lastChild.textContent = "Na żywo"; }
+    if (tag) { tag.classList.add("on"); tag.lastChild.textContent = t("cameras.live"); }
   }, { once: true });
   stage.appendChild(v);
   setTimeout(() => { if (alive() && !started) { stopCamera(); v.remove(); stills(); } }, 12000);
@@ -541,10 +546,14 @@ async function mountCamera(h) {
 
 // --- start ----------------------------------------------------------------------------------------
 (async () => {
-  homeEl.innerHTML = `<div class="fatal">${LOGO}<h1>Alvuna</h1><p>Łączę z Home Assistantem…</p></div>`;
+  homeEl.innerHTML = `<div class="fatal">${LOGO}<h1>Alvuna</h1><p>${t("tv.connecting")}</p></div>`;
   try {
     conn = await connect({ onStates, onStatus: (s) => { S.status = s; render(); } });
     S.status = "online";
+    // The user's own language and formats, before anything but the splash is drawn (render waits for the config).
+    const loc = await userLocale(conn);
+    setLocale(loc);
+    document.documentElement.lang = loc.language || language();
     await loadConfig();
     refreshCamStills(home(), schedule);
     subscribeNotifications(conn, (all) => { S.notifs = all; schedule(); }).catch(() => {});
@@ -555,6 +564,6 @@ async function mountCamera(h) {
     setInterval(tick, 1000);
     window.__hd = { S, focus, render };
   } catch (e) {
-    fatal(typeof e === "number" ? "Nie mogę połączyć się z Home Assistantem." : e?.message || String(e));
+    fatal(typeof e === "number" ? t("tv.connect_failed") : e?.message || String(e));
   }
 })();

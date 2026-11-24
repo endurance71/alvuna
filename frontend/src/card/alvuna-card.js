@@ -1,25 +1,18 @@
 // Alvuna style wall-tablet dashboard: clock, home status, scenes, room tiles with light power,
 // security, climate and media tiles, plus Rooms / Media / Security tabs and a room sheet.
-const WEATHER_PL = {
-  "clear-night": ["Pogodnie", "mdi:weather-night"],
-  cloudy: ["Pochmurno", "mdi:weather-cloudy"],
-  exceptional: ["Nietypowo", "mdi:alert-circle-outline"],
-  fog: ["Mgła", "mdi:weather-fog"],
-  hail: ["Grad", "mdi:weather-hail"],
-  lightning: ["Burza", "mdi:weather-lightning"],
-  "lightning-rainy": ["Burza z deszczem", "mdi:weather-lightning-rainy"],
-  partlycloudy: ["Częściowe zachm.", "mdi:weather-partly-cloudy"],
-  pouring: ["Ulewa", "mdi:weather-pouring"],
-  rainy: ["Deszcz", "mdi:weather-rainy"],
-  snowy: ["Śnieg", "mdi:weather-snowy"],
-  "snowy-rainy": ["Deszcz ze śniegiem", "mdi:weather-snowy-rainy"],
-  sunny: ["Słonecznie", "mdi:weather-sunny"],
-  windy: ["Wietrznie", "mdi:weather-windy"],
-  "windy-variant": ["Wietrznie", "mdi:weather-windy-variant"],
-};
+import { setLocale, t, table, num, int, money, date, time } from "../shared/i18n.js";
 
-const ALERT_WORD = { door: "otwarte", window: "otwarte", opening: "otwarte", garage_door: "otwarta",
-  moisture: "zalanie", smoke: "dym", gas: "gaz", carbon_monoxide: "czad", safety: "alarm", problem: "problem" };
+// Until the first hass arrives the page's own language stands in (HA sets <html lang> to the user's language).
+setLocale({ language: document.documentElement.lang || navigator.language });
+
+// Weather condition icons; the words are in the i18n tables (weather.conditions).
+const WEATHER_ICON = {
+  "clear-night": "mdi:weather-night", cloudy: "mdi:weather-cloudy", exceptional: "mdi:alert-circle-outline", fog: "mdi:weather-fog",
+  hail: "mdi:weather-hail", lightning: "mdi:weather-lightning", "lightning-rainy": "mdi:weather-lightning-rainy",
+  partlycloudy: "mdi:weather-partly-cloudy", pouring: "mdi:weather-pouring", rainy: "mdi:weather-rainy", snowy: "mdi:weather-snowy",
+  "snowy-rainy": "mdi:weather-snowy-rainy", sunny: "mdi:weather-sunny", windy: "mdi:weather-windy", "windy-variant": "mdi:weather-windy-variant",
+};
+const wxWord = (cond) => table("weather.conditions")[cond];
 
 // Tab bar glyphs drawn with a thin, even stroke like the iOS tab bar (MDI glyphs are too heavy at this size).
 // The selected tab gets the filled version; both keep the same elements so the morph only swaps attributes.
@@ -39,8 +32,9 @@ const NAV_ICONS = {
     <path d="m8.9 12.1 2.2 2.2 4-4.2" stroke="${on ? "#F4F7F8" : "currentColor"}"/>`,
 };
 
-const TABS = [["home", "Dom", "mdi:home-outline"], ["rooms", "Pokoje", "mdi:view-grid-outline"],
-  ["media", "Media", "mdi:play-box-outline"], ["clean", "Porządki", "mdi:creation-outline"], ["heating", "Ogrzewanie", "mdi:fire"], ["usage", "Zużycie", "mdi:chart-bar"], ["security", "Ochrona", "mdi:shield-check-outline"]];
+// Tab keys and icons; the labels are tabs.<key> in the i18n tables.
+const TABS = [["home", "mdi:home-outline"], ["rooms", "mdi:view-grid-outline"],
+  ["media", "mdi:play-box-outline"], ["clean", "mdi:creation-outline"], ["heating", "mdi:fire"], ["usage", "mdi:chart-bar"], ["security", "mdi:shield-check-outline"]];
 
 // Critically damped spring (Apple: damping 1, response ~0.4 s) fitted to a cubic-bezier, so iOS runs it on the compositor.
 const EASE_SPRING = "cubic-bezier(.22,1,.36,1)";
@@ -157,13 +151,14 @@ const BRANDS = [
 ];
 
 // What a Google TV reports as the open app (Android TV Remote gives only the package): a readable name for the media
-// tile while the TV is on but nothing plays.
+// tile while the TV is on but nothing plays. Names starting with "media." are i18n keys (not a brand).
 const TV_APPS = [
-  [/tv\.launcherx/, "Ekran główny"], [/netflix/, "Netflix"], [/amazonvideo|primevideo/, "Prime Video"],
+  [/tv\.launcherx/, "media.home_screen"], [/netflix/, "Netflix"], [/amazonvideo|primevideo/, "Prime Video"],
   [/com\.wbd\.stream|hbo/, "Max"], [/youtube\.tvmusic/, "YouTube Music"], [/youtube/, "YouTube"],
   [/canal/, "Canal+"], [/disney/, "Disney+"], [/skyshowtime/, "SkyShowtime"], [/playnow|rodzina\.tvstart/, "PLAY NOW"],
-  [/tvn\.player/, "Player"], [/polsat/, "Polsat Box Go"], [/spotify/, "Spotify"], [/tv\.settings|tcl\.settings/, "Ustawienia"],
+  [/tvn\.player/, "Player"], [/polsat/, "Polsat Box Go"], [/spotify/, "Spotify"], [/tv\.settings|tcl\.settings/, "media.tv_settings"],
 ];
+const tvApp = (v) => { const n = (TV_APPS.find(([re]) => re.test(v)) || [])[1] || ""; return n.startsWith("media.") ? t(n) : n; };
 
 // querySelector that also looks inside open shadow roots (HA's camera player keeps its <video> there).
 const deepQuery = (root, sel) => {
@@ -184,13 +179,7 @@ const deepQueryAll = (root, sel, out = []) => {
 };
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const plural = (n, one, few, many) => {
-  if (n === 1) return one;
-  const d = n % 10, h = n % 100;
-  return d >= 2 && d <= 4 && (h < 12 || h > 14) ? few : many;
-};
-const wIcon = (cond, night) => (cond === "partlycloudy" && night ? "mdi:weather-night-partly-cloudy" : (WEATHER_PL[cond] || [])[1] || "mdi:weather-partly-cloudy");
-const WIND_PL = ["Pn", "Pn-Wsch", "Wsch", "Pd-Wsch", "Pd", "Pd-Zach", "Zach", "Pn-Zach"];
+const wIcon = (cond, night) => (cond === "partlycloudy" && night ? "mdi:weather-night-partly-cloudy" : WEATHER_ICON[cond] || "mdi:weather-partly-cloudy");
 // Translucent tints: the frosted sheet blurs the dashboard behind and colours it by the weather.
 const WX_BG = {
   day: "linear-gradient(160deg, rgba(56,150,215,.55) 0%, rgba(27,92,147,.45) 100%)", night: "linear-gradient(160deg, rgba(34,52,92,.6) 0%, rgba(11,19,36,.55) 100%)",
@@ -200,12 +189,14 @@ const WX_BG = {
 // Preview only (`demo_weather: true`): every condition the weather sheet can draw, by day and by night.
 const WX_DEMO = ["sunny", "clear-night", "partlycloudy", "partlycloudy", "cloudy", "fog", "windy", "rainy", "pouring",
   "snowy", "snowy-rainy", "hail", "lightning", "lightning-rainy", "exceptional"].map((cond, i) => [cond, cond === "clear-night" || i === 3]);
-const ACTIVITY_PL = { Stationary: "W spoczynku", Walking: "Spacer", Running: "Bieg", Automotive: "W samochodzie", Cycling: "Rower" };
-const ago = (iso) => {
+// How long ago, as a unit (now, min, hour, day) and a count, worded by common.since ("od 3 dni") or common.changed
+// ("zmiana 5 min temu").
+const agoParts = (iso) => {
   const min = Math.round((Date.now() - new Date(iso)) / 60000);
-  return min < 1 ? "chwili" : min < 60 ? `${min} min` : min < 1440 ? `${Math.round(min / 60)} godz.` : days(Math.round(min / 1440));
+  return min < 1 ? ["now", 0] : min < 60 ? ["min", min] : min < 1440 ? ["hour", Math.round(min / 60)] : ["day", Math.round(min / 1440)];
 };
-const days = (d) => d === 1 ? "1 dnia" : `${d} dni`; // after "od": od 1 dnia, od 3 dni
+const since = (iso) => { const [u, n] = agoParts(iso); return t(`common.since.${u}`, { n }); };
+const changed = (iso) => { const [u, n] = agoParts(iso); return t(`common.changed.${u}`, { n }); };
 const distanceKm = (a, b) => {
   const rad = (d) => (d * Math.PI) / 180;
   const h = Math.sin(rad(b.latitude - a.latitude) / 2) ** 2
@@ -216,67 +207,44 @@ const battIcon = (level, charging) => {
   const step = Math.round(Number(level) / 10) * 10;
   return charging ? "mdi:battery-charging" : step >= 100 ? "mdi:battery" : step <= 0 ? "mdi:battery-outline" : `mdi:battery-${step}`;
 };
-// Robot vacuum wording; anything not listed falls back to HA's own translation of the state.
-const VAC_STATE_PL = { cleaning: "Sprząta", docked: "W stacji", returning: "Wraca do stacji", paused: "Wstrzymany", idle: "Gotowy",
-  error: "Błąd", unavailable: "Niedostępny" };
-const VAC_SUCTION_PL = { quiet: "Cicho", silent: "Cicho", standard: "Standard", strong: "Mocno", turbo: "Turbo", max: "Max" };
-const VAC_MODE_PL = { "Sweeping": "Odkurzanie", "Mopping": "Mopowanie", "Sweeping and mopping": "Odkurzanie z mopem" };
-const VAC_WEAR = [["main_brush_left", "Szczotka główna"], ["side_brush_left", "Szczotka boczna"], ["filter_left", "Filtr"],
-  ["mop_pad_left", "Mop"], ["sensor_dirty_left", "Czujniki"]];
+// Robot vacuum wording (cleaning.vacuum_state, .suction, .vacuum_mode, .wear); a state not listed falls back to HA's own
+// translation of the state.
+const VAC_WEAR = ["main_brush_left", "side_brush_left", "filter_left", "mop_pad_left", "sensor_dirty_left"];
 
 // WashData appliance states (washer and dishwasher are both feminine in Polish).
-// Program values that are a status, not a program: Home Connect sends "detecting..." while the dishwasher picks one.
-const PROGRAM_PL = { "detecting...": "Rozpoznaje program", detecting: "Rozpoznaje program" };
-// Fraction colours of a Polish municipal (PGK) leaflet, matched on the calendar or event name (folded, no Polish letters).
-const WASTE_COLORS = [[/zmiesz/, "#6E6E6C", "mdi:delete"], [/bio/, "#9A6230", "mdi:leaf"],
-  [/papier/, "#1A73C8", "mdi:newspaper-variant"], [/szklo/, "#16A34A", "mdi:bottle-wine"],
-  [/metal|tworzyw/, "#F2A900", "mdi:recycle"], [/gabaryt|rtv|agd/, "#E2483D", "mdi:sofa"],
-  [/odziez|tekstyl/, "#9B6BC4", "mdi:tshirt-crew"], [/choink/, "#C77FC4", "mdi:pine-tree"]];
-const APP_STATE_PL = { off: "Wyłączona", idle: "Gotowa", starting: "Uruchamia się", running: "Pracuje", paused: "Wstrzymana",
-  user_paused: "Wstrzymana", ending: "Kończy", finished: "Zakończona", anti_wrinkle: "Ochrona przed zagnieceniem",
-  delay_wait: "Opóźniony start", interrupted: "Przerwana", force_stopped: "Zatrzymana", clean: "Gotowe do wyjęcia", unknown: "Brak danych" };
+// Program values that are a status, not a program: Home Connect sends "detecting..." while the dishwasher picks one
+// (appliances.program); the states' words are appliances.state.
+// Fraction colours of a Polish municipal (PGK) leaflet, matched on the calendar or event name (folded, no Polish letters;
+// the common English names match too).
+const WASTE_COLORS = [[/zmiesz|mixed|general|residual/, "#6E6E6C", "mdi:delete"], [/bio|organic|garden/, "#9A6230", "mdi:leaf"],
+  [/papier|paper/, "#1A73C8", "mdi:newspaper-variant"], [/szklo|glass/, "#16A34A", "mdi:bottle-wine"],
+  [/metal|tworzyw|plastic/, "#F2A900", "mdi:recycle"], [/gabaryt|rtv|agd|bulky/, "#E2483D", "mdi:sofa"],
+  [/odziez|tekstyl|textile|cloth/, "#9B6BC4", "mdi:tshirt-crew"], [/choink|christmas/, "#C77FC4", "mdi:pine-tree"]];
 const APP_ACTIVE = ["starting", "running", "paused", "user_paused", "ending", "anti_wrinkle", "delay_wait"];
 const APP_DONE = ["finished", "clean"];
 const RING_C = 2 * Math.PI * 22;
 
-// IMGW-PIB warning types (sensor.<miasto>_alert_pogodowy).
-// GIOŚ air quality index (sensor options) in Polish; the last three mean "better not to air the rooms".
-const AIR_PL = { very_good: "bardzo dobre", good: "dobre", moderate: "umiarkowane", sufficient: "dostateczne", bad: "złe", very_bad: "bardzo złe" };
+// IMGW-PIB warning types (sensor.<miasto>_alert_pogodowy) are worded by weather.imgw.
+// GIOŚ air quality index (sensor options), worded by weather.air; the last three mean "better not to air the rooms".
 const AIR_BAD = ["sufficient", "bad", "very_bad"];
-const IMGW_ALERT_PL = { storms: "Burze", dense_fog: "Gęsta mgła", heavy_rainfall: "Intensywne opady deszczu",
-  heavy_snowfall: "Intensywne opady śniegu", icing: "Oblodzenie", freezing_rain: "Marznący deszcz", snowfall: "Opady śniegu",
-  frosts: "Przymrozki", thaw: "Roztopy", heavy_rain_with_storms: "Ulewy z burzami", heavy_frost: "Silny mróz",
-  strong_wind: "Silny wiatr", heat: "Upał", snow_blizzard: "Zamieć śnieżna" };
 
 const isCharging = (state) => /charging/i.test(state || "") && !/not/i.test(state || "");
-// Plant metrics shown in the plant sheet; `status` names the attribute plant.* reports for that metric.
+// Plant metrics shown in the plant sheet; `status` names the attribute plant.* reports for that metric. `label`, `Low` and
+// `High` (the advice for that status) read plants.metrics.<key> in the user's language.
 const PLANT_METRICS = [
-  { key: "moisture", status: "moisture_status", label: "Wilgotność gleby", icon: "mdi:water", color: "#0A84FF", unit: "%", digits: 0,
-    Low: "Sucho — podlej roślinę", High: "Za mokro — wstrzymaj podlewanie" },
-  { key: "illuminance", status: "illuminance_status", label: "Światło", icon: "mdi:brightness-5", color: "#FF9F0A", unit: " lx", digits: 0,
-    Low: "Za ciemno — przestaw bliżej okna", High: "Za jasno — odsuń od okna" },
-  { key: "dli", status: "dli_status", label: "Światło dzienne (DLI)", icon: "mdi:white-balance-sunny", color: "#FFD60A", unit: " mol/d", digits: 2,
-    Low: "Za mało światła w ciągu dnia — przestaw bliżej okna", High: "Za dużo słońca — odsuń od okna" },
-  { key: "temperature", status: "temperature_status", label: "Temperatura", icon: "mdi:thermometer", color: "#FF453A", unit: "°", digits: 1,
-    Low: "Za zimno", High: "Za ciepło" },
-  { key: "humidity", status: "humidity_status", label: "Wilgotność powietrza", icon: "mdi:water-percent", color: "#30B0C7", unit: "%", digits: 0,
-    Low: "Za suche powietrze — zrosić liście", High: "Za wilgotne powietrze" },
-];
+  { key: "moisture", status: "moisture_status", icon: "mdi:water", color: "#0A84FF", unit: "%", digits: 0 },
+  { key: "illuminance", status: "illuminance_status", icon: "mdi:brightness-5", color: "#FF9F0A", unit: " lx", digits: 0 },
+  { key: "dli", status: "dli_status", icon: "mdi:white-balance-sunny", color: "#FFD60A", unit: " mol/d", digits: 2 },
+  { key: "temperature", status: "temperature_status", icon: "mdi:thermometer", color: "#FF453A", unit: "°", digits: 1 },
+  { key: "humidity", status: "humidity_status", icon: "mdi:water-percent", color: "#30B0C7", unit: "%", digits: 0 },
+].map((m) => Object.defineProperties(m, Object.fromEntries(["label", "Low", "High"]
+  .map((k) => [k, { get: () => table(`plants.metrics.${m.key}`)[k] }]))));
 // Page behind the deck: HA containers go transparent and the root carries the deck's own vertical gradient,
 // so the iPhone status bar and home-indicator areas blend into the card.
 const PAGE_TOP = "#165566";
 // One screen-high gradient that does not repeat; below it the page is the deck's own bottom colour, so the area
 // under the deck (and the bottom overscroll) never shows a lighter band.
 const PAGE_BG = `linear-gradient(180deg, ${PAGE_TOP} 0%, #0F3B49 35%, #0B2633 70%, #081A24 100%) no-repeat #081A24`;
-// Formatters are built once: toLocaleString() creates a new Intl formatter on every call, which is slow on weak tablets.
-const NUM_FMT = new Map();
-const num = (v, digits = 1) => {
-  let f = NUM_FMT.get(digits);
-  if (!f) NUM_FMT.set(digits, (f = new Intl.NumberFormat("pl-PL", { minimumFractionDigits: digits, maximumFractionDigits: digits })));
-  return f.format(Number(v));
-};
-const CLOCK_FMT = new Intl.DateTimeFormat("pl-PL", { hour: "2-digit", minute: "2-digit" });
-const DATE_FMT = new Intl.DateTimeFormat("pl-PL", { weekday: "long", day: "numeric", month: "long" });
 const fold = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l").replace(/Ł/g, "L").toLowerCase();
 const ids = (list) => (list || []).map((x) => (typeof x === "string" ? x : x.entity));
 const fmtTime = (s) => {
@@ -1359,7 +1327,7 @@ ha-icon { transition: color .45s ease; }
 
 class HomedeckCard extends HTMLElement {
   setConfig(config) {
-    if (!Array.isArray(config.rooms) || !config.rooms.length) throw new Error("homedeck-card: zdefiniuj rooms");
+    if (!Array.isArray(config.rooms) || !config.rooms.length) throw new Error(t("common.config_rooms"));
     this._config = config;
     LITE = liteFor(config);
     this.toggleAttribute("lite", LITE);
@@ -1389,6 +1357,10 @@ class HomedeckCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    // A new language or number/time format redraws everything: the watched states may not have changed at all.
+    const relocale = setLocale({ language: hass.locale?.language || hass.language, numberFormat: hass.locale?.number_format,
+      timeFormat: hass.locale?.time_format, currency: hass.config?.currency });
+    if (relocale) this._heatChartFor = null;
     if (!this._config) return;
     this._camHold(hass);
     const todo = this._todoOpen && hass.states[this._todoOpen];
@@ -1400,7 +1372,7 @@ class HomedeckCard extends HTMLElement {
     // The map camera refreshes every few seconds while cleaning; follow it only while its sheet is open.
     const map = this._vacOpen && hass.states[this._config.vacuum?.map];
     if (map && map !== this._vacMap) { this._vacMap = map; this._schedule(); }
-    if (this._changed()) this._schedule();
+    if (this._changed() || relocale) this._schedule();
   }
 
   connectedCallback() {
@@ -1500,8 +1472,8 @@ class HomedeckCard extends HTMLElement {
       if (!st) continue;
       const dev = reg[id]?.device_id, key = dev || id, binary = id.startsWith("binary_sensor.");
       let issue = null;
-      if (st.state === "unavailable") issue = { id, icon: "mdi:battery-off-outline", value: "brak sygnału", rank: 0 };
-      else if (binary && st.state === "on") issue = { id, icon: "mdi:battery-alert-variant-outline", value: "słaba", rank: 1 };
+      if (st.state === "unavailable") issue = { id, icon: "mdi:battery-off-outline", value: t("home.battery_no_signal"), rank: 0 };
+      else if (binary && st.state === "on") issue = { id, icon: "mdi:battery-alert-variant-outline", value: t("home.battery_low"), low: true, rank: 1 };
       else if (!binary && Number(st.state) < limit) issue = { id, icon: battIcon(st.state, false), value: `${Math.round(Number(st.state))}%`, rank: 2 + Number(st.state) };
       if (!issue) continue;
       const d = devs[dev], raw = d?.name_by_user || d?.name || (st.attributes.friendly_name || id).replace(/\s+(bateria|battery.*)$/i, "");
@@ -1515,7 +1487,7 @@ class HomedeckCard extends HTMLElement {
       issue.name = name;
       // A device with both a % sensor and a low flag shows once, preferring the percentage.
       const prev = byDevice.get(key);
-      if (!prev || (prev.value === "słaba" && issue.value.endsWith("%"))) byDevice.set(key, issue);
+      if (!prev || (prev.low && issue.value.endsWith("%"))) byDevice.set(key, issue);
     }
     return [...byDevice.values()].sort((a, b) => a.rank - b.rank);
   }
@@ -2024,10 +1996,10 @@ class HomedeckCard extends HTMLElement {
     const { w, cond: wCond, night: wNight } = this._wxNow();
     const out = this._st(c.outdoor_temperature);
     const temp = out && !isNaN(out.state) ? Number(out.state) : w?.attributes.temperature;
-    const [cond] = WEATHER_PL[wCond] || [""];
+    const cond = wxWord(wCond) || "";
     const warn = this._wxAlert(), air = this._air(), smog = !warn && air?.bad;
-    const weather = w || out ? `<button class="pill ${warn || smog ? "warn" : ""}" data-act="weather" ${warn ? `title="Ostrzeżenie: ${esc(warn)}"` : ""}>
-      <ha-icon icon="${warn ? "mdi:alert" : smog ? "mdi:smog" : wIcon(wCond, wNight)}"></ha-icon><b>${temp != null ? Math.round(temp) + "°" : "–"}</b><span>${esc(smog ? "Smog" : cond)}</span></button>` : "";
+    const weather = w || out ? `<button class="pill ${warn || smog ? "warn" : ""}" data-act="weather" ${warn ? `title="${esc(t("weather.warning", { alert: warn }))}"` : ""}>
+      <ha-icon icon="${warn ? "mdi:alert" : smog ? "mdi:smog" : wIcon(wCond, wNight)}"></ha-icon><b>${temp != null ? Math.round(temp) + "°" : "–"}</b><span>${esc(smog ? t("weather.smog") : cond)}</span></button>` : "";
     const people = this._persons();
     // The first person sits on top and each next one tucks in underneath, like stacked contacts in iOS.
     const avatars = people.map((p, i) => {
@@ -2046,9 +2018,9 @@ class HomedeckCard extends HTMLElement {
 
   _kioskButton() {
     const id = this._config.kiosk;
-    if (!id) return `<button class="round" data-act="settings" title="Ustawienia"><ha-icon icon="mdi:cog-outline"></ha-icon></button>`;
+    if (!id) return `<button class="round" data-act="settings" title="${t("common.settings")}"><ha-icon icon="mdi:cog-outline"></ha-icon></button>`;
     const on = this._on(id);
-    return `<button class="round kiosk ${on ? "" : "off"}" data-act="kiosk" data-entity="${esc(id)}" title="${on ? "Wyjdź z trybu kiosku" : "Tryb kiosku"}"
+    return `<button class="round kiosk ${on ? "" : "off"}" data-act="kiosk" data-entity="${esc(id)}" title="${on ? t("home.kiosk_exit") : t("home.kiosk")}"
       aria-pressed="${on}"><ha-icon icon="${on ? "mdi:fullscreen-exit" : "mdi:fullscreen"}"></ha-icon></button>`;
   }
 
@@ -2056,7 +2028,7 @@ class HomedeckCard extends HTMLElement {
     const c = this._config;
     const lights = this._allLights();
     const on = lights.filter((id) => this._on(id)).length;
-    const headline = on ? `${on} ${plural(on, "światło włączone", "światła włączone", "świateł włączonych")} w domu` : "Wszystkie światła wyłączone";
+    const headline = on ? t("home.lights_on", { n: on }) : t("home.all_off");
     // `requires: switch.x` on a scene: the button shows only while that device is reachable (the gate's Wemos can be
     // offline for weeks; a button that silently does nothing is worse than no button).
     const usable = (s) => !s.requires || !["unavailable", "unknown", undefined].includes(this._st(s.requires)?.state);
@@ -2077,12 +2049,12 @@ class HomedeckCard extends HTMLElement {
     const rank = (k) => (end.includes(k) ? end.indexOf(k) + 1 : 0);
     const tiles = parts.map((p, i) => [p, i]).sort((a, b) => rank(a[0][0]) - rank(b[0][0]) || a[1] - b[1]).map(([p]) => p[1]()).join("");
     return `<div class="status">
-        <div><div class="label">Status domu</div><div class="headline">${headline}</div>${this._attention()}${this._heatLine()}${this._alertLine()}${this._waste()}${this._airLine()}</div>
+        <div><div class="label">${t("home.status")}</div><div class="headline">${headline}</div>${this._attention()}${this._heatLine()}${this._alertLine()}${this._waste()}${this._airLine()}</div>
         <div class="actions">
-          <button class="act" data-act="all-on"><ha-icon icon="mdi:lightbulb-outline"></ha-icon>Włącz wszystkie</button>
-          <button class="act light" data-act="all-off"><ha-icon icon="mdi:power"></ha-icon>Wyłącz wszystkie</button>
+          <button class="act" data-act="all-on"><ha-icon icon="mdi:lightbulb-outline"></ha-icon>${t("home.all_on_btn")}</button>
+          <button class="act light" data-act="all-off"><ha-icon icon="mdi:power"></ha-icon>${t("home.all_off_btn")}</button>
         </div></div>
-      ${scenes ? `<div class="scenes"><div class="label">Sceny<i>${(c.scenes || []).filter(usable).length}</i></div><div class="scene-row">${scenes}</div></div>` : ""}
+      ${scenes ? `<div class="scenes"><div class="label">${t("scenes.title")}<i>${(c.scenes || []).filter(usable).length}</i></div><div class="scene-row">${scenes}</div></div>` : ""}
       <div class="gridwrap"><div class="grid">${tiles}</div></div>`;
   }
 
@@ -2095,13 +2067,13 @@ class HomedeckCard extends HTMLElement {
         ${on && l.off ? `data-off="${esc(l.off)}"` : ""}>
       <div class="logo" style="background-image:url('${esc(l.logo)}')"></div>
       <div class="name">${esc(l.name)}</div>
-      <div class="sub">${on ? `<i class="dot"></i>Gra teraz` : esc(l.sub || "")}</div></div>`;
+      <div class="sub">${on ? `<i class="dot"></i>${t("media.playing_now")}` : esc(l.sub || "")}</div></div>`;
   }
 
   _attention() {
     const issues = this._batteryIssues();
     if (!issues.length) return "";
-    return `<div class="attn"><ha-icon icon="mdi:battery-alert-variant-outline"></ha-icon><span>Wymaga uwagi:</span>${issues.map((x) =>
+    return `<div class="attn"><ha-icon icon="mdi:battery-alert-variant-outline"></ha-icon><span>${t("home.attention")}</span>${issues.map((x) =>
       `<button class="attn-item" data-act="more" data-entity="${esc(x.id)}">${esc(x.name)}<b>${esc(x.value)}</b></button>`).join("")}</div>`;
   }
 
@@ -2112,7 +2084,7 @@ class HomedeckCard extends HTMLElement {
     const today = day(now), tomorrow = day(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
     const due = (when) => ids(this._config.waste).map((id) => this._st(id)).filter((st) => st && String(st.attributes.start_time || "").startsWith(when))
       .map((st) => st.attributes.message || st.attributes.friendly_name);
-    const [label, list] = now.getHours() < 12 && due(today).length ? ["Dziś wywóz:", due(today)] : ["Jutro wywóz:", due(tomorrow)];
+    const [label, list] = now.getHours() < 12 && due(today).length ? [t("waste.today"), due(today)] : [t("waste.tomorrow"), due(tomorrow)];
     if (!list.length) return "";
     return `<div class="attn waste"><ha-icon icon="mdi:trash-can-outline"></ha-icon><span>${label}</span>${list.map((n) =>
       `<span class="attn-item"><b>${esc(n)}</b></span>`).join("")}</div>`;
@@ -2121,29 +2093,29 @@ class HomedeckCard extends HTMLElement {
   // `weather_alert`: an IMGW-PIB warning gets its own line under the headline, not only the icon on the weather pill.
   _alertLine() {
     const warn = this._wxAlert();
-    return warn ? `<div class="attn alert"><ha-icon icon="mdi:alert"></ha-icon><span>Ostrzeżenie IMGW:</span><span class="attn-item"><b>${esc(warn)}</b></span></div>` : "";
+    return warn ? `<div class="attn alert"><ha-icon icon="mdi:alert"></ha-icon><span>${t("weather.imgw_line")}</span><span class="attn-item"><b>${esc(warn)}</b></span></div>` : "";
   }
 
   // Under the headline only when the air is bad: nobody should air the rooms then.
   _airLine() {
     const air = this._air();
     if (!air?.bad) return "";
-    return `<div class="attn smog"><ha-icon icon="mdi:smog"></ha-icon><span>Powietrze ${esc(air.label)}${air.pm10 != null ? ` (PM10 ${air.pm10} µg/m³)` : ""}</span>
-      <span class="attn-item"><b>Lepiej nie wietrzyć</b></span></div>`;
+    return `<div class="attn smog"><ha-icon icon="mdi:smog"></ha-icon><span>${esc(t("weather.air_line", { label: air.label }))}${air.pm10 != null ? ` (PM10 ${air.pm10} µg/m³)` : ""}</span>
+      <span class="attn-item"><b>${t("weather.no_airing")}</b></span></div>`;
   }
 
   _roomTile(r, i) {
     const lights = this._lights(r);
     const on = lights.filter((id) => this._on(id)).length;
-    const t = this._st(r.temperature), h = this._st(r.humidity)?.state;
-    const sub = !lights.length ? (h != null && h !== "" && !isNaN(h) ? `Wilgotność ${Math.round(h)}%` : r.humidity ? "Wilgotność –" : "Brak świateł")
-      : on === 0 ? "Wszystko wyłączone" : on === lights.length ? (on > 1 ? "Wszystkie włączone" : "Włączone") : `Włączone ${on} z ${lights.length}`;
+    const temp = this._st(r.temperature), h = this._st(r.humidity)?.state;
+    const sub = !lights.length ? (h != null && h !== "" && !isNaN(h) ? t("rooms.humidity", { v: Math.round(h) }) : r.humidity ? t("rooms.humidity_none") : t("rooms.no_lights"))
+      : on === 0 ? t("rooms.all_off") : on === lights.length ? (on > 1 ? t("rooms.all_on") : t("common.on_n")) : t("rooms.some_on", { n: on, total: lights.length });
     return `<div class="tile ${on ? "on" : ""}" role="button" tabindex="0" data-act="room" data-room="${i}">
       <div class="head"><div class="ic"><ha-icon icon="${esc(r.icon || "mdi:home-outline")}"></ha-icon></div>
-        ${lights.length ? `<button class="pw" data-act="room-power" data-room="${i}" aria-label="Zasilanie ${esc(r.name)}"><ha-icon icon="mdi:power"></ha-icon></button>` : ""}</div>
+        ${lights.length ? `<button class="pw" data-act="room-power" data-room="${i}" aria-label="${t("rooms.power", { name: esc(r.name) })}"><ha-icon icon="mdi:power"></ha-icon></button>` : ""}</div>
       <div class="name">${esc(r.name)}</div><div class="sub">${sub}</div>
       <div class="foot"><div class="dots">${lights.map((id) => `<i class="${this._on(id) ? "on" : ""}"></i>`).join("")}</div>
-        ${t && !isNaN(t.state) ? `<div class="temp">${num(t.state)}°</div>` : (r.devices || []).slice(0, 1).map((d) => this._deviceChip(d)).join("")}</div></div>`;
+        ${temp && !isNaN(temp.state) ? `<div class="temp">${num(temp.state)}°</div>` : (r.devices || []).slice(0, 1).map((d) => this._deviceChip(d)).join("")}</div></div>`;
   }
 
   _deviceChip(d) {
@@ -2156,13 +2128,13 @@ class HomedeckCard extends HTMLElement {
     const active = this._on(d.active);
     const bat = this._st(d.battery)?.state, detail = this._st(d.detail)?.state;
     const hasBat = bat != null && !isNaN(bat), charging = isCharging(this._st(d.battery_state)?.state);
-    const sub = [active ? "Aktywny" : this._st(d.active)?.state === "unavailable" ? "Niedostępny" : "Uśpiony",
-      active && detail && !["unknown", "unavailable"].includes(detail) ? detail : "", charging ? "ładuje" : ""].filter(Boolean).join(" · ");
+    const sub = [active ? t("devices.active") : this._st(d.active)?.state === "unavailable" ? t("common.unavailable_m") : t("devices.asleep"),
+      active && detail && !["unknown", "unavailable"].includes(detail) ? detail : "", charging ? t("devices.charging") : ""].filter(Boolean).join(" · ");
     return `<div class="row" role="button" tabindex="0" data-act="more" data-entity="${esc(d.active || d.battery)}">
       <div class="ic ${active ? "lime" : ""}"><ha-icon icon="${esc(d.icon || "mdi:laptop")}"></ha-icon></div>
       <div><div class="t">${esc(d.name || this._name(d.active || d.battery))}</div><div class="s">${esc(sub)}</div></div>
-      <div class="row-end">${active && d.sleep ? `<button class="mini" data-act="run" data-entity="${esc(d.sleep)}" aria-label="Uśpij ${esc(d.name || "")}">
-        <ha-icon icon="mdi:power-sleep"></ha-icon>Uśpij</button>` : ""}
+      <div class="row-end">${active && d.sleep ? `<button class="mini" data-act="run" data-entity="${esc(d.sleep)}" aria-label="${t("devices.sleep_label", { name: esc(d.name || "") })}">
+        <ha-icon icon="mdi:power-sleep"></ha-icon>${t("devices.sleep")}</button>` : ""}
         ${hasBat ? `<div class="batt"><ha-icon icon="${battIcon(bat, charging)}"></ha-icon>${Math.round(bat)}%</div>` : ""}</div></div>`;
   }
 
@@ -2184,25 +2156,25 @@ class HomedeckCard extends HTMLElement {
     const offline = items.filter((x) => x.off);
     // Open sensors are a list, set at the size of a tile name; the big type is only for the short one-line states.
     const shown = alerts.slice(0, 3), more = alerts.length - shown.length;
-    const body = alerts.length ? `<div class="alerts">${shown.map((a) => `<div><b>${esc(a.name)}</b> ${ALERT_WORD[a.dc] || "uwaga"}</div>`).join("")}${more ? `<div>i ${more} więcej</div>` : ""}</div>`
-      : `<div class="big">${offline.length ? `${offline.length} ${plural(offline.length, "czujnik", "czujniki", "czujników")} offline` : "Bezpiecznie"}</div>`;
+    const body = alerts.length ? `<div class="alerts">${shown.map((a) => `<div><b>${esc(a.name)}</b> ${table("security.alert")[a.dc] || t("security.attention")}</div>`).join("")}${more ? `<div>${t("security.more", { n: more })}</div>` : ""}</div>`
+      : `<div class="big">${offline.length ? t("security.offline", { n: offline.length }) : t("security.safe")}</div>`;
     return `<div class="tile ${alerts.length ? "alert" : ""}" role="button" tabindex="0" data-act="tab" data-tab="security">
       <div class="head" style="justify-content:flex-start;gap:10px;align-items:center">
-        <div class="ic"><ha-icon icon="${alerts.length ? "mdi:shield-alert-outline" : "mdi:shield-check-outline"}"></ha-icon></div><div class="kicker">Ochrona</div></div>
+        <div class="ic"><ha-icon icon="${alerts.length ? "mdi:shield-alert-outline" : "mdi:shield-check-outline"}"></ha-icon></div><div class="kicker">${t("tabs.security")}</div></div>
       ${body}
-      <div class="sub" style="margin-top:6px">${items.length} ${plural(items.length, "monitorowany czujnik", "monitorowane czujniki", "monitorowanych czujników")}</div></div>`;
+      <div class="sub" style="margin-top:6px">${t("security.monitored", { n: items.length })}</div></div>`;
   }
 
   _climateTile() {
     const cl = this._config.climate;
     if (!cl) return "";
-    const t = this._st(cl.temperature), h = this._st(cl.humidity), out = this._st(this._config.outdoor_temperature);
+    const temp = this._st(cl.temperature), h = this._st(cl.humidity), out = this._st(this._config.outdoor_temperature);
     const th = this._thermo();
-    const parts = th ? [th.status, th.note] : [cl.name, h && !isNaN(h.state) ? `${Math.round(h.state)}% wilg.` : "", out && !isNaN(out.state) ? `na zewnątrz ${num(out.state)}°` : ""];
+    const parts = th ? [th.status, th.note] : [cl.name, h && !isNaN(h.state) ? t("climate.humidity_short", { v: Math.round(h.state) }) : "", out && !isNaN(out.state) ? t("climate.outside", { t: num(out.state) }) : ""];
     return `<div class="tile" role="button" tabindex="0" data-act="climate">
       <div class="head" style="justify-content:flex-start;gap:10px;align-items:center">
-        <div class="ic ${th?.heating ? "heat" : "lime"}"><ha-icon icon="${th?.heating ? "mdi:fire" : "mdi:thermometer"}"></ha-icon></div><div class="kicker">Klimat</div></div>
-      <div class="big" style="font-size:30px">${t && !isNaN(t.state) ? num(t.state) + "°" : "–"}</div>
+        <div class="ic ${th?.heating ? "heat" : "lime"}"><ha-icon icon="${th?.heating ? "mdi:fire" : "mdi:thermometer"}"></ha-icon></div><div class="kicker">${t("climate.title")}</div></div>
+      <div class="big" style="font-size:30px">${temp && !isNaN(temp.state) ? num(temp.state) + "°" : "–"}</div>
       <div class="sub" style="margin-top:6px">${esc(parts.filter(Boolean).join(" · "))}</div>${this._humidifierLine()}</div>`;
   }
 
@@ -2215,7 +2187,7 @@ class HomedeckCard extends HTMLElement {
       const name = this._name((this._config.climate.humidifiers || []).find((x) => (typeof x === "string" ? x : x.entity) === id) || id);
       // One line on the narrow tile: "Osuszacz 44 → 35%" (now → target).
       const now = a.current_humidity != null ? Math.round(a.current_humidity) : null;
-      const txt = st.state !== "on" ? `${name} wyłączony`
+      const txt = st.state !== "on" ? t("climate.humidifier_off", { name })
         : `${name} ${now != null && a.humidity != null ? `${now} → ${a.humidity}%` : now != null ? `${now}%` : a.humidity != null ? `→ ${a.humidity}%` : ""}`;
       return `<div class="sub" style="margin-top:2px;display:flex;align-items:center;gap:4px">
         <ha-icon icon="mdi:air-humidifier" style="--mdc-icon-size:14px;flex:none;${st.state === "on" ? "color:var(--lime)" : ""}"></ha-icon>
@@ -2236,8 +2208,8 @@ class HomedeckCard extends HTMLElement {
     const left = boost && timer.attributes.finishes_at ? Math.max(1, Math.round((new Date(timer.attributes.finishes_at) - Date.now()) / 60000)) : null;
     const sched = Number(this._st(cl.schedule)?.attributes.temperature);
     const onSchedule = on && !boost && !isNaN(sched) && Math.abs(target - sched) < .05;
-    const status = !on ? "Ogrzewanie wyłączone" : `${heating ? "Grzeje do" : "Utrzymuje"} ${num(target)}°`;
-    const note = boost ? `grzanie 1h${left ? `, jeszcze ${left} min` : ""}` : on && !onSchedule && !isNaN(sched) ? `ręcznie, harmonogram ${num(sched)}°` : "";
+    const status = !on ? t("climate.heating_off") : `${t(heating ? "climate.heating_word" : "climate.holding_word")} ${num(target)}°`;
+    const note = boost ? `${t("climate.boost_note")}${left ? t("climate.boost_left", { n: left }) : ""}` : on && !onSchedule && !isNaN(sched) ? t("climate.manual", { t: num(sched) }) : "";
     return { id: cl.entity, cl, a, on, heating, target, boost, sched, onSchedule, status, note };
   }
 
@@ -2248,14 +2220,14 @@ class HomedeckCard extends HTMLElement {
     return `<div class="thermo">
       <div class="th-status ${th.heating ? "heat" : ""}"><ha-icon icon="${th.heating ? "mdi:fire" : th.on ? "mdi:thermostat" : "mdi:power"}"></ha-icon>${esc(th.status)}</div>
       <div class="th-row">
-        <button class="th-btn" data-act="temp" data-step="-0.5" aria-label="Chłodniej" ${!th.on || th.target <= min ? "disabled" : ""}><ha-icon icon="mdi:minus"></ha-icon></button>
-        <div class="th-val"><b>${num(th.target)}°</b><span>${isNaN(cur) ? "&nbsp;" : `Teraz ${num(cur)}°`}</span>
+        <button class="th-btn" data-act="temp" data-step="-0.5" aria-label="${t("climate.cooler")}" ${!th.on || th.target <= min ? "disabled" : ""}><ha-icon icon="mdi:minus"></ha-icon></button>
+        <div class="th-val"><b>${num(th.target)}°</b><span>${isNaN(cur) ? "&nbsp;" : t("common.now_value", { v: `${num(cur)}°` })}</span>
           <span class="th-note">${th.note ? esc(th.note) : "&nbsp;"}</span></div>
-        <button class="th-btn" data-act="temp" data-step="0.5" aria-label="Cieplej" ${!th.on || th.target >= max ? "disabled" : ""}><ha-icon icon="mdi:plus"></ha-icon></button></div>
+        <button class="th-btn" data-act="temp" data-step="0.5" aria-label="${t("climate.warmer")}" ${!th.on || th.target >= max ? "disabled" : ""}><ha-icon icon="mdi:plus"></ha-icon></button></div>
       <div class="th-modes">
-        ${cl.resume ? `<button class="${th.onSchedule ? "on" : ""}" data-act="thermo-run" data-entity="${esc(cl.resume)}"><ha-icon icon="mdi:calendar-clock"></ha-icon>Harmonogram</button>` : ""}
-        ${cl.boost ? `<button class="${th.boost ? "on" : ""}" data-act="thermo-run" data-entity="${esc(cl.boost)}"><ha-icon icon="mdi:fire"></ha-icon>Grzanie 1h</button>` : ""}
-        <button class="${th.on ? "" : "on"}" data-act="thermo-power" data-on="${th.on ? 1 : 0}"><ha-icon icon="mdi:power"></ha-icon>${th.on ? "Wyłącz" : "Wyłączone"}</button></div></div>`;
+        ${cl.resume ? `<button class="${th.onSchedule ? "on" : ""}" data-act="thermo-run" data-entity="${esc(cl.resume)}"><ha-icon icon="mdi:calendar-clock"></ha-icon>${t("climate.schedule")}</button>` : ""}
+        ${cl.boost ? `<button class="${th.boost ? "on" : ""}" data-act="thermo-run" data-entity="${esc(cl.boost)}"><ha-icon icon="mdi:fire"></ha-icon>${t("climate.boost")}</button>` : ""}
+        <button class="${th.on ? "" : "on"}" data-act="thermo-power" data-on="${th.on ? 1 : 0}"><ha-icon icon="mdi:power"></ha-icon>${th.on ? t("common.turn_off") : t("common.off_n")}</button></div></div>`;
   }
 
   _climateSensors() {
@@ -2263,7 +2235,7 @@ class HomedeckCard extends HTMLElement {
     if (cl.sensors) return cl.sensors;
     const list = c.rooms.filter((r) => r.temperature || r.humidity)
       .map((r) => ({ name: r.name, icon: r.icon, temperature: r.temperature, humidity: r.humidity }));
-    if (c.outdoor_temperature) list.push({ name: "Na zewnątrz", icon: "mdi:tree-outline", temperature: c.outdoor_temperature, humidity: cl.outdoor_humidity, outdoor: true });
+    if (c.outdoor_temperature) list.push({ name: t("climate.outdoor"), icon: "mdi:tree-outline", temperature: c.outdoor_temperature, humidity: cl.outdoor_humidity, outdoor: true });
     return list;
   }
 
@@ -2276,16 +2248,16 @@ class HomedeckCard extends HTMLElement {
     const indoor = items.filter((x) => !x.outdoor && x.t != null);
     const avg = indoor.length ? indoor.reduce((a, x) => a + x.t, 0) / indoor.length : null;
     const cards = items.map((x) => {
-      const note = x.h == null || x.outdoor ? "" : x.h >= 65 ? `<span class="warn">wilgotno</span>` : x.h < 35 ? `<span class="warn">sucho</span>` : "";
+      const note = x.h == null || x.outdoor ? "" : x.h >= 65 ? `<span class="warn">${t("climate.humid")}</span>` : x.h < 35 ? `<span class="warn">${t("climate.dry")}</span>` : "";
       return `<div class="sensor" role="button" tabindex="0" data-act="more" data-entity="${esc(x.temperature || x.humidity)}">
         <div class="sn"><ha-icon icon="${esc(x.icon || "mdi:thermometer")}"></ha-icon>${esc(x.name)}</div>
         <div class="sv">${x.t != null ? num(x.t) + "°" : "–"}</div>
         <div class="sh"><ha-icon icon="mdi:water-percent"></ha-icon>${x.h != null ? Math.round(x.h) + "%" : "–"}${note}</div></div>`;
     }).join("");
-    return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet" role="dialog" aria-label="Klimat">
+    return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet" role="dialog" aria-label="${t("climate.title")}">
       <div class="hd"><span class="ic lime"><ha-icon icon="mdi:thermometer"></ha-icon></span>
-        <div style="flex:1"><h2>Klimat</h2><div class="s" style="color:var(--muted);font-size:13px">${avg != null ? `Średnio ${num(avg)}° w mieszkaniu` : ""}</div></div>
-        <button class="round" data-act="close-sheet" aria-label="Zamknij"><ha-icon icon="mdi:close"></ha-icon></button></div>
+        <div style="flex:1"><h2>${t("climate.title")}</h2><div class="s" style="color:var(--muted);font-size:13px">${avg != null ? t("climate.average", { t: num(avg) }) : ""}</div></div>
+        <button class="round" data-act="close-sheet" aria-label="${t("common.close")}"><ha-icon icon="mdi:close"></ha-icon></button></div>
       ${this._thermoPanel()}${(this._config.climate?.humidifiers || []).length
         ? `<div class="rows" style="margin-bottom:12px">${this._config.climate.humidifiers.map((x) => this._humidifierRow(x)).join("")}</div>` : ""}
       <div class="sensors">${cards}</div></div></div>`;
@@ -2310,14 +2282,14 @@ class HomedeckCard extends HTMLElement {
   // `air_quality: { index, pm10, pm25 }`: GIOŚ sensors of the nearest station.
   _air() {
     const c = this._config.air_quality, st = c && this._st(c.index);
-    if (!st || !AIR_PL[st.state]) return null;
+    if (!st || !table("weather.air")[st.state]) return null;
     const pm = (id) => { const v = this._st(id)?.state; return v != null && !isNaN(v) ? Math.round(Number(v)) : null; };
-    return { level: st.state, label: AIR_PL[st.state], bad: AIR_BAD.includes(st.state), pm10: pm(c.pm10), pm25: pm(c.pm25) };
+    return { level: st.state, label: table("weather.air")[st.state], bad: AIR_BAD.includes(st.state), pm10: pm(c.pm10), pm25: pm(c.pm25) };
   }
 
   _wxAlert() {
     const st = this._st(this._config.weather_alert)?.state;
-    return st && !["no_alert", "unknown", "unavailable"].includes(st) ? IMGW_ALERT_PL[st] || st : "";
+    return st && !["no_alert", "unknown", "unavailable"].includes(st) ? table("weather.imgw")[st] || st : "";
   }
 
   _foldTwiceDaily(parts) {
@@ -2386,16 +2358,16 @@ class HomedeckCard extends HTMLElement {
       : String(cond).startsWith("lightning") ? WX_BG.storm : night ? WX_BG.night : ["cloudy", "fog", "windy", "windy-variant"].includes(cond) ? WX_BG.cloud : WX_BG.day;
     const stat = (icon, label, value) => `<div class="wx-stat"><span>${label}</span><b><ha-icon icon="${icon}"></ha-icon>${value}</b></div>`;
     const wind = a.wind_speed != null ? `${Math.round(a.wind_speed)} ${esc(a.wind_speed_unit || "km/h")}` : "–";
-    const windDir = a.wind_bearing != null ? " · " + WIND_PL[Math.round(a.wind_bearing / 45) % 8] : "";
-    const stats = stat("mdi:water-percent", "Wilgotność", a.humidity != null ? `${Math.round(a.humidity)}%` : "–")
-      + stat("mdi:weather-windy", "Wiatr" + windDir, wind)
-      + stat("mdi:gauge", "Ciśnienie", a.pressure != null ? `${Math.round(a.pressure)} hPa` : "–")
-      + stat("mdi:cloud-outline", "Zachmurzenie", a.cloud_coverage != null ? `${Math.round(a.cloud_coverage)}%` : "–")
-      + (air ? stat(air.bad ? "mdi:smog" : "mdi:leaf", "Powietrze" + (air.pm10 != null ? ` · PM10 ${air.pm10}` : ""), esc(air.label[0].toUpperCase() + air.label.slice(1))) : "");
+    const windDir = a.wind_bearing != null ? " · " + table("weather.wind")[Math.round(a.wind_bearing / 45) % 8] : "";
+    const stats = stat("mdi:water-percent", t("common.humidity"), a.humidity != null ? `${Math.round(a.humidity)}%` : "–")
+      + stat("mdi:weather-windy", t("weather.wind_label") + windDir, wind)
+      + stat("mdi:gauge", t("weather.pressure"), a.pressure != null ? `${Math.round(a.pressure)} hPa` : "–")
+      + stat("mdi:cloud-outline", t("weather.clouds"), a.cloud_coverage != null ? `${Math.round(a.cloud_coverage)}%` : "–")
+      + (air ? stat(air.bad ? "mdi:smog" : "mdi:leaf", t("weather.air_label") + (air.pm10 != null ? ` · PM10 ${air.pm10}` : ""), esc(air.label[0].toUpperCase() + air.label.slice(1))) : "");
     const hours = (f?.hourly || []).slice(0, 12).map((h, i) => {
       const d = new Date(h.datetime);
       const hNight = d.getHours() < 7 || d.getHours() >= 17;
-      return `<div class="hr"><span>${i ? String(d.getHours()).padStart(2, "0") : "Teraz"}</span><ha-icon icon="${wIcon(h.condition, hNight)}"></ha-icon>
+      return `<div class="hr"><span>${i ? String(d.getHours()).padStart(2, "0") : t("common.now")}</span><ha-icon icon="${wIcon(h.condition, hNight)}"></ha-icon>
         <b>${Math.round(h.temperature)}°</b>${h.precipitation_probability ? `<i>${Math.round(h.precipitation_probability)}%</i>` : ""}</div>`;
     }).join("");
     const days = (f?.daily || []).slice(0, 7);
@@ -2403,27 +2375,27 @@ class HomedeckCard extends HTMLElement {
     const span = hi - lo || 1;
     const dayRows = days.map((d, i) => {
       const low = d.templow ?? d.temperature;
-      const name = i === 0 ? "Dziś" : new Date(d.datetime).toLocaleDateString("pl-PL", { weekday: "short" }).replace(".", "");
+      const name = i === 0 ? t("common.today") : date(d.datetime, { weekday: "short" }).replace(".", "");
       const rain = d.precipitation_probability ? `${Math.round(d.precipitation_probability)}%` : d.precipitation ? `${num(d.precipitation)} mm` : "";
       return `<div class="day"><span>${esc(name)}</span><ha-icon icon="${wIcon(d.condition)}"></ha-icon><span class="p">${rain}</span>
         <span class="lo">${Math.round(low)}°</span><div class="range"><i style="left:${((low - lo) / span) * 100}%;width:${Math.max(((d.temperature - low) / span) * 100, 4)}%"></i></div>
         <span class="hi">${Math.round(d.temperature)}°</span></div>`;
     }).join("");
-    const loading = `<div class="empty">${f ? "Brak prognozy" : "Ładowanie prognozy…"}</div>`;
-    return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet wx" role="dialog" aria-label="Pogoda" style="--wx-bg:${bg}">
-      <div class="hd"><h2 style="flex:1">${esc(c.weather_name || "Pogoda")}</h2>
-        <button class="round" data-act="close-sheet" aria-label="Zamknij"><ha-icon icon="mdi:close"></ha-icon></button></div>
+    const loading = `<div class="empty">${f ? t("weather.no_forecast") : t("weather.loading")}</div>`;
+    return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet wx" role="dialog" aria-label="${t("weather.title")}" style="--wx-bg:${bg}">
+      <div class="hd"><h2 style="flex:1">${esc(c.weather_name || t("weather.title"))}</h2>
+        <button class="round" data-act="close-sheet" aria-label="${t("common.close")}"><ha-icon icon="mdi:close"></ha-icon></button></div>
       ${c.demo_weather ? `<div class="wx-demo">${WX_DEMO.map(([k, n], i) => `<button class="${this._wxDemo === i ? "on" : ""}" data-act="wx-demo" data-i="${i}">
-        <ha-icon icon="${wIcon(k, n)}"></ha-icon>${esc(WEATHER_PL[k][0])}${n && k !== "clear-night" ? " (noc)" : ""}</button>`).join("")}</div>` : ""}
+        <ha-icon icon="${wIcon(k, n)}"></ha-icon>${esc(wxWord(k))}${n && k !== "clear-night" ? ` (${t("weather.night")})` : ""}</button>`).join("")}</div>` : ""}
       <div class="wx-hero">${this._wxArt(cond, night)}
         <div><div class="wx-temp">${temp != null ? Math.round(temp) + "°" : "–"}</div>
-          <div class="wx-cond">${esc((WEATHER_PL[cond] || [cond])[0])}</div>
-          ${today ? `<div class="s" style="color:var(--muted);font-size:14px;margin-top:2px">Maks. ${Math.round(today.temperature)}° · Min. ${Math.round(today.templow ?? today.temperature)}°</div>` : ""}</div></div>
+          <div class="wx-cond">${esc(wxWord(cond) ?? cond)}</div>
+          ${today ? `<div class="s" style="color:var(--muted);font-size:14px;margin-top:2px">${t("weather.high_low", { hi: Math.round(today.temperature), lo: Math.round(today.templow ?? today.temperature) })}</div>` : ""}</div></div>
       ${this._wxAlert() ? `<div class="pproblems"><div class="pproblem"><div class="ic" style="background:#FF9F0A"><ha-icon icon="mdi:alert"></ha-icon></div>
-        <div><div class="t">Ostrzeżenie: ${esc(this._wxAlert())}</div><div class="s">Komunikat IMGW-PIB</div></div></div></div>` : ""}
+        <div><div class="t">${esc(t("weather.warning", { alert: this._wxAlert() }))}</div><div class="s">${t("weather.imgw_source")}</div></div></div></div>` : ""}
       <div class="wx-stats ${air ? "five" : ""}">${stats}</div>
-      <div class="label">Najbliższe godziny</div><div class="hours">${hours || loading}</div>
-      <div class="label">Kolejne dni</div><div class="days">${dayRows || loading}</div></div></div>`;
+      <div class="label">${t("weather.hours")}</div><div class="hours">${hours || loading}</div>
+      <div class="label">${t("weather.days")}</div><div class="days">${dayRows || loading}</div></div></div>`;
   }
 
   // A scene can name what shows it is running (`active`: a timer, switch or script). While it runs the button lights up,
@@ -2447,35 +2419,35 @@ class HomedeckCard extends HTMLElement {
     const p = this._persons().find((x) => x.entity === id) || { entity: id };
     const { st, a, name, pic, home } = this._who(p);
     const val = (key) => { const v = this._st(p[key])?.state; return v && !["unknown", "unavailable", "--", ""].includes(v) ? v : null; };
-    const zone = home ? "W domu" : st?.state === "not_home" ? "Poza domem" : this._st(`zone.${st?.state}`)?.attributes.friendly_name || st?.state || "Nieznane";
+    const zone = home ? t("persons.home") : st?.state === "not_home" ? t("persons.away") : this._st(`zone.${st?.state}`)?.attributes.friendly_name || st?.state || t("persons.unknown");
     const homeZone = this._st("zone.home")?.attributes;
     let dist = "";
     if (!home && a.latitude != null && homeZone?.latitude != null) {
       const km = distanceKm(a, homeZone);
-      dist = km < 1 ? ` · ${Math.round(km * 1000)} m od domu` : ` · ${num(km)} km od domu`;
+      dist = ` · ${km < 1 ? t("persons.dist_m", { d: Math.round(km * 1000) }) : t("persons.dist_km", { d: num(km) })}`;
     }
     const stat = (icon, label, value) => `<div class="wx-stat"><span>${label}</span><b><ha-icon icon="${icon}"></ha-icon>${esc(value)}</b></div>`;
     const stats = [];
     const battery = val("battery") ?? a.battery_level;
     if (battery != null) {
       const charging = isCharging(val("battery_state"));
-      stats.push(stat(battIcon(battery, charging), charging ? "Bateria · ładuje" : "Bateria", `${Math.round(battery)}%`));
+      stats.push(stat(battIcon(battery, charging), charging ? t("persons.battery_charging") : t("common.battery"), `${Math.round(battery)}%`));
     }
-    if (val("steps") != null) stats.push(stat("mdi:shoe-print", "Kroki dziś", Number(val("steps")).toLocaleString("pl-PL")));
-    if (val("activity") != null) stats.push(stat("mdi:run", "Aktywność", ACTIVITY_PL[val("activity")] || val("activity")));
+    if (val("steps") != null) stats.push(stat("mdi:shoe-print", t("persons.steps"), int(val("steps"))));
+    if (val("activity") != null) stats.push(stat("mdi:run", t("persons.activity_label"), table("persons.activity")[val("activity")] || val("activity")));
     if (val("connection") != null) {
       const wifi = /wi-?fi/i.test(val("connection"));
-      stats.push(stat(wifi ? "mdi:wifi" : "mdi:signal-cellular-3", "Połączenie", wifi ? val("ssid") || "Wi-Fi" : "Komórkowe"));
+      stats.push(stat(wifi ? "mdi:wifi" : "mdi:signal-cellular-3", t("persons.connection"), wifi ? val("ssid") || "Wi-Fi" : t("persons.cellular")));
     }
     const address = val("address");
     const where = address ? `<div class="where"><ha-icon icon="mdi:map-marker-outline"></ha-icon><span>${esc(address.split("\n").slice(0, 2).join(", "))}</span></div>` : "";
     return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet" role="dialog" aria-label="${esc(name)}">
       <div class="hd"><div class="person-hero">
           <div class="person-pic ${home ? "home" : ""}" style="${pic ? `background-image:url('${esc(this._pic(pic))}')` : ""}">${pic ? "" : esc(name[0])}</div>
-          <div><h2>${esc(name)}</h2><div class="st"><b style="${home ? "" : "color:#fff"}">${esc(zone)}</b>${st ? ` · od ${ago(st.last_changed)}` : ""}${esc(dist)}</div></div></div>
-        <button class="round" data-act="close-sheet" aria-label="Zamknij" style="align-self:flex-start"><ha-icon icon="mdi:close"></ha-icon></button></div>
+          <div><h2>${esc(name)}</h2><div class="st"><b style="${home ? "" : "color:#fff"}">${esc(zone)}</b>${st ? ` · ${since(st.last_changed)}` : ""}${esc(dist)}</div></div></div>
+        <button class="round" data-act="close-sheet" aria-label="${t("common.close")}" style="align-self:flex-start"><ha-icon icon="mdi:close"></ha-icon></button></div>
       ${stats.length ? `<div class="wx-stats two">${stats.join("")}</div>` : ""}${where}
-      <button class="wide-btn" data-act="more" data-entity="${esc(id)}"><ha-icon icon="mdi:map-outline"></ha-icon>Mapa i historia</button></div></div>`;
+      <button class="wide-btn" data-act="more" data-entity="${esc(id)}"><ha-icon icon="mdi:map-outline"></ha-icon>${t("persons.map")}</button></div></div>`;
   }
 
   async _loadTodo() {
@@ -2498,20 +2470,19 @@ class HomedeckCard extends HTMLElement {
     const done = data ? data.items.filter((i) => i.status === "completed") : [];
     const seen = {};
     const key = new Map((data?.items || []).map((i) => [i, `${i.summary}#${(seen[i.summary] = (seen[i.summary] ?? -1) + 1)}`]));
-    const due = (d) => (d ? new Date(d).toLocaleDateString("pl-PL", { weekday: "short", day: "numeric", month: "short" }) : "");
+    const due = (d) => (d ? date(d, { weekday: "short", day: "numeric", month: "short" }) : "");
     const row = (i) => `<div class="todo ${i.status === "completed" ? "done" : ""}" role="button" tabindex="0" data-act="todo-toggle" data-uid="${esc(i.uid)}" data-flip="${esc(key.get(i))}">
       <span class="chk"><ha-icon icon="mdi:check"></ha-icon></span><span class="tt">${esc(i.summary)}${i.due ? `<small>${esc(due(i.due))}</small>` : ""}</span></div>`;
-    const sub = !data ? "Ładowanie…" : data.error ? "Nie udało się wczytać listy" : open.length
-      ? `${open.length} ${plural(open.length, "pozycja", "pozycje", "pozycji")} do zrobienia` : "Wszystko zrobione";
+    const sub = !data ? t("common.loading") : data.error ? t("todo.error") : open.length ? t("todo.open", { n: open.length }) : t("todo.all_done");
     return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet" role="dialog" aria-label="${esc(name)}">
       <div class="hd"><span class="ic lime"><ha-icon icon="${esc(chip.icon || "mdi:format-list-checks")}"></ha-icon></span>
         <div style="flex:1"><h2>${esc(name)}</h2><div class="s" style="color:var(--muted);font-size:13px">${sub}</div></div>
-        <button class="round" data-act="close-sheet" aria-label="Zamknij"><ha-icon icon="mdi:close"></ha-icon></button></div>
-      <div class="todo-add"><input type="text" placeholder="Dodaj pozycję…" data-act="todo-input" aria-label="Nowa pozycja" enterkeyhint="done">
-        <button data-act="todo-add" aria-label="Dodaj"><ha-icon icon="mdi:plus"></ha-icon></button></div>
+        <button class="round" data-act="close-sheet" aria-label="${t("common.close")}"><ha-icon icon="mdi:close"></ha-icon></button></div>
+      <div class="todo-add"><input type="text" placeholder="${t("todo.add_placeholder")}" data-act="todo-input" aria-label="${t("todo.new_item")}" enterkeyhint="done">
+        <button data-act="todo-add" aria-label="${t("todo.add")}"><ha-icon icon="mdi:plus"></ha-icon></button></div>
       <div class="todos">${open.map(row).join("")}</div>
-      ${done.length ? `<div class="done-hd" data-flip="done-hd"><span class="label" style="margin:0">Zrobione · ${done.length}</span>
-        <button class="link" data-act="todo-clear">Wyczyść</button></div><div class="todos">${done.map(row).join("")}</div>` : ""}</div></div>`;
+      ${done.length ? `<div class="done-hd" data-flip="done-hd"><span class="label" style="margin:0">${t("todo.done", { n: done.length })}</span>
+        <button class="link" data-act="todo-clear">${t("todo.clear")}</button></div><div class="todos">${done.map(row).join("")}</div>` : ""}</div></div>`;
   }
 
   _todoAdd() {
@@ -2534,16 +2505,16 @@ class HomedeckCard extends HTMLElement {
     const st = this._st(pl.entity), a = st?.attributes || {};
     const problems = Array.isArray(a.problems) ? a.problems : [];
     const first = problems[0] && PLANT_METRICS.find((m) => m.key === problems[0].sensor_type);
-    const sub = !st ? "Brak danych" : problems.length ? (first ? first[problems[0].status] || "Wymaga uwagi" : "Wymaga uwagi").split(" — ")[0] : "Wszystko w porządku";
+    const sub = !st ? t("common.no_data") : problems.length ? (first ? first[problems[0].status] || t("plants.attention") : t("plants.attention")).split(" — ")[0] : t("common.all_ok");
     const val = (id, digits, unit) => { const v = this._st(id)?.state; return v != null && !isNaN(v) ? num(v, digits) + unit : null; };
     const chips = [[pl.moisture && val(pl.moisture, 0, "%"), "mdi:water"], [pl.illuminance && val(pl.illuminance, 0, " lx"), "mdi:brightness-5"]]
       .filter(([v]) => v).map(([v, icon]) => `<div class="devchip"><ha-icon icon="${icon}"></ha-icon>${v}</div>`).join("");
     const photo = this._plantPic(pl, true);
     return `<div class="tile plant-tile ${problems.length ? "plant-warn" : ""}" role="button" tabindex="0" data-act="plant" data-plant="${i}">
       <div class="ptop"><div class="plant-pic" style="${photo}">${photo ? "" : `<ha-icon icon="mdi:sprout"></ha-icon>`}</div>
-        <div class="pw pstate ${problems.length ? "bad" : ""}" title="${problems.length ? "Wymaga uwagi" : "W porządku"}">
+        <div class="pw pstate ${problems.length ? "bad" : ""}" title="${problems.length ? t("plants.attention") : t("plants.ok")}">
           <ha-icon icon="${problems.length ? "mdi:exclamation-thick" : "mdi:check-bold"}"></ha-icon></div></div>
-      <div class="name">${esc(pl.name || a.friendly_name || "Roślina")}<span class="proom">${esc(pl.room || "")}</span></div><div class="sub">${esc(sub)}</div>
+      <div class="name">${esc(pl.name || a.friendly_name || t("plants.plant"))}<span class="proom">${esc(pl.room || "")}</span></div><div class="sub">${esc(sub)}</div>
       <div class="foot pfoot">${chips}</div></div>`;
   }
 
@@ -2553,29 +2524,29 @@ class HomedeckCard extends HTMLElement {
     const pic = this._plantPic(pl);
     const probRows = problems.map((p) => {
       const m = PLANT_METRICS.find((x) => x.key === p.sensor_type) || { icon: "mdi:alert-circle-outline", color: "#8E8E93", unit: "", digits: 1 };
-      const range = p.min != null && p.max != null ? ` · zakres ${num(p.min, m.digits)}–${num(p.max, m.digits)}${m.unit}` : "";
+      const range = p.min != null && p.max != null ? ` · ${t("plants.range", { range: `${num(p.min, m.digits)}–${num(p.max, m.digits)}${m.unit}` })}` : "";
       return `<div class="pproblem"><div class="ic" style="background:${m.color}"><ha-icon icon="${m.icon}"></ha-icon></div>
         <div><div class="t">${esc(m[p.status] || `${p.sensor_type}: ${p.status}`)}</div>
-        <div class="s">Teraz ${num(p.current, m.digits)}${esc(m.unit)}${range}</div></div></div>`;
+        <div class="s">${t("common.now_value", { v: `${num(p.current, m.digits)}${esc(m.unit)}` })}${range}</div></div></div>`;
     }).join("");
     const metric = (m, id, statusVal) => {
       const v = this._st(id)?.state;
       const ok = !statusVal || String(statusVal).toLowerCase() === "ok";
-      const label = !statusVal ? "" : ok ? "W normie" : String(statusVal).toLowerCase() === "low" ? "Za mało" : "Za dużo";
+      const label = !statusVal ? "" : ok ? t("plants.in_range") : String(statusVal).toLowerCase() === "low" ? t("plants.low") : t("plants.high");
       return `<div class="pmetric" role="button" tabindex="0" data-act="more" data-entity="${esc(id)}" style="--c:${m.color}">
         <div class="pm-hd"><ha-icon icon="${m.icon}"></ha-icon>${esc(m.label)}</div>
         <div class="pm-v">${v != null && !isNaN(v) ? num(v, m.digits) + esc(m.unit) : "–"}</div>
         ${label ? `<div class="pm-s ${ok ? "" : "bad"}"><ha-icon icon="${ok ? "mdi:check-circle" : String(statusVal).toLowerCase() === "low" ? "mdi:arrow-down-circle" : "mdi:arrow-up-circle"}"></ha-icon>${label}</div>` : ""}</div>`;
     };
     const metrics = PLANT_METRICS.filter((m) => pl[m.key]).map((m) => metric(m, pl[m.key], a[m.status])).join("")
-      + (pl.battery ? metric({ label: "Bateria czujnika", icon: "mdi:battery-60", color: "#34C759", unit: "%", digits: 0 }, pl.battery,
+      + (pl.battery ? metric({ label: t("plants.sensor_battery"), icon: "mdi:battery-60", color: "#34C759", unit: "%", digits: 0 }, pl.battery,
         Number(this._st(pl.battery)?.state) < 15 ? "low" : "ok") : "");
     return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet plant-sheet" role="dialog" aria-label="${esc(pl.name || a.friendly_name || "")}">
       <div class="plant-banner" style="${pic}">
-        <button class="round" data-act="close-sheet" aria-label="Zamknij"><ha-icon icon="mdi:close"></ha-icon></button>
+        <button class="round" data-act="close-sheet" aria-label="${t("common.close")}"><ha-icon icon="mdi:close"></ha-icon></button>
         <div class="pb-txt"><span class="pbadge ${problems.length ? "bad" : ""}"><ha-icon icon="${problems.length ? "mdi:alert-circle" : "mdi:check-circle"}"></ha-icon>
-            ${problems.length ? "Wymaga uwagi" : "W porządku"}</span>
-          <h2>${esc(pl.name || a.friendly_name || "Roślina")}</h2>${a.species ? `<div class="sp">${esc(a.species)}${pl.room ? ` · ${esc(pl.room)}` : ""}</div>` : ""}</div></div>
+            ${problems.length ? t("plants.attention") : t("plants.ok")}</span>
+          <h2>${esc(pl.name || a.friendly_name || t("plants.plant"))}</h2>${a.species ? `<div class="sp">${esc(a.species)}${pl.room ? ` · ${esc(pl.room)}` : ""}</div>` : ""}</div></div>
       ${probRows ? `<div class="pproblems">${probRows}</div>` : ""}
       <div class="pmetrics">${metrics}</div></div></div>`;
   }
@@ -2613,7 +2584,7 @@ class HomedeckCard extends HTMLElement {
     return {
       id: src.entity_id, tv: id, st, a, active, playing: src.state === "playing", srcName,
       // A TV that is on but plays nothing HA can see (decoder, console on HDMI) still shows what it is on.
-      input: on && !active ? srcName(tv.source) || (TV_APPS.find(([re]) => re.test(String(tv.app_id || ""))) || [])[1] || "" : "",
+      input: on && !active ? srcName(tv.source) || tvApp(String(tv.app_id || "")) : "",
       title: a.media_title || (active ? a.app_name || srcName(a.source) : "") || "",
       artist: a.media_artist || a.media_album_name || a.media_series_title || subtitle || "",
       // The TV channel (from `subtitle`) and, from `channel_logos: { "TV Republika": url | { logo, color } }`, its logo
@@ -2632,7 +2603,7 @@ class HomedeckCard extends HTMLElement {
       })(),
       // A Google TV reports the open app as its package (com.google.android.youtube.tv): show the app's name instead.
       app: [a.app_name, srcName(a.source), tv.app_name, srcName(tv.source)].filter(Boolean)
-        .map((v) => (/^[a-z][\w]*(\.[\w]+)+$/i.test(v) ? (TV_APPS.find(([re]) => re.test(v)) || [])[1] || "" : v)).find(Boolean) || "",
+        .map((v) => (/^[a-z][\w]*(\.[\w]+)+$/i.test(v) ? tvApp(v) : v)).find(Boolean) || "",
       pic, cover: !!found,
       // No title means the picture is the open app's icon, not artwork.
       logo: !a.media_title,
@@ -2661,7 +2632,7 @@ class HomedeckCard extends HTMLElement {
     if (cache.has(key)) return cache.get(key);
     cache.set(key, "");
     const term = encodeURIComponent(`${a.media_artist} ${a.media_title.replace(/\s*[([].*?[)\]]/g, "")}`);
-    fetch(`https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=1&country=PL`)
+    fetch(`https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=1&country=${this._hass.config?.country || "US"}`)
       .then((r) => r.json()).then((d) => {
         // A video that is not a song can still match some record: take the cover only when the artist agrees.
         const hit = d.results?.[0], want = fold(a.media_artist).split(/\W+/)[0] || "";
@@ -2743,7 +2714,7 @@ class HomedeckCard extends HTMLElement {
       cur = sum(mo); prev = sum(mo - 1);
     } else {
       bars = Array.from({ length: 12 }, (_, i) => { const d = new Date(y, mo - 11 + i, 1);
-        return { v: rows.get(key(d)) || 0, label: d.toLocaleDateString("pl-PL", { month: "short" }).replace(".", ""), on: i === 11 }; });
+        return { v: rows.get(key(d)) || 0, label: date(d, { month: "short" }).replace(".", ""), on: i === 11 }; });
       cur = bars[11].v; prev = bars[10].v;
     }
     const price = typeof u.price === "number" ? u.price : Number(this._st(u.price)?.state);
@@ -2755,13 +2726,13 @@ class HomedeckCard extends HTMLElement {
     if (!st) return "";
     const v = i.attribute ? st.attributes[i.attribute] : st.state;
     if (v == null || ["unknown", "unavailable", "None"].includes(String(v))) return "";
-    const date = (t) => new Date(String(t).replace(" ", "T")).toLocaleDateString("pl-PL", { day: "numeric", month: "short" });
+    const day = (x) => date(new Date(String(x).replace(" ", "T")), { day: "numeric", month: "short" });
     // The panels are narrow: the date is the value, how many days away goes into the label ("Odczyt · 17 dni" / "3 gru").
     let txt, label = i.name;
     if (i.days) {
-      const n = Math.round(Number(v)), when = n <= 0 ? "dziś" : n === 1 ? "jutro" : `${n} dni`;
-      if (st.attributes.event_time) { txt = date(st.attributes.event_time); label = `${i.name} · ${when}`; } else txt = when;
-    } else if (i.date) txt = date(v);
+      const n = Math.round(Number(v)), when = n <= 0 ? t("common.today_lc") : n === 1 ? t("common.tomorrow_lc") : t("usage.days", { n });
+      if (st.attributes.event_time) { txt = day(st.attributes.event_time); label = `${i.name} · ${when}`; } else txt = when;
+    } else if (i.date) txt = day(v);
     else txt = isNaN(v) ? String(v) : `${num(v, i.digits ?? 2)}${i.unit ? " " + i.unit : ""}`;
     return `<div class="use-info"><span>${esc(label)}</span><b>${esc(txt)}</b></div>`;
   }
@@ -2771,24 +2742,24 @@ class HomedeckCard extends HTMLElement {
     const digits = u.digits ?? (d.unit === "kWh" ? 0 : d.cur < 10 ? 2 : 0);
     const live = u.live && this._st(u.live), today = u.today && this._st(u.today);
     const upd = u.updated && d.st?.attributes[u.updated];
-    const cost = d.price != null && d.cur ? num(d.cur * d.price, 0) : "";
-    const prev = d.prev && u.compare !== false ? `<div class="use-info"><span>Poprzedni miesiąc</span><b>${num(d.prev, digits)} ${esc(d.unit)}</b></div>` : "";
+    const cost = d.price != null && d.cur ? money(d.cur * d.price, 0) : "";
+    const prev = d.prev && u.compare !== false ? `<div class="use-info"><span>${t("usage.prev_month")}</span><b>${num(d.prev, digits)} ${esc(d.unit)}</b></div>` : "";
     const label = (i) => (u.chart === "day" ? i % 7 === 1 : i % 2 === 1);
     return `<div class="panel use" style="--use:${esc(u.color || "var(--lime)")}">
       <h3><span class="ic use-ic"><ha-icon icon="${esc(u.icon || "mdi:meter-electric-outline")}"></ha-icon></span>${esc(u.name)}
         ${live && !isNaN(live.state) ? `<span class="meta" style="white-space:nowrap">${num(live.state, 1)} ${esc(live.attributes.unit_of_measurement || "")}</span>` : ""}</h3>
-      <div class="use-big">${d.loaded ? num(d.cur, digits) : "–"}<small>${esc(d.unit)}</small>${cost ? `<span class="use-cost">≈ ${cost} zł</span>` : ""}</div>
-      <div class="use-sub">${esc(u.label || "W tym miesiącu")}</div>
+      <div class="use-big">${d.loaded ? num(d.cur, digits) : "–"}<small>${esc(d.unit)}</small>${cost ? `<span class="use-cost">${t("usage.approx", { v: cost })}</span>` : ""}</div>
+      <div class="use-sub">${esc(u.label || t("usage.this_month"))}</div>
       <div class="use-chart" aria-hidden="true">${d.bars.map((b, i) => `<div class="use-col ${b.on ? "on" : ""}">
         <i style="height:${Math.max(b.v ? 3 : 0, (b.v / max) * 100).toFixed(1)}%"></i><span>${label(i) || b.on ? esc(b.label) : ""}</span></div>`).join("")}</div>
-      <div class="use-infos">${prev}${today && !isNaN(today.state) ? `<div class="use-info"><span>Dziś</span><b>${num(today.state, u.today_digits ?? 0)} ${esc(today.attributes.unit_of_measurement || "")}</b></div>` : ""}
-        ${upd ? `<div class="use-info"><span>Dane do</span><b>${esc(new Date(String(upd).replace(" ", "T")).toLocaleDateString("pl-PL", { day: "numeric", month: "short" }))}</b></div>` : ""}
+      <div class="use-infos">${prev}${today && !isNaN(today.state) ? `<div class="use-info"><span>${t("common.today")}</span><b>${num(today.state, u.today_digits ?? 0)} ${esc(today.attributes.unit_of_measurement || "")}</b></div>` : ""}
+        ${upd ? `<div class="use-info"><span>${t("usage.data_until")}</span><b>${esc(date(new Date(String(upd).replace(" ", "T")), { day: "numeric", month: "short" }))}</b></div>` : ""}
         ${(u.info || []).map((i) => this._usageInfo(i)).join("")}</div></div>`;
   }
 
   _usageTab() {
     const list = this._config.usage || [];
-    return `<div class="section-title">Zużycie</div><div class="panels use-panels" style="--n:${list.length}">${list.map((u) => this._usagePanel(u)).join("")}</div>`;
+    return `<div class="section-title">${t("tabs.usage")}</div><div class="panels use-panels" style="--n:${list.length}">${list.map((u) => this._usagePanel(u)).join("")}</div>`;
   }
 
   // --- heating: the OpenTherm boiler -------------------------------------------------------------------
@@ -2855,13 +2826,13 @@ class HomedeckCard extends HTMLElement {
   }
   _heatChartBuild() {
     const d = this._heatHist;
-    if (!d) return `<div class="heat-empty">Wczytywanie…</div>`;
+    if (!d) return `<div class="heat-empty">${t("heating.loading")}</div>`;
     const end = Date.now(), first = Math.min(...[d.flow, d.ret].map((a) => a[0]?.[0] ?? end));
     // Until a full day is recorded the chart starts at the first reading, so it is not mostly empty.
     const start = Math.max(end - 24 * 3600e3, first), span = Math.max(end - start, 3600e3), step = Math.max(60e3, span / 240);
     const lines = { flow: this._heatSample(d.flow, start, end, step), ret: this._heatSample(d.ret, start, end, step), set: this._heatSample(d.set, start, end, step) };
     const all = [...lines.flow, ...lines.ret, ...lines.set].map(([, v]) => v);
-    if (!all.length) return `<div class="heat-empty">Brak danych z ostatniej doby</div>`;
+    if (!all.length) return `<div class="heat-empty">${t("heating.no_data_24h")}</div>`;
     const W = 640, H = 190, lo = Math.min(30, Math.floor(Math.min(...all) / 5) * 5), hi = Math.max(lo + 20, Math.ceil(Math.max(...all) / 5) * 5);
     const x = (t) => ((t - start) / span) * W, y = (v) => H - ((v - lo) / (hi - lo)) * H;
     const line = (p) => p.map(([t, v], i) => `${i ? "L" : "M"}${x(t).toFixed(1)} ${y(v).toFixed(1)}`).join("");
@@ -2875,8 +2846,8 @@ class HomedeckCard extends HTMLElement {
     const ticks = [], hourStep = span > 12 * 3600e3 ? 6 : span > 4 * 3600e3 ? 2 : 1, t0 = new Date(start); t0.setMinutes(0, 0, 0);
     for (let t = t0.getTime() + 3600e3; t < end - 900e3; t += 3600e3) if (new Date(t).getHours() % hourStep === 0) ticks.push(t);
     const yTicks = []; for (let v = lo; v <= hi; v += hi - lo > 30 ? 10 : 5) yTicks.push(v);
-    return `<div class="hc-legend"><span style="--c:#FF9F5A">Zasilanie</span><span style="--c:#5AC8FA">Powrót</span>
-        <span class="dash" style="--c:rgba(255,255,255,.7)">Zadane</span><span class="flame" style="--c:#FF9F0A">Palnik</span></div>
+    return `<div class="hc-legend"><span style="--c:#FF9F5A">${t("heating.flow")}</span><span style="--c:#5AC8FA">${t("heating.return")}</span>
+        <span class="dash" style="--c:rgba(255,255,255,.7)">${t("heating.target_short")}</span><span class="flame" style="--c:#FF9F0A">${t("heating.burner")}</span></div>
       <div class="hc-plot"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
         <defs><linearGradient id="hc-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF9F5A" stop-opacity=".22"/><stop offset="1" stop-color="#FF9F5A" stop-opacity="0"/></linearGradient></defs>
         <rect class="hc-zone" x="0" y="${condY.toFixed(1)}" width="${W}" height="${(H - condY).toFixed(1)}"/><line class="hc-45" x1="0" x2="${W}" y1="${condY.toFixed(1)}" y2="${condY.toFixed(1)}"/>
@@ -2884,7 +2855,7 @@ class HomedeckCard extends HTMLElement {
         <path d="${area(lines.flow)}" fill="url(#hc-fill)"/>
         <path class="ln set" d="${line(lines.set)}"/><path class="ln ret" d="${line(lines.ret)}"/><path class="ln flow" d="${line(lines.flow)}"/></svg>
         ${yTicks.map((v) => `<span class="hc-y" style="top:${((y(v) / H) * 100).toFixed(1)}%">${v}°</span>`).join("")}
-        <span class="hc-45l" style="top:${((condY / H) * 100).toFixed(1)}%">45° · poniżej kocioł kondensuje</span></div>
+        <span class="hc-45l" style="top:${((condY / H) * 100).toFixed(1)}%">${t("heating.condense_line")}</span></div>
       <svg class="hc-flame" viewBox="0 0 ${W} 10" preserveAspectRatio="none" aria-hidden="true">${flames}</svg>
       <div class="hc-x">${ticks.map((t) => `<span style="left:${((x(t) / W) * 100).toFixed(2)}%">${String(new Date(t).getHours()).padStart(2, "0")}:00</span>`).join("")}</div>`;
   }
@@ -2897,7 +2868,7 @@ class HomedeckCard extends HTMLElement {
     const deg = (v) => (v == null ? "–" : `${num(v, 0)}°`);
     const warm = s.rad != null ? Math.min(1, Math.max(0, (s.rad - 22) / 23)) : s.pump && s.flow != null ? Math.min(1, Math.max(0.12, (s.flow - 25) / 35)) : 0;
     const room = s.room != null ? `${num(s.room, 1)}°` : "–";
-    const goal = s.target != null && !isNaN(s.target) ? `<tspan class="hl-long"> · </tspan>cel ${num(s.target, 1)}°` : "";
+    const goal = s.target != null && !isNaN(s.target) ? `<tspan class="hl-long"> · </tspan>${t("heating.goal", { t: num(s.target, 1) })}` : "";
     const h = s.flame ? 0.45 + Math.min(100, Math.max(0, s.mod ?? 0)) / 100 * 0.55 : 0;
     const flames = s.flame ? [0, 1, 2, 3, 4].map((i) => {
       const x = 112 + i * 14, k = h * (i % 2 ? 0.85 : 1);
@@ -2908,7 +2879,7 @@ class HomedeckCard extends HTMLElement {
     const flowD = "M178 204V226H490V214", retD = "M638 214V262H140V204", gasD = "M-44 286H112V204";
     // Hot tap water: cold mains in from the left, hot out to the tap on the wall.
     const coldD = "M-44 258H94V204", dhwD = "M76 204V234H2V156";
-    return `<svg class="hl" viewBox="-44 6 724 306" role="img" aria-label="Kocioł i grzejnik: zasilanie ${deg(s.flow)}, powrót ${deg(s.ret)}, grzejnik ${s.rad != null ? deg(s.rad) : "–"}, w domu ${room}">
+    return `<svg class="hl" viewBox="-44 6 724 306" role="img" aria-label="${t("heating.loop_aria", { flow: deg(s.flow), ret: deg(s.ret), rad: s.rad != null ? deg(s.rad) : "–", room })}">
       <defs>
         <linearGradient id="hl-burn" gradientUnits="userSpaceOnUse" x1="0" y1="168" x2="0" y2="118"><stop offset="0" stop-color="#3D7BFF"/><stop offset=".35" stop-color="#FF8A1E"/><stop offset="1" stop-color="#FFE08A"/></linearGradient>
         <radialGradient id="hl-glow2"><stop offset="0" stop-color="#FF9F0A" stop-opacity=".7"/><stop offset="1" stop-color="#FF9F0A" stop-opacity="0"/></radialGradient>
@@ -2919,10 +2890,10 @@ class HomedeckCard extends HTMLElement {
       ${s.dhwOn ? `<path class="hl-flow" d="${coldD}"/><path class="hl-flow" d="${dhwD}"/>` : ""}
       <g class="hl-tap"><rect x="-8" y="140" width="20" height="18" rx="5"/><path d="M-8 146H-24a6 6 0 0 0-6 6v6" /><rect class="hl-tapk" x="-4" y="132" width="12" height="7" rx="3"/></g>
       ${s.dhwOn ? [0, 1, 2].map((i) => `<circle class="hl-drop" style="animation-delay:${(i * 0.33).toFixed(2)}s" cx="-30" cy="164" r="2.6"/>`).join("") : ""}
-      <text class="hl-dhwt" x="-36" y="116">${s.dhw != null ? deg(s.dhw) : "–"}</text><text class="hl-lbl start" x="-36" y="134">CWU</text>
+      <text class="hl-dhwt" x="-36" y="116">${s.dhw != null ? deg(s.dhw) : "–"}</text><text class="hl-lbl start" x="-36" y="134">${t("heating.dhw_short")}</text>
       ${s.flame ? `<path class="hl-flow gas" d="${gasD}"/>` : ""}${s.pump ? `<path class="hl-flow" d="${flowD}"/><path class="hl-flow" d="${retD}"/>` : ""}
       <g class="hl-valve"><rect x="24" y="279" width="12" height="14" rx="3"/><rect class="hl-handle" x="27" y="266" width="7" height="16" rx="3.5"/></g>
-      <text class="hl-lbl gas start" x="-42" y="302">gaz</text>
+      <text class="hl-lbl gas start" x="-42" y="302">${t("heating.gas_lc")}</text>
       <rect class="hl-case" x="60" y="14" width="160" height="190" rx="18"/>
       <rect class="hl-seam" x="60" y="92" width="160" height="1.5"/>
       <rect class="hl-lcd" x="92" y="30" width="96" height="40" rx="6"/>
@@ -2933,17 +2904,17 @@ class HomedeckCard extends HTMLElement {
       ${s.flame ? `<circle cx="140" cy="150" r="46" fill="url(#hl-glow2)"/>` : ""}
       <g fill="url(#hl-burn)">${flames}</g>
       <rect class="hl-burner" x="104" y="166" width="72" height="5" rx="2.5"/>
-      <text class="hl-cap" x="140" y="196">kocioł</text>
+      <text class="hl-cap" x="140" y="196">${t("heating.boiler_lc")}</text>
       ${warm > 0.3 ? [0, 1, 2].map((i) => `<path class="hl-air" style="animation-delay:${(i * 0.9).toFixed(1)}s" d="M${586 + i * 26} 88c-4-5 4-8 0-12s4-8 0-12"/>`).join("") : ""}
       <rect class="hl-rad2" x="472" y="92" width="184" height="122" rx="8"/>
       <rect x="472" y="92" width="184" height="122" rx="8" fill="url(#hl-radwarm)"/>
       <g class="hl-ribs">${ribs}</g>
       <rect class="hl-trv" x="482" y="212" width="16" height="11" rx="3"/><rect class="hl-trv" x="630" y="212" width="16" height="11" rx="3"/>
       ${s.rad != null ? `<rect class="hl-badge" x="518" y="131" width="92" height="44" rx="22"/><text class="hl-radt" x="564" y="154">${num(s.rad, 0)}°</text>` : ""}
-      <text class="hl-lbl" x="564" y="230">grzejnik</text>
-      <text class="hl-room" x="472" y="36">${room}</text><text class="hl-lbl start" x="474" y="56"><tspan class="hl-long">w domu</tspan>${goal}</text>
-      <text class="hl-num hot" x="310" y="212">${deg(s.flow)}</text><text class="hl-lbl start" x="362" y="206">zasilanie</text>
-      <text class="hl-num cold" x="310" y="302">${deg(s.ret)}</text><text class="hl-lbl start" x="362" y="296">powrót</text>
+      <text class="hl-lbl" x="564" y="230">${t("heating.radiator_lc")}</text>
+      <text class="hl-room" x="472" y="36">${room}</text><text class="hl-lbl start" x="474" y="56"><tspan class="hl-long">${t("heating.indoors")}</tspan>${goal}</text>
+      <text class="hl-num hot" x="310" y="212">${deg(s.flow)}</text><text class="hl-lbl start" x="362" y="206">${t("heating.flow_lc")}</text>
+      <text class="hl-num cold" x="310" y="302">${deg(s.ret)}</text><text class="hl-lbl start" x="362" y="296">${t("heating.return_lc")}</text>
     </svg>`;
   }
 
@@ -2957,7 +2928,7 @@ class HomedeckCard extends HTMLElement {
     const pts = []; for (let t = x0; t <= x1; t += 1) pts.push(`${pts.length ? "L" : "M"}${x(t).toFixed(1)} ${y(f(t)).toFixed(1)}`);
     const out = s.out != null ? Math.min(x1, Math.max(x0, s.out)) : null, now = out != null ? f(out) : null;
     const fill = `${pts.join("")}L${W} ${H}L0 ${H}Z`;
-    return `<div class="cv-plot"><span class="cv-yl">woda</span><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+    return `<div class="cv-plot"><span class="cv-yl">${t("heating.water_lc")}</span><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
         <defs><linearGradient id="cv-g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${W}" y2="0"><stop offset="0" stop-color="#FF6B3D"/><stop offset=".55" stop-color="#FFB347"/><stop offset="1" stop-color="#7FD4FF"/></linearGradient>
           <linearGradient id="cv-f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB347" stop-opacity=".16"/><stop offset="1" stop-color="#FFB347" stop-opacity="0"/></linearGradient></defs>
         <path d="${fill}" fill="url(#cv-f)"/>
@@ -2968,7 +2939,7 @@ class HomedeckCard extends HTMLElement {
       ${now != null ? `<i class="cv-dot" style="left:${((x(out) / W) * 100).toFixed(1)}%;top:${((y(now) / H) * 100).toFixed(1)}%"></i>
         <span class="cv-tag" style="left:${((x(out) / W) * 100).toFixed(1)}%;top:${((y(now) / H) * 100).toFixed(1)}%">${num(s.out, 0)}° → ${num(now, 0)}°</span>` : ""}
       ${[30, 40, 50].map((v) => `<span class="hc-y" style="top:${((y(v) / H) * 100).toFixed(1)}%">${v}°</span>`).join("")}</div>
-      <div class="hc-x cv-x">${[-10, 0, 10].map((t) => `<span style="left:${((x(t) / W) * 100).toFixed(1)}%">${t}°</span>`).join("")}<em>na zewnątrz</em></div>`;
+      <div class="hc-x cv-x">${[-10, 0, 10].map((t) => `<span style="left:${((x(t) / W) * 100).toFixed(1)}%">${t}°</span>`).join("")}<em>${t("heating.outside_lc")}</em></div>`;
   }
 
   // The thermostat as a dial: the arc fills up to the target, a dot marks the room now, − / + on the sides, then the
@@ -2984,21 +2955,21 @@ class HomedeckCard extends HTMLElement {
     const [cx, cy] = !isNaN(cur) ? pt(ang(cur)) : [null, null];
     const tone = !th.on ? "off" : th.heating ? "heat" : "ok";
     const rooms = this._climateSensors().map((x) => ({ ...x, t: Number(this._st(x.temperature)?.state) })).filter((x) => !isNaN(x.t));
-    return `<div class="panel heat-thermo"><h3>Termostat</h3>
+    return `<div class="panel heat-thermo"><h3>${t("heating.thermostat")}</h3>
       <div class="td-row">
-        <button class="th-btn" data-act="temp" data-step="-0.5" aria-label="Chłodniej" ${!th.on || th.target <= min ? "disabled" : ""}><ha-icon icon="mdi:minus"></ha-icon></button>
+        <button class="th-btn" data-act="temp" data-step="-0.5" aria-label="${t("climate.cooler")}" ${!th.on || th.target <= min ? "disabled" : ""}><ha-icon icon="mdi:minus"></ha-icon></button>
         <div class="td-dial ${tone}"><svg viewBox="0 0 200 200" aria-hidden="true">
             <path class="td-track" d="${arc(start, start + sweep)}"/>
             ${th.on ? `<path class="td-val" d="${arc(start, Math.max(start + 1, ang(th.target)))}"/>` : ""}
             ${cx != null ? `<circle class="td-now" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="6"/>` : ""}</svg>
-          <div class="td-in"><span class="td-st">${th.on ? (th.heating ? "Grzeje do" : "Utrzymuje") : "Wyłączone"}</span>
-            <b>${num(th.target)}°</b><span>${isNaN(cur) ? "" : `teraz ${num(cur)}°`}</span></div></div>
-        <button class="th-btn" data-act="temp" data-step="0.5" aria-label="Cieplej" ${!th.on || th.target >= max ? "disabled" : ""}><ha-icon icon="mdi:plus"></ha-icon></button></div>
+          <div class="td-in"><span class="td-st">${th.on ? (th.heating ? t("climate.heating_word") : t("climate.holding_word")) : t("common.off_n")}</span>
+            <b>${num(th.target)}°</b><span>${isNaN(cur) ? "" : t("heating.now_lc", { t: num(cur) })}</span></div></div>
+        <button class="th-btn" data-act="temp" data-step="0.5" aria-label="${t("climate.warmer")}" ${!th.on || th.target >= max ? "disabled" : ""}><ha-icon icon="mdi:plus"></ha-icon></button></div>
       ${th.note ? `<div class="td-note">${esc(th.note)}</div>` : ""}
       <div class="th-modes">
-        ${th.cl.resume ? `<button class="${th.onSchedule ? "on" : ""}" data-act="thermo-run" data-entity="${esc(th.cl.resume)}"><ha-icon icon="mdi:calendar-clock"></ha-icon>Harmonogram</button>` : ""}
-        ${th.cl.boost ? `<button class="${th.boost ? "on" : ""}" data-act="thermo-run" data-entity="${esc(th.cl.boost)}"><ha-icon icon="mdi:fire"></ha-icon>Grzanie 1h</button>` : ""}
-        <button class="${th.on ? "" : "on"}" data-act="thermo-power" data-on="${th.on ? 1 : 0}"><ha-icon icon="mdi:power"></ha-icon>${th.on ? "Wyłącz" : "Wyłączone"}</button></div>
+        ${th.cl.resume ? `<button class="${th.onSchedule ? "on" : ""}" data-act="thermo-run" data-entity="${esc(th.cl.resume)}"><ha-icon icon="mdi:calendar-clock"></ha-icon>${t("climate.schedule")}</button>` : ""}
+        ${th.cl.boost ? `<button class="${th.boost ? "on" : ""}" data-act="thermo-run" data-entity="${esc(th.cl.boost)}"><ha-icon icon="mdi:fire"></ha-icon>${t("climate.boost")}</button>` : ""}
+        <button class="${th.on ? "" : "on"}" data-act="thermo-power" data-on="${th.on ? 1 : 0}"><ha-icon icon="mdi:power"></ha-icon>${th.on ? t("common.turn_off") : t("common.off_n")}</button></div>
       <div class="td-rooms">${rooms.map((x) => {
         // Indoor rooms on a 16–26 °C track with the target marked: blue when colder than the target, orange when warmer.
         const pos = (v) => Math.min(100, Math.max(0, ((v - 16) / 10) * 100)).toFixed(1);
@@ -3021,7 +2992,7 @@ class HomedeckCard extends HTMLElement {
   _heatLine() {
     const list = this._heatIssues();
     if (!list.length) return "";
-    return `<div class="attn heat ${list.some((x) => x.urgent) ? "urgent" : ""}"><ha-icon icon="mdi:water-boiler-alert"></ha-icon><span>Kocioł:</span>${list.map((x) => {
+    return `<div class="attn heat ${list.some((x) => x.urgent) ? "urgent" : ""}"><ha-icon icon="mdi:water-boiler-alert"></ha-icon><span>${t("heating.boiler_line")}</span>${list.map((x) => {
       const [head, ...rest] = x.text.split(" – ");
       return `<button class="attn-item ${x.urgent ? "urgent" : ""}" data-act="tab" data-tab="heating">${rest.length ? `<span>${esc(head)}</span><b>${esc(rest.join(" – "))}</b>` : `<b>${esc(head)}</b>`}</button>`;
     }).join("")}</div>`;
@@ -3035,47 +3006,48 @@ class HomedeckCard extends HTMLElement {
     const flow = val(h.flow), ret = val(h.return), set = val(h.setpoint), mod = val(h.modulation), press = val(h.pressure);
     const mode = this._st(h.mode)?.state;
     // ILEA reports 0 % at its smallest flame, so 0 with the flame on means "minimum", not "off".
-    const power = mod == null ? "" : mod > 0 ? `${Math.round(mod)}% mocy` : "minimalna moc";
-    const [title, sub, tone] = !online ? ["Brak połączenia", "ESP nie odpowiada", "off"] : fault ? ["Awaria kotła", "sprawdź wyświetlacz kotła", "fault"]
-      : flame && dhw ? ["Grzeje wodę", power, "heat"] : flame ? ["Grzeje dom", power, "heat"]
-      : ch ? ["Palnik odpoczywa", "pompa krąży wodą", "idle"]
+    const power = mod == null ? "" : mod > 0 ? t("heating.power_pct", { n: Math.round(mod) }) : t("heating.power_min");
+    const [title, sub, tone] = !online ? [t("heating.offline"), t("heating.esp_silent"), "off"] : fault ? [t("heating.fault"), t("heating.check_display"), "fault"]
+      : flame && dhw ? [t("heating.heating_water"), power, "heat"] : flame ? [t("heating.heating_home"), power, "heat"]
+      : ch ? [t("heating.burner_resting"), t("heating.pump"), "idle"]
       // Heat is asked for but the water in the boiler is still warmer than needed (often right after hot tap water).
-      : this._on(h.request) && flow != null && set != null && flow > set ? ["Czeka", `woda w kotle ${num(flow, 0)}° – cieplejsza niż potrzeba`, "idle"]
-      : this._on(h.request) ? ["Czeka", "zaraz zapali palnik", "idle"]
-      : h.request ? ["Grzanie wyłączone", mode && mode !== "Krzywa + korekta" ? mode : "termostat nie potrzebuje ciepła", "idle"] : ["Czeka", "", "idle"];
+      : this._on(h.request) && flow != null && set != null && flow > set ? [t("heating.waiting"), t("heating.water_warmer", { t: num(flow, 0) }), "idle"]
+      : this._on(h.request) ? [t("heating.waiting"), t("heating.igniting"), "idle"]
+      // "Krzywa + korekta" is the controller's own mode name (a select option), the normal one: not worth a line.
+      : h.request ? [t("heating.heating_off"), mode && mode !== "Krzywa + korekta" ? mode : t("heating.no_demand"), "idle"] : [t("heating.waiting"), "", "idle"];
     // Condensing starts below ~55 °C on the return and works well below ~45 °C.
-    const cond = ret == null || !online ? null : ret < 45 ? ["Kondensuje", "good"] : ret < 55 ? ["Częściowa kondensacja", ""] : ["Bez kondensacji", "warn"];
-    const t = this._heatToday(), dhwT = val(h.dhw);
+    const cond = ret == null || !online ? null : ret < 45 ? [t("heating.condensing"), "good"] : ret < 55 ? [t("heating.partial"), ""] : [t("heating.no_condensing"), "warn"];
+    const ht = this._heatToday(), dhwT = val(h.dhw);
     const room = val(this._config.climate?.temperature), target = Number(this._st(this._config.climate?.entity)?.attributes.temperature);
     const more = (id) => (id ? ` role="button" tabindex="0" data-act="heat" data-entity="${esc(id)}"` : "");
     const issues = this._heatIssues();
     const hero = `<div class="panel hh ${tone}">
         <div class="hh-head"><span class="ic ${tone === "heat" ? "heat" : tone === "fault" ? "fault" : ""}"><ha-icon icon="${fault ? "mdi:alert-circle-outline" : flame ? "mdi:fire" : online ? "mdi:water-boiler" : "mdi:lan-disconnect"}"></ha-icon></span>
           <div class="hh-title"><b>${esc(title)}</b><span>${esc(sub)}</span></div>
-          <div class="hh-set"${more(h.setpoint)}><span>woda zadana</span><b>${set == null ? "–" : num(set, 1) + "°"}</b></div></div>
+          <div class="hh-set"${more(h.setpoint)}><span>${t("heating.target_water_lc")}</span><b>${set == null ? "–" : num(set, 1) + "°"}</b></div></div>
         ${issues.length ? `<div class="hh-alerts">${issues.map((x) => `<button class="${x.urgent ? "urgent" : ""}"${more(h.status)}><ha-icon icon="${x.urgent ? "mdi:alert-circle" : "mdi:alert-outline"}"></ha-icon>${esc(x.text)}</button>`).join("")}</div>` : ""}
         <div class="hh-loop">${this._heatLoop({ flow, ret, mod, flame, pump: online && (ch || flame), room, target, rad: val(h.radiator), dhw: val(h.dhw), dhwOn: online && dhw })}</div>
         <div class="hh-strip">
-          <div${more(h.flow)} style="--c:#FFB067"><b>${flow == null ? "–" : num(flow, 0) + "°"}</b><span>zasilanie</span></div>
-          <div${more(h.return)} style="--c:#7FD4FF"><b>${ret == null ? "–" : num(ret, 0) + "°"}</b><span>powrót</span></div>
-          <div${more(h.dhw)} style="--c:#FF9CC8"><b>${val(h.dhw) == null ? "–" : num(val(h.dhw), 0) + "°"}</b><span>CWU</span></div>
-          <div${more(this._config.climate?.temperature)}><b>${room == null ? "–" : num(room, 1) + "°"}</b><span>${isNaN(target) ? "w domu" : `cel ${num(target, 1)}°`}</span></div></div>
-        <div class="heat-tags">${cond ? `<span class="heat-tag ${cond[1]}">${cond[0]}</span>` : ""}${ret != null && flow != null && online ? `<span class="heat-tag">różnica ${num(flow - ret, 0)}°</span>` : ""}${mode && online ? `<span class="heat-tag">${esc(mode)}</span>` : ""}</div></div>`;
+          <div${more(h.flow)} style="--c:#FFB067"><b>${flow == null ? "–" : num(flow, 0) + "°"}</b><span>${t("heating.flow_lc")}</span></div>
+          <div${more(h.return)} style="--c:#7FD4FF"><b>${ret == null ? "–" : num(ret, 0) + "°"}</b><span>${t("heating.return_lc")}</span></div>
+          <div${more(h.dhw)} style="--c:#FF9CC8"><b>${val(h.dhw) == null ? "–" : num(val(h.dhw), 0) + "°"}</b><span>${t("heating.dhw_short")}</span></div>
+          <div${more(this._config.climate?.temperature)}><b>${room == null ? "–" : num(room, 1) + "°"}</b><span>${isNaN(target) ? t("heating.indoors") : t("heating.goal", { t: num(target, 1) })}</span></div></div>
+        <div class="heat-tags">${cond ? `<span class="heat-tag ${cond[1]}">${cond[0]}</span>` : ""}${ret != null && flow != null && online ? `<span class="heat-tag">${t("heating.delta", { t: num(flow - ret, 0) })}</span>` : ""}${mode && online ? `<span class="heat-tag">${esc(mode)}</span>` : ""}</div></div>`;
     const stat = (icon, k, v, unit, label, id, cls = "") => `<div class="hs ${cls}" style="--k:${k}"${more(id)}><i class="hs-ic"><ha-icon icon="${icon}"></ha-icon></i><div><b>${v}${unit ? `<small>${unit}</small>` : ""}</b><span>${label}</span></div></div>`;
     const gasToday = val(h.gas_today), price = val(h.gas_price);
-    const today = `<div class="panel heat-wide"><h3>Dziś</h3><div class="hs-grid">
-        ${h.gas_today ? stat("mdi:meter-gas-outline", "#FFD54A", gasToday != null ? `≈${num(gasToday, 1)}` : "–", "m³", gasToday != null && price != null ? `gaz · ok. ${Math.round(gasToday * price)} zł` : "gaz (szacunek)", h.gas_today) : ""}
-        ${stat("mdi:fire", "#FF9F0A", t ? num(t.hours, 1) : "–", "h", t?.starts != null ? `palnik · ${t.starts} ${t.starts === 1 ? "zapalenie" : t.starts % 10 >= 2 && t.starts % 10 <= 4 && (t.starts % 100 < 10 || t.starts % 100 >= 20) ? "zapalenia" : "zapaleń"}` : "pracy palnika", h.flame)}
-        ${stat("mdi:gauge", "#5AC8FA", press != null ? num(press, 1) : "–", "bar", press != null && press < 1 ? "ciśnienie · dolej wody" : "ciśnienie wody", h.pressure, press != null && press < 1 ? "warn" : "")}
-        ${stat("mdi:water-thermometer-outline", "#FF7AB6", dhwT != null ? `${num(dhwT, 0)}°` : "–", "", "ciepła woda", h.dhw)}</div></div>`;
-    const chart = `<div class="panel heat-chart"><h3>${this._heatHist && (Date.now() - Math.min(...[this._heatHist.flow, this._heatHist.ret].map((a) => a[0]?.[0] ?? Date.now()))) < 23 * 3600e3 ? "Od rana" : "Ostatnie 24 h"}</h3>${this._heatChart()}</div>`;
+    const today = `<div class="panel heat-wide"><h3>${t("common.today")}</h3><div class="hs-grid">
+        ${h.gas_today ? stat("mdi:meter-gas-outline", "#FFD54A", gasToday != null ? `≈${num(gasToday, 1)}` : "–", "m³", gasToday != null && price != null ? t("heating.gas_cost", { v: money(gasToday * price, 0) }) : t("heating.gas_estimate"), h.gas_today) : ""}
+        ${stat("mdi:fire", "#FF9F0A", ht ? num(ht.hours, 1) : "–", "h", ht?.starts != null ? t("heating.burner_starts", { n: ht.starts }) : t("heating.burner_time"), h.flame)}
+        ${stat("mdi:gauge", "#5AC8FA", press != null ? num(press, 1) : "–", "bar", press != null && press < 1 ? t("heating.pressure_low") : t("heating.pressure_lc"), h.pressure, press != null && press < 1 ? "warn" : "")}
+        ${stat("mdi:water-thermometer-outline", "#FF7AB6", dhwT != null ? `${num(dhwT, 0)}°` : "–", "", t("heating.hot_water_lc"), h.dhw)}</div></div>`;
+    const chart = `<div class="panel heat-chart"><h3>${this._heatHist && (Date.now() - Math.min(...[this._heatHist.flow, this._heatHist.ret].map((a) => a[0]?.[0] ?? Date.now()))) < 23 * 3600e3 ? t("heating.since_morning") : t("heating.last_24h")}</h3>${this._heatChart()}</div>`;
     const slope = val(h.slope), offset = val(h.offset), corr = val(h.correction), out = val(h.outdoor);
-    const curve = h.curve && slope != null && !isNaN(target) ? `<div class="panel heat-curve"><h3>Krzywa grzewcza</h3>
+    const curve = h.curve && slope != null && !isNaN(target) ? `<div class="panel heat-curve"><h3>${t("heating.curve")}</h3>
         ${this._heatCurve({ slope, offset: offset ?? 0, target, out, tmin: val(h.min), tmax: val(h.max) })}
-        <div class="cv-chips"><span${more(h.slope)}>nachylenie <b>${num(slope, 1)}</b></span><span${more(h.offset)}>przesunięcie <b>${offset > 0 ? "+" : ""}${num(offset ?? 0, 1)}°</b></span>
-          ${corr != null ? `<span${more(h.correction)}>z pokoju <b>${corr > 0 ? "+" : ""}${num(corr, 1)}°</b></span>` : ""}</div></div>` : "";
+        <div class="cv-chips"><span${more(h.slope)}>${t("heating.slope_lc")} <b>${num(slope, 1)}</b></span><span${more(h.offset)}>${t("heating.offset_lc")} <b>${offset > 0 ? "+" : ""}${num(offset ?? 0, 1)}°</b></span>
+          ${corr != null ? `<span${more(h.correction)}>${t("heating.from_room")} <b>${corr > 0 ? "+" : ""}${num(corr, 1)}°</b></span>` : ""}</div></div>` : "";
     const thermo = this._heatThermo();
-    return `<div class="section-title">Ogrzewanie</div><div class="panels heat-panels">${hero}${thermo}${chart}${curve}${today}</div>`;
+    return `<div class="section-title">${t("tabs.heating")}</div><div class="panels heat-panels">${hero}${thermo}${chart}${curve}${today}</div>`;
   }
 
   _appMonth(ap) {
@@ -3086,7 +3058,7 @@ class HomedeckCard extends HTMLElement {
 
   _appState(ap) {
     const st = this._st(ap.state)?.state || "unknown";
-    return { st, active: APP_ACTIVE.includes(st), done: APP_DONE.includes(st), label: APP_STATE_PL[st] || st };
+    return { st, active: APP_ACTIVE.includes(st), done: APP_DONE.includes(st), label: table("appliances.state")[st] || st };
   }
 
   _appNum(id) {
@@ -3104,7 +3076,7 @@ class HomedeckCard extends HTMLElement {
   _applianceTile(ap, i) {
     const { active, done, label } = this._appState(ap);
     const pct = this._appNum(ap.progress), left = this._appNum(ap.remaining), prog = this._st(ap.program)?.state;
-    const program = PROGRAM_PL[prog] || prog;
+    const program = table("appliances.program")[prog] || prog;
     const sub = active ? [label, left != null ? `${Math.round(left)} min` : ""].filter(Boolean).join(" · ")
       : done ? label : label;
     const chip = (icon, text, keep) => `<div class="devchip ${keep ? "keep" : ""}"><ha-icon icon="${icon}"></ha-icon><span>${text}</span></div>`;
@@ -3114,8 +3086,8 @@ class HomedeckCard extends HTMLElement {
       ? (program && !["off", "none", "unknown"].includes(prog) ? chip("mdi:file-document-outline",
         esc(program.replace(/^(mycie|pranie|program)\s+(\S)/i, (_, __, c) => c.toUpperCase()))) : "")
         + (power != null ? chip("mdi:flash-outline", `${Math.round(power)} W`, true) : "")
-      : (cycles != null ? chip("mdi:counter", `${cycles} cykli`) : "")
-        + (month.cost != null ? chip("mdi:cash", `${num(month.cost, 2)} zł`) : today != null ? chip("mdi:lightning-bolt-outline", `${num(today, 1)} kWh`) : "");
+      : (cycles != null ? chip("mdi:counter", t("appliances.cycles", { n: cycles })) : "")
+        + (month.cost != null ? chip("mdi:cash", money(month.cost)) : today != null ? chip("mdi:lightning-bolt-outline", `${num(today, 1)} kWh`) : "");
     const badge = active ? `<div class="pw ring">${this._ring(pct, 48)}<span>${pct != null ? Math.round(pct) : 0}%</span></div>`
       : done ? `<div class="pw pstate"><ha-icon icon="mdi:check-bold"></ha-icon></div>` : "";
     return `<div class="tile ${active ? "on" : ""}" role="button" tabindex="0" data-act="appliance" data-app="${i}">
@@ -3142,8 +3114,8 @@ class HomedeckCard extends HTMLElement {
   // not grow (and its opening animation does not jump) when the chart comes in.
   _heatSheetChart(pts, color, digits, unit, loading) {
     const end = Date.now(), first = pts.find(([, s]) => !isNaN(s) && s !== "" && s != null)?.[0];
-    if (first == null) return `<div class="hsh-chart"><div class="hsh-ph">${loading ? "" : "Brak danych z ostatniej doby"}</div><div class="hsh-x"></div></div>
-      <div class="wx-stats three">${[["mdi:arrow-down", "Najniżej"], ["mdi:approximately-equal", "Średnio"], ["mdi:arrow-up", "Najwyżej"]].map(([i, k]) => `<div class="wx-stat"><span>${k}</span><b><ha-icon icon="${i}"></ha-icon>–</b></div>`).join("")}</div>`;
+    if (first == null) return `<div class="hsh-chart"><div class="hsh-ph">${loading ? "" : t("heating.no_data_24h")}</div><div class="hsh-x"></div></div>
+      <div class="wx-stats three">${[["mdi:arrow-down", t("heating.min")], ["mdi:approximately-equal", t("heating.avg")], ["mdi:arrow-up", t("heating.max")]].map(([i, k]) => `<div class="wx-stat"><span>${k}</span><b><ha-icon icon="${i}"></ha-icon>–</b></div>`).join("")}</div>`;
     const start = Math.max(end - 24 * 3600e3, first), span = Math.max(end - start, 3600e3);
     const p = this._heatSample(pts, start, end, Math.max(60e3, span / 200));
     if (!p.length) return "";
@@ -3160,7 +3132,7 @@ class HomedeckCard extends HTMLElement {
         <path d="${line}L${x(p[p.length - 1][0]).toFixed(1)} ${H}L${x(p[0][0]).toFixed(1)} ${H}Z" fill="url(#hsh-fill)"/>
         <path d="${line}" fill="none" stroke="${color}" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>
       <div class="hsh-x">${ticks.map((t) => `<span style="left:${(x(t) / W * 100).toFixed(1)}%">${new Date(t).getHours()}:00</span>`).join("")}</div></div>
-      <div class="wx-stats three">${[["mdi:arrow-down", "Najniżej", f(mn)], ["mdi:approximately-equal", "Średnio", f(avg)], ["mdi:arrow-up", "Najwyżej", f(mx)]]
+      <div class="wx-stats three">${[["mdi:arrow-down", t("heating.min"), f(mn)], ["mdi:approximately-equal", t("heating.avg"), f(avg)], ["mdi:arrow-up", t("heating.max"), f(mx)]]
         .map(([i, k, v]) => `<div class="wx-stat"><span>${k}</span><b><ha-icon icon="${i}"></ha-icon>${esc(v)}</b></div>`).join("")}</div>`;
   }
 
@@ -3169,50 +3141,52 @@ class HomedeckCard extends HTMLElement {
     const key = Object.entries(h).find(([, v]) => v === id)?.[0];
     const val = (e) => { const x = this._st(e); return x && x.state !== "" && !isNaN(x.state) ? Number(x.state) : null; };
     const deg = (v, d = 0) => (v == null ? "–" : `${num(v, d)}°`);
-    const t = this._heatToday(), v = val(id);
+    const ht = this._heatToday(), v = val(id);
+    // [title, icon, colour, decimals, unit, what it means]; the words are heating.info.<key> in the i18n tables.
+    const I = table("heating.info"), word = (k, ...rest) => [I[k]?.title, ...rest, I[k]?.hint];
     const INFO = {
-      flow: ["Zasilanie", "mdi:thermometer-chevron-up", "#FF9F5A", 0, "°", "Woda płynąca z kotła do grzejników. Na krzywej pogodowej zwykle 35–50°, im cieplej na zewnątrz, tym niżej."],
-      return: ["Powrót", "mdi:thermometer-chevron-down", "#5AC8FA", 0, "°", "Woda wracająca z grzejników do kotła. Poniżej 45° kocioł kondensuje i spala mniej gazu."],
-      setpoint: ["Woda zadana", "mdi:target", "#FFD54A", 1, "°", "Temperatura wody, którą sterownik zamawia u kotła: krzywa pogodowa plus korekta z pokoju dziennego."],
-      curve: ["Woda z krzywej", "mdi:chart-bell-curve-cumulative", "#FFD54A", 1, "°", "Wynik krzywej pogodowej razem z korektą pokojową."],
-      correction: ["Korekta z pokoju", "mdi:home-thermometer", "#B8F03C", 1, "°", "Ile sterownik dokłada do krzywej, gdy w pokoju dziennym jest za zimno (albo ujmuje, gdy za ciepło). Narasta powoli."],
-      dhw: ["Ciepła woda", "mdi:water-thermometer-outline", "#FF7AB6", 0, "°", "Temperatura ciepłej wody w kotle. Kocioł grzeje ją od razu, gdy ktoś odkręci kran."],
-      pressure: ["Ciśnienie wody", "mdi:gauge", "#5AC8FA", 2, "bar", "Zalecane 1,2–1,5 bar na zimnym kotle (na ciepłym trochę więcej). Poniżej 0,7 bar kocioł staje (E59), powyżej 2,7 bar też."],
-      outdoor: ["Na zewnątrz", "mdi:home-thermometer-outline", "#A9BCC8", 1, "°", "Temperatura zewnętrzna, z której liczy się krzywa."],
-      radiator: ["Grzejnik", "mdi:radiator", "#FF9F5A", 1, "°", "Czujnik na grzejniku w pokoju dziennym."],
-      modulation: ["Moc palnika", "mdi:fire", "#FF9F0A", 0, "%", "0% to najmniejszy płomień (ok. 4 kW), 100% to pełna moc."],
-      gas_today: ["Gaz dziś", "mdi:meter-gas-outline", "#FFD54A", 2, "m³", "Szacunek z mocy palnika (modulacja i dane z instrukcji kotła), liczony od północy. Dokładność poprawi kalibracja z licznikiem."],
+      flow: word("flow", "mdi:thermometer-chevron-up", "#FF9F5A", 0, "°"),
+      return: word("return", "mdi:thermometer-chevron-down", "#5AC8FA", 0, "°"),
+      setpoint: word("setpoint", "mdi:target", "#FFD54A", 1, "°"),
+      curve: word("curve", "mdi:chart-bell-curve-cumulative", "#FFD54A", 1, "°"),
+      correction: word("correction", "mdi:home-thermometer", "#B8F03C", 1, "°"),
+      dhw: word("dhw", "mdi:water-thermometer-outline", "#FF7AB6", 0, "°"),
+      pressure: word("pressure", "mdi:gauge", "#5AC8FA", 2, "bar"),
+      outdoor: word("outdoor", "mdi:home-thermometer-outline", "#A9BCC8", 1, "°"),
+      radiator: word("radiator", "mdi:radiator", "#FF9F5A", 1, "°"),
+      modulation: word("modulation", "mdi:fire", "#FF9F0A", 0, "%"),
+      gas_today: word("gas_today", "mdi:meter-gas-outline", "#FFD54A", 2, "m³"),
     };
     let info = INFO[key], extra = "", chart = "";
     const stepper = (e, step, digits, unit) => {
       const x = this._st(e), cur = x ? Number(x.state) : null;
-      return x ? `<div class="hsh-step"><button class="th-btn" data-act="heat-step" data-entity="${esc(e)}" data-step="${-step}" aria-label="Mniej"><ha-icon icon="mdi:minus"></ha-icon></button>
+      return x ? `<div class="hsh-step"><button class="th-btn" data-act="heat-step" data-entity="${esc(e)}" data-step="${-step}" aria-label="${t("common.less")}"><ha-icon icon="mdi:minus"></ha-icon></button>
         <b>${cur == null || isNaN(cur) ? "–" : num(cur, digits) + unit}</b>
-        <button class="th-btn" data-act="heat-step" data-entity="${esc(e)}" data-step="${step}" aria-label="Więcej"><ha-icon icon="mdi:plus"></ha-icon></button></div>` : "";
+        <button class="th-btn" data-act="heat-step" data-entity="${esc(e)}" data-step="${step}" aria-label="${t("common.more")}"><ha-icon icon="mdi:plus"></ha-icon></button></div>` : "";
     };
     const stats = (list) => `<div class="wx-stats ${list.length === 3 ? "three" : "two"}">${list.map(([i, k, x]) => `<div class="wx-stat"><span>${k}</span><b><ha-icon icon="${i}"></ha-icon>${esc(x)}</b></div>`).join("")}</div>`;
     if (key === "flame" || key === "starts") {
-      info = ["Palnik", "mdi:fire", "#FF9F0A", 0, "", "Jak długo palnik pracował od północy i ile razy się zapalał. Na krzywej pali długo na małej mocy, z niewieloma zapaleniami."];
-      extra = stats([["mdi:clock-outline", "Pracy dziś", t ? `${num(t.hours, 1)} h` : "–"], ["mdi:restart", "Zapaleń dziś", t?.starts != null ? String(t.starts) : "–"],
-        ["mdi:fire", "Teraz", this._on(h.flame) ? `pali · ${num(val(h.modulation) ?? 0, 0)}%` : "nie pali"]]);
+      info = word("flame", "mdi:fire", "#FF9F0A", 0, "");
+      extra = stats([["mdi:clock-outline", t("heating.run_today"), ht ? `${num(ht.hours, 1)} h` : "–"], ["mdi:restart", t("heating.starts_today"), ht?.starts != null ? String(ht.starts) : "–"],
+        ["mdi:fire", t("common.now"), this._on(h.flame) ? t("heating.burning_pct", { n: num(val(h.modulation) ?? 0, 0) }) : t("heating.not_burning")]]);
     } else if (key === "status") {
-      info = ["Stan kotła", "mdi:water-boiler-alert", "#FF9F0A", 0, "", "Problemy, które widzi Home Assistant. Pilne (czerwone) przychodzą też jako alert krytyczny na iPhone'a."];
+      info = word("status", "mdi:water-boiler-alert", "#FF9F0A", 0, "");
       const list = this._heatIssues();
       extra = `<div class="hsh-issues">${list.length ? list.map((x) => `<div class="${x.urgent ? "urgent" : ""}"><ha-icon icon="${x.urgent ? "mdi:alert-circle" : "mdi:alert-outline"}"></ha-icon>${esc(x.text)}</div>`).join("")
-        : `<div class="ok"><ha-icon icon="mdi:check-circle-outline"></ha-icon>Wszystko w porządku</div>`}</div>`;
+        : `<div class="ok"><ha-icon icon="mdi:check-circle-outline"></ha-icon>${t("common.all_ok")}</div>`}</div>`;
     } else if (key === "gas_today") {
       const price = val(h.gas_price), flow = val(h.gas_flow);
-      extra = stats([["mdi:cash", "Koszt dziś", v != null && price != null ? `ok. ${num(v * price, 2)} zł` : "–"], ["mdi:fire", "Pobór teraz", flow != null ? `${num(flow, 2)} m³/h` : "–"]]);
+      extra = stats([["mdi:cash", t("heating.cost_today"), v != null && price != null ? t("heating.about", { v: money(v * price) }) : "–"], ["mdi:fire", t("heating.draw_now"), flow != null ? `${num(flow, 2)} m³/h` : "–"]]);
     } else if (key === "dhw" && h.dhw_set) {
-      extra = `<div class="hsh-set"><span>Ustawiona temperatura</span>${stepper(h.dhw_set, 1, 0, "°")}</div>`;
+      extra = `<div class="hsh-set"><span>${t("heating.set_temp")}</span>${stepper(h.dhw_set, 1, 0, "°")}</div>`;
     } else if (key === "slope" || key === "offset") {
       info = key === "slope"
-        ? ["Nachylenie krzywej", "mdi:slope-uphill", "#FFD54A", 2, "", "O ile stopni rośnie temperatura wody, gdy na zewnątrz robi się o stopień zimniej. Mniej = taniej, ale wolniej się nagrzewa."]
-        : ["Przesunięcie krzywej", "mdi:arrow-up-down", "#FFD54A", 1, "°", "Przesuwa całą krzywą w górę lub w dół. Gdy w domu stale za ciepło, zmniejsz o 1–2°."];
-      extra = `<div class="hsh-set"><span>Ustawienie</span>${stepper(id, key === "slope" ? 0.05 : 0.5, key === "slope" ? 2 : 1, key === "slope" ? "" : "°")}</div>`;
+        ? word("slope", "mdi:slope-uphill", "#FFD54A", 2, "")
+        : word("offset", "mdi:arrow-up-down", "#FFD54A", 1, "°");
+      extra = `<div class="hsh-set"><span>${t("heating.setting")}</span>${stepper(id, key === "slope" ? 0.05 : 0.5, key === "slope" ? 2 : 1, key === "slope" ? "" : "°")}</div>`;
     } else if (key === "setpoint") {
-      extra = stats([["mdi:chart-bell-curve-cumulative", "Z krzywej", deg(val(h.curve), 1)], ["mdi:home-thermometer", "Korekta", val(h.correction) == null ? "–" : `${val(h.correction) > 0 ? "+" : ""}${num(val(h.correction), 1)}°`],
-        ["mdi:state-machine", "Tryb", this._st(h.mode)?.state || "–"]]);
+      extra = stats([["mdi:chart-bell-curve-cumulative", t("heating.from_curve"), deg(val(h.curve), 1)], ["mdi:home-thermometer", t("heating.correction"), val(h.correction) == null ? "–" : `${val(h.correction) > 0 ? "+" : ""}${num(val(h.correction), 1)}°`],
+        ["mdi:state-machine", t("common.mode"), this._st(h.mode)?.state || "–"]]);
     }
     const room = this._climateSensors().find((x) => x.temperature === id);
     if (!info && room) info = [room.name, room.icon || "mdi:thermometer", "#B8F03C", 1, "°", ""];
@@ -3222,48 +3196,48 @@ class HomedeckCard extends HTMLElement {
       const mine = this._heatSheetHist?.id === id;
       chart = this._heatSheetChart(mine ? this._heatSheetHist.pts : [], color, digits, unit, !mine);
     }
-    const big = key === "flame" || key === "starts" ? (this._on(h.flame) ? "Pali" : "Nie pali") : ["status", "slope", "offset"].includes(key) ? "" : v == null ? (st?.state || "–") : `${num(v, digits)}${unit === "°" ? "°" : unit ? `<small>${unit}</small>` : ""}`;
+    const big = key === "flame" || key === "starts" ? (this._on(h.flame) ? t("heating.burning") : t("heating.not_burning_big")) : ["status", "slope", "offset"].includes(key) ? "" : v == null ? (st?.state || "–") : `${num(v, digits)}${unit === "°" ? "°" : unit ? `<small>${unit}</small>` : ""}`;
     return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet heat-sheet" role="dialog" aria-label="${esc(title)}" style="--c:${color}">
       <div class="hd"><span class="ic" style="background:color-mix(in srgb, ${color} 22%, transparent);color:${color}"><ha-icon icon="${icon}"></ha-icon></span>
-        <div style="flex:1;min-width:0"><h2>${esc(title)}</h2><div class="s" style="color:var(--muted);font-size:13px">${room ? (room.outdoor ? "Czujnik na zewnątrz" : "Pokój") : "Kocioł"}${st?.last_changed ? ` · zmiana ${ago(st.last_changed) === "chwili" ? "przed chwilą" : `${ago(st.last_changed).replace("1 dnia", "1 dzień")} temu`}` : ""}</div></div>
-        <button class="round" data-act="close-sheet" aria-label="Zamknij"><ha-icon icon="mdi:close"></ha-icon></button></div>
+        <div style="flex:1;min-width:0"><h2>${esc(title)}</h2><div class="s" style="color:var(--muted);font-size:13px">${room ? (room.outdoor ? t("heating.sensor_outdoor") : t("heating.room")) : t("heating.boiler")}${st?.last_changed ? ` · ${changed(st.last_changed)}` : ""}</div></div>
+        <button class="round" data-act="close-sheet" aria-label="${t("common.close")}"><ha-icon icon="mdi:close"></ha-icon></button></div>
       ${big ? `<div class="hsh-big">${big}</div>` : ""}${hint ? `<p class="hsh-hint">${esc(hint)}</p>` : ""}${extra}${chart}
-      <button class="wide-btn" data-act="more" data-entity="${esc(id)}"><ha-icon icon="mdi:chart-line"></ha-icon>Szczegóły i pełna historia</button></div></div>`;
+      <button class="wide-btn" data-act="more" data-entity="${esc(id)}"><ha-icon icon="mdi:chart-line"></ha-icon>${t("heating.details")}</button></div></div>`;
   }
 
   _applianceSheet(ap) {
     if (!ap) return "";
     const { active, done, label } = this._appState(ap);
     const pct = this._appNum(ap.progress), left = this._appNum(ap.remaining), total = this._appNum(ap.duration);
-    const phase = this._st(ap.phase)?.state, prog = this._st(ap.program)?.state, program = PROGRAM_PL[prog] || prog;
+    const phase = this._st(ap.phase)?.state, prog = this._st(ap.program)?.state, program = table("appliances.program")[prog] || prog;
     const shown = (v) => v && !["off", "none", "unknown", "unavailable"].includes(v);
     const stat = (icon, k, v) => `<div class="wx-stat"><span>${k}</span><b><ha-icon icon="${icon}"></ha-icon>${esc(v)}</b></div>`;
     const kwh = (id) => { const n = this._appNum(id); return n != null ? `${num(n, 2)} kWh` : "–"; };
     const power = this._appNum(ap.power), cycles = this._appNum(ap.cycles), month = this._appMonth(ap);
     const btn = (id, icon, text) => { const st = this._st(id); return st && st.state !== "unavailable"
       ? `<button class="act" data-act="press" data-entity="${esc(id)}"><ha-icon icon="${icon}"></ha-icon>${text}</button>` : ""; };
-    const buttons = [btn(ap.pause, "mdi:pause", "Wstrzymaj"), btn(ap.resume, "mdi:play", "Wznów"), btn(ap.unloaded, "mdi:check", "Wyjęte")].join("");
+    const buttons = [btn(ap.pause, "mdi:pause", t("common.pause")), btn(ap.resume, "mdi:play", t("common.resume")), btn(ap.unloaded, "mdi:check", t("appliances.unloaded"))].join("");
     const tasks = this._st(ap.maintenance)?.attributes.due_tasks || [];
-    const maint = tasks.map((t) => `<div class="pproblem"><div class="ic" style="background:#FF9F0A"><ha-icon icon="mdi:wrench-outline"></ha-icon></div>
-      <div><div class="t">${esc(t.name)}</div><div class="s">${t.cycles_interval ? `${t.cycles_since} cykli od ostatniego razu · co ${t.cycles_interval}` : ""}</div></div></div>`).join("");
+    const maint = tasks.map((task) => `<div class="pproblem"><div class="ic" style="background:#FF9F0A"><ha-icon icon="mdi:wrench-outline"></ha-icon></div>
+      <div><div class="t">${esc(task.name)}</div><div class="s">${task.cycles_interval ? t("appliances.maint", { n: task.cycles_since, every: task.cycles_interval }) : ""}</div></div></div>`).join("");
     return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet" role="dialog" aria-label="${esc(ap.name)}">
       <div class="hd"><span class="ic lime"><ha-icon icon="${esc(ap.icon || "mdi:washing-machine")}"></ha-icon></span>
         <div style="flex:1"><h2>${esc(ap.name)}</h2><div class="s" style="color:var(--muted);font-size:13px">${esc([label, ap.room].filter(Boolean).join(" · "))}</div></div>
-        <button class="round" data-act="close-sheet" aria-label="Zamknij"><ha-icon icon="mdi:close"></ha-icon></button></div>
+        <button class="round" data-act="close-sheet" aria-label="${t("common.close")}"><ha-icon icon="mdi:close"></ha-icon></button></div>
       <div class="app-hero ${active ? "on" : done ? "done" : ""}">
         <div class="app-ring">${this._ring(active ? pct : done ? 100 : 0, 132)}
           <div class="app-ring-txt"><b>${active ? `${pct != null ? Math.round(pct) : 0}%` : done ? `<ha-icon icon="mdi:check-bold"></ha-icon>` : `<ha-icon icon="${esc(ap.icon || "mdi:washing-machine")}"></ha-icon>`}</b>
-            <span>${active && left != null ? `zostało ${Math.round(left)} min` : esc(label)}</span></div></div></div>
-      <div class="wx-stats">${stat("mdi:file-document-outline", "Program", shown(program) ? program : "–")}
-        ${stat("mdi:water-sync", "Faza", shown(phase) ? phase : "–")}
-        ${stat("mdi:timer-outline", "Czas cyklu", total != null ? `${Math.round(total)} min` : "–")}
-        ${stat("mdi:flash-outline", "Moc", power != null ? `${Math.round(power)} W` : "–")}
-        ${stat("mdi:lightning-bolt-outline", "Energia dziś", kwh(ap.energy_today))}
-        ${stat("mdi:calendar-month", "Ten miesiąc", month.kwh != null ? `${num(month.kwh, 2)} kWh` : "–")}
-        ${stat("mdi:cash", "Koszt w miesiącu", month.cost != null ? `${num(month.cost, 2)} zł` : "–")}
-        ${stat("mdi:counter", "Cykle", cycles != null ? String(cycles) : "–")}</div>
+            <span>${active && left != null ? t("appliances.left", { n: Math.round(left) }) : esc(label)}</span></div></div></div>
+      <div class="wx-stats">${stat("mdi:file-document-outline", t("appliances.program_label"), shown(program) ? program : "–")}
+        ${stat("mdi:water-sync", t("appliances.phase"), shown(phase) ? phase : "–")}
+        ${stat("mdi:timer-outline", t("appliances.duration"), total != null ? `${Math.round(total)} min` : "–")}
+        ${stat("mdi:flash-outline", t("common.power_draw"), power != null ? `${Math.round(power)} W` : "–")}
+        ${stat("mdi:lightning-bolt-outline", t("appliances.energy_today"), kwh(ap.energy_today))}
+        ${stat("mdi:calendar-month", t("common.this_month"), month.kwh != null ? `${num(month.kwh, 2)} kWh` : "–")}
+        ${stat("mdi:cash", t("common.month_cost"), month.cost != null ? money(month.cost) : "–")}
+        ${stat("mdi:counter", t("appliances.cycles_label"), cycles != null ? String(cycles) : "–")}</div>
       ${buttons ? `<div class="actions app-actions">${buttons}</div>` : ""}
-      ${maint ? `<div class="label vac-label">Konserwacja</div><div class="pproblems">${maint}</div>` : ""}</div></div>`;
+      ${maint ? `<div class="label vac-label">${t("common.maintenance")}</div><div class="pproblems">${maint}</div>` : ""}</div></div>`;
   }
 
   _vacuumTile() {
@@ -3276,14 +3250,14 @@ class HomedeckCard extends HTMLElement {
       active ? this._vacValue(v.time, "mdi:timer-outline") : ""].join("");
     return `<div class="tile ${active ? "on" : ""}" role="button" tabindex="0" data-act="vacuum">
       <div class="head"><div class="ic"><ha-icon icon="mdi:robot-vacuum"></ha-icon></div>
-        <button class="pw" data-act="vac" data-cmd="${cleaning ? "pause" : "start"}" aria-label="${cleaning ? "Wstrzymaj" : "Sprzątaj"}">
+        <button class="pw" data-act="vac" data-cmd="${cleaning ? "pause" : "start"}" aria-label="${cleaning ? t("common.pause") : t("cleaning.start")}">
           <ha-icon icon="${cleaning ? "mdi:pause" : "mdi:play"}"></ha-icon></button></div>
-      <div class="name">${esc(v.name || "Odkurzacz")}</div><div class="sub one-line">${esc(sub)}</div>
+      <div class="name">${esc(v.name || t("cleaning.vacuum"))}</div><div class="sub one-line">${esc(sub)}</div>
       <div class="foot pfoot">${chips}</div></div>`;
   }
 
   _vacState(st) {
-    return VAC_STATE_PL[st.state] || (this._hass.formatEntityState ? this._hass.formatEntityState(st) : st.state);
+    return table("cleaning.vacuum_state")[st.state] || (this._hass.formatEntityState ? this._hass.formatEntityState(st) : st.state);
   }
 
   _vacBattery() {
@@ -3313,26 +3287,27 @@ class HomedeckCard extends HTMLElement {
       <ha-icon icon="${esc(r.icon || "mdi:floor-plan")}"></ha-icon>${esc(r.name)}</button>`).join("");
     const suction = this._st(v.suction), options = suction?.attributes.options || [];
     const seg = suction && !["unknown", "unavailable"].includes(suction.state) && options.length
-      ? `<div class="label vac-label">Moc ssania</div><div class="seg">${options.map((o) => `<button class="${o === suction.state ? "sel" : ""}"
-          data-act="vac-suction" data-option="${esc(o)}">${esc(VAC_SUCTION_PL[o] || o)}</button>`).join("")}</div>` : "";
-    const wear = VAC_WEAR.filter(([k]) => a[k] != null).map(([k, label]) => {
+      ? `<div class="label vac-label">${t("cleaning.suction_label")}</div><div class="seg">${options.map((o) => `<button class="${o === suction.state ? "sel" : ""}"
+          data-act="vac-suction" data-option="${esc(o)}">${esc(table("cleaning.suction")[o] || o)}</button>`).join("")}</div>` : "";
+    const wear = VAC_WEAR.filter((k) => a[k] != null).map((k) => {
+      const label = table("cleaning.wear")[k];
       const p = Math.max(0, Math.min(100, Number(a[k])));
       return `<div class="wear ${p < 20 ? "low" : ""}"><span>${label}</span><b>${p}%</b><div class="bar"><i style="transform:scaleX(${p / 100})"></i></div></div>`;
     }).join("");
-    return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet" role="dialog" aria-label="${esc(v.name || "Odkurzacz")}">
+    return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet" role="dialog" aria-label="${esc(v.name || t("cleaning.vacuum"))}">
       <div class="hd"><span class="ic lime"><ha-icon icon="mdi:robot-vacuum"></ha-icon></span>
-        <div style="flex:1"><h2>${esc(v.name || "Odkurzacz")}</h2><div class="s" style="color:var(--muted);font-size:13px">${esc(
+        <div style="flex:1"><h2>${esc(v.name || t("cleaning.vacuum"))}</h2><div class="s" style="color:var(--muted);font-size:13px">${esc(
           [this._vacState(st), active && room && !["unknown", "unavailable"].includes(room) ? room : ""].filter(Boolean).join(" · "))}</div></div>
-        <button class="round" data-act="close-sheet" aria-label="Zamknij"><ha-icon icon="mdi:close"></ha-icon></button></div>
-      ${map ? `<div class="vac-map"><img src="${esc(this._hass.hassUrl ? this._hass.hassUrl(map) : map)}" alt="Mapa sprzątania"></div>` : ""}
-      <div class="wx-stats">${stat(bat != null ? battIcon(bat, a.charging) : "mdi:battery-unknown", "Bateria", bat != null ? `${Math.round(bat)}%` : "–")}
-        ${stat("mdi:texture-box", "Powierzchnia", val(v.area))}${stat("mdi:timer-outline", "Czas", val(v.time))}
-        ${stat("mdi:broom", "Tryb", VAC_MODE_PL[a.cleaning_mode] || a.cleaning_mode || "–")}</div>
-      <div class="vac-ctrls">${ctrl(cleaning ? "pause" : "start", cleaning ? "mdi:pause" : "mdi:play", cleaning ? "Pauza" : st.state === "paused" ? "Wznów" : "Start", true)}
-        ${ctrl("stop", "mdi:stop", "Stop")}${ctrl("home", "mdi:home-import-outline", "Do stacji")}${ctrl("locate", "mdi:map-marker-radius-outline", "Znajdź")}</div>
+        <button class="round" data-act="close-sheet" aria-label="${t("common.close")}"><ha-icon icon="mdi:close"></ha-icon></button></div>
+      ${map ? `<div class="vac-map"><img src="${esc(this._hass.hassUrl ? this._hass.hassUrl(map) : map)}" alt="${t("cleaning.map")}"></div>` : ""}
+      <div class="wx-stats">${stat(bat != null ? battIcon(bat, a.charging) : "mdi:battery-unknown", t("common.battery"), bat != null ? `${Math.round(bat)}%` : "–")}
+        ${stat("mdi:texture-box", t("cleaning.area"), val(v.area))}${stat("mdi:timer-outline", t("cleaning.time"), val(v.time))}
+        ${stat("mdi:broom", t("common.mode"), table("cleaning.vacuum_mode")[a.cleaning_mode] || a.cleaning_mode || "–")}</div>
+      <div class="vac-ctrls">${ctrl(cleaning ? "pause" : "start", cleaning ? "mdi:pause" : "mdi:play", cleaning ? t("cleaning.pause") : st.state === "paused" ? t("common.resume") : t("cleaning.start_btn"), true)}
+        ${ctrl("stop", "mdi:stop", t("cleaning.stop"))}${ctrl("home", "mdi:home-import-outline", t("cleaning.dock"))}${ctrl("locate", "mdi:map-marker-radius-outline", t("cleaning.locate"))}</div>
       ${seg}
-      ${roomBtns ? `<div class="label vac-label">Sprzątaj pokój</div><div class="vac-rooms">${roomBtns}</div>` : ""}
-      ${wear ? `<div class="label vac-label">Konserwacja</div><div class="wears">${wear}</div>` : ""}</div></div>`;
+      ${roomBtns ? `<div class="label vac-label">${t("cleaning.room")}</div><div class="vac-rooms">${roomBtns}</div>` : ""}
+      ${wear ? `<div class="label vac-label">${t("common.maintenance")}</div><div class="wears">${wear}</div>` : ""}</div></div>`;
   }
 
   // The home media tile: every source that plays or shows an input (the TV on the decoder) gets a slide. With two or
@@ -3342,7 +3317,7 @@ class HomedeckCard extends HTMLElement {
     const all = (this._config.media || []).map((x, i) => ({ x, i, m: this._mediaInfo(x) })).filter((e) => e.m);
     if (!all.length) return "";
     const live = all.filter((e) => e.m.active || e.m.input), slides = live.length ? live : [all[0]];
-    const room = (e) => (typeof e.x === "object" && (e.x.room || e.x.name)) || (e.i === 0 ? this._config.media_room || "Salon" : e.m.a.friendly_name);
+    const room = (e) => (typeof e.x === "object" && (e.x.room || e.x.name)) || (e.i === 0 ? this._config.media_room || t("media.living_room") : e.m.a.friendly_name);
     // An open app with nothing playing (or the TV's home screen) still shows its logo.
     const glow = (e) => (e.m.active || (e.m.input && e.m.brand) ? this._glow(e.m, "tile-art") : "");
     // Bento: while something plays the tile takes two cells and shows the artwork next to the title and controls.
@@ -3362,7 +3337,7 @@ class HomedeckCard extends HTMLElement {
     const icon = (name) => `<ha-icon icon="${name}" style="--mdc-icon-size:14px"></ha-icon>`;
     if (!m.active) {
       return `<div class="kicker">${icon(m.input ? "mdi:television" : "mdi:music-note")}<span class="kt">${esc(room)}</span></div>
-        <div class="title">${m.input ? esc(m.input) : m.st.state === "unavailable" ? "Niedostępny" : "Nic nie gra"}</div>
+        <div class="title">${m.input ? esc(m.input) : m.st.state === "unavailable" ? t("common.unavailable_m") : t("media.nothing")}</div>
         <div class="sub">${esc(m.a.friendly_name)}</div>`;
     }
     // YouTube titles carry the channel's series after " | " and emoji: the tile shows only the title itself.
@@ -3376,9 +3351,9 @@ class HomedeckCard extends HTMLElement {
     const sub = m.artist ? `<div class="sub">${esc(m.artist)}</div>` : "";
     const bar = m.slot || m.a.media_duration ? `<div class="bar"><i ${this._progressAttrs(m)}></i></div>` : "";
     const ctrls = `<div class="ctrls">
-        <button data-act="media" data-cmd="media_previous_track" data-entity="${esc(m.id)}" aria-label="Poprzedni"><ha-icon icon="mdi:skip-previous"></ha-icon></button>
-        <button class="play" data-act="media" data-cmd="media_play_pause" data-entity="${esc(m.id)}" aria-label="Odtwórz/pauza"><ha-icon icon="${m.playing ? "mdi:pause" : "mdi:play"}"></ha-icon></button>
-        <button data-act="media" data-cmd="media_next_track" data-entity="${esc(m.id)}" aria-label="Następny"><ha-icon icon="mdi:skip-next"></ha-icon></button>
+        <button data-act="media" data-cmd="media_previous_track" data-entity="${esc(m.id)}" aria-label="${t("media.previous")}"><ha-icon icon="mdi:skip-previous"></ha-icon></button>
+        <button class="play" data-act="media" data-cmd="media_play_pause" data-entity="${esc(m.id)}" aria-label="${t("media.play_pause")}"><ha-icon icon="${m.playing ? "mdi:pause" : "mdi:play"}"></ha-icon></button>
+        <button data-act="media" data-cmd="media_next_track" data-entity="${esc(m.id)}" aria-label="${t("media.next")}"><ha-icon icon="mdi:skip-next"></ha-icon></button>
       </div>`;
     if (!wide) return kick + sub + bar + ctrls;
     // Wide: title, progress and the buttons; the channel or artist is left to the Media tab.
@@ -3407,16 +3382,16 @@ class HomedeckCard extends HTMLElement {
     const id = typeof x === "string" ? x : x.entity, st = this._st(id), a = st?.attributes || {};
     const pos = a.current_position, moving = ["opening", "closing"].includes(st?.state);
     const open = moving || (pos != null ? pos > 0 : st?.state === "open");
-    const sub = !st || st.state === "unavailable" ? "Niedostępna" : st.state === "opening" ? "Podnosi się…" : st.state === "closing" ? "Opuszcza się…"
-      : pos != null ? (pos === 0 ? "Zamknięta" : pos === 100 ? "Otwarta" : `Otwarta w ${pos}%`) : st.state === "closed" ? "Zamknięta" : "Otwarta";
+    const sub = !st || st.state === "unavailable" ? t("common.unavailable_f") : st.state === "opening" ? t("covers.opening") : st.state === "closing" ? t("covers.closing")
+      : pos != null ? (pos === 0 ? t("covers.closed") : pos === 100 ? t("covers.open") : t("covers.open_pct", { n: pos })) : st.state === "closed" ? t("covers.closed") : t("covers.open");
     const btn = (cmd, icon, label) => `<button class="icon-btn" data-act="cover" data-cmd="${cmd}" data-entity="${esc(id)}" aria-label="${label}"><ha-icon icon="${icon}"></ha-icon></button>`;
     return `<div class="row cover-row">
       <div class="ic ${open ? "lime" : ""}"><ha-icon icon="${open ? "mdi:blinds-horizontal" : "mdi:blinds-horizontal-closed"}"></ha-icon></div>
       <div><div class="t">${esc(this._name(x))}</div><div class="s">${sub}</div></div>
-      <div class="cov-btns">${btn("open_cover", "mdi:arrow-up", "Podnieś")}${btn("stop_cover", "mdi:stop", "Zatrzymaj")}${btn("close_cover", "mdi:arrow-down", "Opuść")}</div>
+      <div class="cov-btns">${btn("open_cover", "mdi:arrow-up", t("covers.up"))}${btn("stop_cover", "mdi:stop", t("covers.stop"))}${btn("close_cover", "mdi:arrow-down", t("covers.down"))}</div>
       ${pos != null ? `<div class="fold open"><div><div class="ctl"><ha-icon icon="mdi:arrow-expand-vertical"></ha-icon>
         <input type="range" class="slider" min="0" max="100" value="${pos}" style="--v:${pos}%" data-unit="%" data-act="cover-pos"
-          data-entity="${esc(id)}" aria-label="Pozycja rolety"><span class="vol-num" data-vol>${pos}%</span></div></div></div>` : ""}</div>`;
+          data-entity="${esc(id)}" aria-label="${t("covers.position")}"><span class="vol-num" data-vol>${pos}%</span></div></div></div>` : ""}</div>`;
   }
 
   // Dehumidifier / humidifier (humidifier.*): what it does now, room humidity against the target, − / + on the target
@@ -3425,19 +3400,19 @@ class HomedeckCard extends HTMLElement {
     const id = typeof x === "string" ? x : x.entity, st = this._st(id), a = st?.attributes || {};
     const on = st?.state === "on", off = !st || st.state === "unavailable";
     const dry = a.device_class === "dehumidifier";
-    const MODES = { auto: "auto", eco: "eko", laundry: "pranie", purify: "oczyszczanie", sleep: "noc", normal: "normalny", boost: "turbo" };
+    const MODES = table("climate.humidifier_modes");
     const cur = a.current_humidity, target = a.humidity;
-    const sub = off ? "Niedostępny" : !on ? "Wyłączony"
-      : [cur != null && target != null && (dry ? cur > target : cur < target) ? (dry ? "Osusza" : "Nawilża") : "Trzyma wilgotność",
-        cur != null ? `${Math.round(cur)}%` + (target != null ? ` → ${target}%` : "") : target != null ? `cel ${target}%` : "",
+    const sub = off ? t("common.unavailable_m") : !on ? t("common.off_m")
+      : [cur != null && target != null && (dry ? cur > target : cur < target) ? (dry ? t("climate.drying") : t("climate.humidifying")) : t("climate.holding_humidity"),
+        cur != null ? `${Math.round(cur)}%` + (target != null ? ` → ${target}%` : "") : target != null ? t("climate.target", { v: `${target}%` }) : "",
         a.mode ? MODES[a.mode] || a.mode : ""].filter(Boolean).join(" · ");
     const btn = (cmd, icon, label, extra = "") => `<button class="icon-btn" data-act="humid" data-cmd="${cmd}" data-entity="${esc(id)}"
       aria-label="${label}" ${extra}><ha-icon icon="${icon}"></ha-icon></button>`;
     return `<div class="row cover-row">
       <div class="ic ${on ? "lime" : ""}"><ha-icon icon="mdi:air-humidifier"></ha-icon></div>
       <div><div class="t">${esc(this._name(x))}</div><div class="s">${esc(sub)}</div></div>
-      <div class="cov-btns">${on && target != null ? btn("down", "mdi:minus", "Niższy cel wilgotności") + btn("up", "mdi:plus", "Wyższy cel wilgotności") : ""}
-        ${off ? "" : btn("toggle", "mdi:power", on ? "Wyłącz" : "Włącz")}</div></div>`;
+      <div class="cov-btns">${on && target != null ? btn("down", "mdi:minus", t("climate.humidity_lower")) + btn("up", "mdi:plus", t("climate.humidity_higher")) : ""}
+        ${off ? "" : btn("toggle", "mdi:power", on ? t("common.turn_off") : t("common.turn_on"))}</div></div>`;
   }
 
   _lightRow(x) {
@@ -3454,19 +3429,19 @@ class HomedeckCard extends HTMLElement {
     const kelvin = a.color_temp_kelvin || Math.round((kMin + kMax) / 2), hue = Math.round(a.hs_color?.[0] ?? 30);
     const lock = (open) => (open ? "" : 'disabled tabindex="-1"');
     const trail = ct || color ? `<button class="icon-btn ${toneOpen ? "sel" : ""}" data-act="tone" data-entity="${esc(id)}" aria-expanded="${toneOpen}"
-        aria-label="${color ? "Kolor i barwa" : "Barwa światła"}" ${lock(on)}><ha-icon icon="mdi:tune-variant"></ha-icon></button>`
+        aria-label="${color ? t("lights.color_tone") : t("lights.tone")}" ${lock(on)}><ha-icon icon="mdi:tune-variant"></ha-icon></button>`
       : `<span class="vol-num" data-vol>${pct || 1}%</span>`;
     const bri = `<div class="fold ${on ? "open" : ""}" data-act="fold"><div><div class="ctl"><ha-icon icon="mdi:brightness-6"></ha-icon>
         <input type="range" class="slider" min="1" max="100" value="${pct || 1}" style="--v:${pct || 1}%" data-unit="%" data-act="bright"
-          data-entity="${esc(id)}" aria-label="Jasność" ${lock(on)}>${trail}</div></div></div>`;
+          data-entity="${esc(id)}" aria-label="${t("lights.brightness")}" ${lock(on)}>${trail}</div></div></div>`;
     const tone = ct || color ? `<div class="fold ${toneOpen ? "open" : ""}" data-act="fold"><div>
         ${ct ? `<div class="ctl"><ha-icon icon="mdi:thermometer"></ha-icon><input type="range" class="slider ct" min="${kMin}" max="${kMax}" step="50"
-          value="${kelvin}" data-unit="K" data-act="ct" data-entity="${esc(id)}" aria-label="Temperatura barwowa" ${lock(toneOpen)}>
+          value="${kelvin}" data-unit="K" data-act="ct" data-entity="${esc(id)}" aria-label="${t("lights.color_temp")}" ${lock(toneOpen)}>
           <span class="vol-num" data-vol>${kelvin}K</span></div>` : ""}
         ${color ? `<div class="ctl"><ha-icon icon="mdi:palette-outline"></ha-icon><input type="range" class="slider hue" min="0" max="359" value="${hue}"
-          data-act="hue" data-entity="${esc(id)}" aria-label="Kolor" ${lock(toneOpen)}>
+          data-act="hue" data-entity="${esc(id)}" aria-label="${t("lights.color")}" ${lock(toneOpen)}>
           <span class="swatch" data-swatch style="--c:hsl(${hue},100%,50%)"></span></div>` : ""}</div></div>` : "";
-    const sub = !st || st.state === "unavailable" ? "Niedostępne" : on ? (dim ? `${pct}%` : "Włączone") : "Wyłączone";
+    const sub = !st || st.state === "unavailable" ? t("common.unavailable_n") : on ? (dim ? `${pct}%` : t("common.on_n")) : t("common.off_n");
     return `<div class="row" role="button" tabindex="0" data-act="light" data-entity="${esc(id)}" data-hold="${esc(id)}">
       <div class="ic ${on ? "lime" : ""}"><ha-icon icon="${on ? "mdi:lightbulb" : "mdi:lightbulb-outline"}"></ha-icon></div>
       <div><div class="t">${esc(this._name(x))}</div><div class="s">${sub}</div></div>
@@ -3475,24 +3450,24 @@ class HomedeckCard extends HTMLElement {
   }
 
   _roomMeta(r) {
-    const t = this._st(r.temperature), h = this._st(r.humidity);
-    return [t && !isNaN(t.state) ? num(t.state) + "°" : "", h && !isNaN(h.state) ? Math.round(h.state) + "% wilg." : ""].filter(Boolean).join(" · ");
+    const temp = this._st(r.temperature), h = this._st(r.humidity);
+    return [temp && !isNaN(temp.state) ? num(temp.state) + "°" : "", h && !isNaN(h.state) ? t("climate.humidity_short", { v: Math.round(h.state) }) : ""].filter(Boolean).join(" · ");
   }
 
   _roomRows(r) {
     const rows = (r.devices || []).map((d) => this._deviceRow(d)).join("") + (r.humidifiers || []).map((x) => this._humidifierRow(x)).join("")
       + (r.covers || []).map((x) => this._coverRow(x)).join("") + (r.lights || []).map((x) => this._lightRow(x)).join("");
     if (!rows && (r.temperature || r.humidity)) return this._roomClimate(r);
-    return `<div class="rows">${rows || `<div class="empty">Brak świateł w tym pokoju</div>`}</div>`;
+    return `<div class="rows">${rows || `<div class="empty">${t("rooms.no_lights_room")}</div>`}</div>`;
   }
 
   // A room with nothing to switch (Pokój babci) shows its climate as two stat tiles instead of an empty list.
   _roomClimate(r) {
-    const t = this._st(r.temperature), h = this._st(r.humidity), ok = (x) => x && !isNaN(x.state);
+    const temp = this._st(r.temperature), h = this._st(r.humidity), ok = (x) => x && !isNaN(x.state);
     const stat = (icon, label, value, id) => `<div class="wx-stat" role="button" tabindex="0" data-act="more" data-entity="${esc(id)}"><span>${label}</span>
       <b><ha-icon icon="${icon}"></ha-icon>${value}</b></div>`;
-    return `<div class="wx-stats two room-climate">${ok(t) ? stat("mdi:thermometer", "Temperatura", `${num(t.state)}°`, r.temperature) : ""}${ok(h)
-      ? stat("mdi:water-percent", "Wilgotność", `${Math.round(h.state)}%`, r.humidity) : ""}</div>`;
+    return `<div class="wx-stats two room-climate">${ok(temp) ? stat("mdi:thermometer", t("common.temperature"), `${num(temp.state)}°`, r.temperature) : ""}${ok(h)
+      ? stat("mdi:water-percent", t("common.humidity"), `${Math.round(h.state)}%`, r.humidity) : ""}</div>`;
   }
 
   _roomPanel(r) {
@@ -3510,8 +3485,8 @@ class HomedeckCard extends HTMLElement {
 
   _cleanTab() {
     const tiles = this._cleaningTiles(false);
-    return `<div class="section-title">Porządki</div>${tiles ? `<div class="gridwrap"><div class="grid">${tiles}</div></div>`
-      : `<div class="empty">Brak urządzeń</div>`}${this._wasteSection()}`;
+    return `<div class="section-title">${t("tabs.clean")}</div>${tiles ? `<div class="gridwrap"><div class="grid">${tiles}</div></div>`
+      : `<div class="empty">${t("cleaning.no_devices")}</div>`}${this._wasteSection()}`;
   }
 
   // The next three weeks of `waste:` calendars, one card per pickup day, coloured like the operator's leaflet.
@@ -3549,18 +3524,18 @@ class HomedeckCard extends HTMLElement {
     // slots, the weekday as the kicker, the date as the big line. The next pickup is lit like an active tile.
     const cards = days.slice(0, 5).map((d, i) => {
       const dt = new Date(`${d.date}T00:00:00`), n = Math.round((dt - today) / 86400000);
-      const when = n === 0 ? "dziś" : n === 1 ? "jutro" : `za ${n} dni`;
+      const when = n === 0 ? t("common.today_lc") : n === 1 ? t("common.tomorrow_lc") : t("waste.in_days", { n });
       const icons = d.items.map((e) => { const w = this._wasteStyle(e.id, e.name);
         return `<div class="ic waste-ic" style="--c:${esc(w.color)}"><ha-icon icon="${esc(w.icon)}"></ha-icon></div>`; }).join("");
       return `<div class="tile waste-tile ${i === 0 ? "on" : ""}">
         <div class="head" style="justify-content:flex-start;gap:8px;align-items:center">${icons}
-          <div class="kicker" style="margin-left:4px">${esc(dt.toLocaleDateString("pl-PL", { weekday: "long" }))}</div></div>
-        <div class="big">${esc(dt.toLocaleDateString("pl-PL", { day: "numeric", month: "long" }))}</div>
+          <div class="kicker" style="margin-left:4px">${esc(date(dt, { weekday: "long" }))}</div></div>
+        <div class="big">${esc(date(dt, { day: "numeric", month: "long" }))}</div>
         <div class="sub" style="margin-top:6px">${esc(d.items.map((e) => e.name).join(" · "))} · ${when}</div></div>`;
     }).join("");
-    return `<div class="section-title">Wywóz śmieci</div>${cards ? `<div class="gridwrap"><div class="grid">${cards}</div></div>`
-      : `<div class="empty">${this._wasteEvents ? "Brak odbiorów w najbliższych 3 tygodniach" : "Wczytuję harmonogram…"}</div>`}
-      <div class="waste-note">Pojemniki wystaw przed posesję do 6:00 w dniu odbioru.</div>`;
+    return `<div class="section-title">${t("waste.title")}</div>${cards ? `<div class="gridwrap"><div class="grid">${cards}</div></div>`
+      : `<div class="empty">${this._wasteEvents ? t("waste.none") : t("waste.loading")}</div>`}
+      <div class="waste-note">${t("waste.note")}</div>`;
   }
 
   // Bento: the room with the most controls spans the full width with its rows in columns; the rest share the lines
@@ -3569,14 +3544,14 @@ class HomedeckCard extends HTMLElement {
     const rooms = this._config.rooms, size = (r) => (r.lights || []).length + (r.covers || []).length + (r.devices || []).length
       + (r.humidifiers || []).length;
     const top = Math.max(...rooms.map(size)), heroAt = top >= 4 && rooms.filter((r) => size(r) === top).length === 1 ? rooms.findIndex((r) => size(r) === top) : -1;
-    return `<div class="section-title">Pokoje</div><div class="panels rooms">${rooms.map((r, i) => `<div class="panel ${i === heroAt ? "hero" : ""}">${this._roomPanel(r)}</div>`).join("")}</div>`;
+    return `<div class="section-title">${t("tabs.rooms")}</div><div class="panels rooms">${rooms.map((r, i) => `<div class="panel ${i === heroAt ? "hero" : ""}">${this._roomPanel(r)}</div>`).join("")}</div>`;
   }
 
   _mediaTab() {
     const list = (this._config.media || []).map((x) => this._mediaInfo(x)).filter(Boolean);
     const hero = list.find((m) => m.active);
     const rest = list.filter((m) => m !== hero);
-    return `<div class="section-title">Media</div>${hero ? this._nowPlaying(hero) : ""}
+    return `<div class="section-title">${t("tabs.media")}</div>${hero ? this._nowPlaying(hero) : ""}
       <div class="players">${rest.map((m) => this._playerCard(m)).join("")}</div>`;
   }
 
@@ -3592,11 +3567,11 @@ class HomedeckCard extends HTMLElement {
     const step = m.a.device_class === "tv" ? 1 : 5, p = this._volPending?.[m.tv], real = Math.round(m.a.volume_level * 100);
     if (p && (p.value === real || Date.now() - p.at > 8000)) delete this._volPending[m.tv];
     const v = this._volPending?.[m.tv] ? p.value : real, muted = m.a.is_volume_muted;
-    return `<div class="vol2"><button class="icon-btn" data-act="mute" data-entity="${esc(m.tv)}" aria-label="${muted ? "Włącz dźwięk" : "Wycisz"}">
+    return `<div class="vol2"><button class="icon-btn" data-act="mute" data-entity="${esc(m.tv)}" aria-label="${muted ? t("media.unmute") : t("media.mute")}">
         <ha-icon icon="${muted ? "mdi:volume-off" : v < 35 ? "mdi:volume-low" : v < 70 ? "mdi:volume-medium" : "mdi:volume-high"}"></ha-icon></button>
-      <button class="icon-btn step" data-act="vol-step" data-step="-${step}" data-entity="${esc(m.tv)}" aria-label="Ciszej" ${v <= 0 ? "disabled" : ""}><ha-icon icon="mdi:minus"></ha-icon></button>
-      <input type="range" class="slider" min="0" max="100" value="${v}" style="--v:${v}%" data-act="volume" data-entity="${esc(m.tv)}" aria-label="Głośność">
-      <button class="icon-btn step" data-act="vol-step" data-step="${step}" data-entity="${esc(m.tv)}" aria-label="Głośniej" ${v >= 100 ? "disabled" : ""}><ha-icon icon="mdi:plus"></ha-icon></button></div>`;
+      <button class="icon-btn step" data-act="vol-step" data-step="-${step}" data-entity="${esc(m.tv)}" aria-label="${t("media.vol_down")}" ${v <= 0 ? "disabled" : ""}><ha-icon icon="mdi:minus"></ha-icon></button>
+      <input type="range" class="slider" min="0" max="100" value="${v}" style="--v:${v}%" data-act="volume" data-entity="${esc(m.tv)}" aria-label="${t("media.volume")}">
+      <button class="icon-btn step" data-act="vol-step" data-step="${step}" data-entity="${esc(m.tv)}" aria-label="${t("media.vol_up")}" ${v >= 100 ? "disabled" : ""}><ha-icon icon="mdi:plus"></ha-icon></button></div>`;
   }
 
   // The brand card for an app the TV can only name: its colours with the crisp logo on top.
@@ -3628,28 +3603,28 @@ class HomedeckCard extends HTMLElement {
             ${m.appBrand ? `<span class="chip app logo" title="${esc(m.app)}"><i class="np-brand ${m.appBrand[3] ? "mono" : ""}" style="--logo:url('/local/logos/${m.appBrand[1]}.svg?v=${LOGO_V}')"></i></span>`
               : m.app ? `<span class="chip app"><ha-icon icon="${this._appIcon(m)}"></ha-icon>${esc(m.app)}</span>` : ""}
             <span class="chip"><ha-icon icon="${m.a.device_class === "tv" ? "mdi:television" : "mdi:cast"}"></ha-icon>${esc(m.a.friendly_name)}</span>
-            <span class="chip state ${m.playing ? "on" : ""}"><i></i>${m.playing ? "Odtwarzanie" : "Wstrzymane"}</span></div>
+            <span class="chip state ${m.playing ? "on" : ""}"><i></i>${m.playing ? t("media.playing") : t("media.paused")}</span></div>
           <div class="np-title">${esc(m.title)}</div>${m.channel || m.artist ? `<div class="np-sub">${esc(m.channel || m.artist)}</div>` : ""}
           ${m.slot || m.a.media_duration ? `<div class="np-prog"><div class="bar"><i ${this._progressAttrs(m)}></i></div>
             <div class="times">${m.slot ? `<span>${m.slot.label[0]}</span><span>${m.slot.label[1]}</span>`
               : `<span data-elapsed>${fmtTime(pos)}</span><span>${fmtTime(m.a.media_duration)}</span>`}</div></div>` : ""}
           <div class="np-ctrls">
-            <button data-act="media" data-cmd="media_previous_track" data-entity="${esc(m.id)}" aria-label="Poprzedni"><ha-icon icon="mdi:skip-previous"></ha-icon></button>
-            <button class="play" data-act="media" data-cmd="media_play_pause" data-entity="${esc(m.id)}" aria-label="Odtwórz/pauza"><ha-icon icon="${m.playing ? "mdi:pause" : "mdi:play"}"></ha-icon></button>
-            <button data-act="media" data-cmd="media_next_track" data-entity="${esc(m.id)}" aria-label="Następny"><ha-icon icon="mdi:skip-next"></ha-icon></button></div>
+            <button data-act="media" data-cmd="media_previous_track" data-entity="${esc(m.id)}" aria-label="${t("media.previous")}"><ha-icon icon="mdi:skip-previous"></ha-icon></button>
+            <button class="play" data-act="media" data-cmd="media_play_pause" data-entity="${esc(m.id)}" aria-label="${t("media.play_pause")}"><ha-icon icon="${m.playing ? "mdi:pause" : "mdi:play"}"></ha-icon></button>
+            <button data-act="media" data-cmd="media_next_track" data-entity="${esc(m.id)}" aria-label="${t("media.next")}"><ha-icon icon="mdi:skip-next"></ha-icon></button></div>
           ${this._volume(m)}
         </div></div></div>`;
   }
 
   _playerCard(m) {
     const st = m.st.state, on = !["off", "unavailable", "unknown", "standby"].includes(st);
-    const sub = st === "unavailable" ? "Niedostępny" : !on ? "Wyłączony"
-      : [m.srcName(m.a.source), m.a.sound_mode].filter(Boolean).join(" · ") || (m.active ? m.title : "Włączony");
+    const sub = st === "unavailable" ? t("common.unavailable_m") : !on ? t("common.off_m")
+      : [m.srcName(m.a.source), m.a.sound_mode].filter(Boolean).join(" · ") || (m.active ? m.title : t("common.on_m"));
     const icon = m.a.device_class === "tv" ? "mdi:television" : /soundbar/i.test(m.a.friendly_name) ? "mdi:soundbar" : "mdi:speaker";
     return `<div class="player ${on ? "is-on" : ""}"><div class="player-hd">
         <div class="ic ${on ? "lime" : ""}"><ha-icon icon="${icon}"></ha-icon></div>
         <div style="min-width:0"><div class="t">${esc(m.a.friendly_name)}</div><div class="s">${esc(sub)}</div></div>
-        ${st !== "unavailable" ? `<button class="pwr ${on ? "on" : ""}" data-act="power" data-entity="${esc(m.tv)}" data-on="${on ? 1 : 0}" aria-label="Zasilanie"><ha-icon icon="mdi:power"></ha-icon></button>` : ""}</div>
+        ${st !== "unavailable" ? `<button class="pwr ${on ? "on" : ""}" data-act="power" data-entity="${esc(m.tv)}" data-on="${on ? 1 : 0}" aria-label="${t("common.power")}"><ha-icon icon="mdi:power"></ha-icon></button>` : ""}</div>
       ${on ? this._volume(m) : ""}</div>`;
   }
 
@@ -3713,14 +3688,14 @@ class HomedeckCard extends HTMLElement {
     if (!cams.length) return "";
     const src = this._camStill(cams[0]);
     return `<div class="tile cam-tile" role="button" tabindex="0" data-act="tab" data-tab="security">${src ? `<img data-keep data-src="${esc(src)}" alt="">` : ""}
-      <div class="kicker"><ha-icon icon="mdi:cctv" style="--mdc-icon-size:14px"></ha-icon> Kamery · ${cams.length}</div>
+      <div class="kicker"><ha-icon icon="mdi:cctv" style="--mdc-icon-size:14px"></ha-icon> ${t("cameras.count", { n: cams.length })}</div>
       <div class="title">${esc(this._camName(cams[0]))}</div></div>`;
   }
 
   _camerasGrid() {
     const cams = this._config.cameras || [];
     if (!cams.length) return "";
-    return `<div class="label" style="margin-top:18px">Kamery</div><div class="cams">${cams.map((cam, i) => {
+    return `<div class="label" style="margin-top:18px">${t("cameras.title")}</div><div class="cams">${cams.map((cam, i) => {
       const src = this._camStill(cam);
       return `<div class="cam" role="button" tabindex="0" data-act="camera" data-cam="${i}">${src ? `<img data-keep data-src="${esc(src)}" alt="">` : ""}
         <div class="cam-meta"><ha-icon icon="${esc(cam.icon || "mdi:cctv")}"></ha-icon>${esc(this._camName(cam))}</div></div>`;
@@ -3763,14 +3738,14 @@ class HomedeckCard extends HTMLElement {
     const still = this._camShownStill(cam);
     return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet cam-sheet" role="dialog" aria-label="${esc(name)}">
       <div class="hd"><h2 style="flex:1">${esc(name)}</h2>
-        <button class="round cam-fs" data-act="cam-full" aria-label="Pełny ekran"><ha-icon icon="mdi:fullscreen"></ha-icon></button>
-        <button class="round" data-act="close-sheet" aria-label="Zamknij"><ha-icon icon="mdi:close"></ha-icon></button></div>
+        <button class="round cam-fs" data-act="cam-full" aria-label="${t("cameras.fullscreen")}"><ha-icon icon="mdi:fullscreen"></ha-icon></button>
+        <button class="round" data-act="close-sheet" aria-label="${t("common.close")}"><ha-icon icon="mdi:close"></ha-icon></button></div>
       <div class="cam-live ${this._camFull ? "full" : ""}" style="${still ? `--still:url('${esc(still)}')` : ""}"><div class="cam-slot" data-keep></div>
-        <span class="cam-badge"><i></i><span class="on">Na żywo</span><span class="wait">Łączenie…</span></span>
-        <button class="round cam-exit" data-act="cam-exit" aria-label="Zamknij pełny ekran"><ha-icon icon="mdi:fullscreen-exit"></ha-icon></button></div>
+        <span class="cam-badge"><i></i><span class="on">${t("cameras.live")}</span><span class="wait">${t("cameras.connecting")}</span></span>
+        <button class="round cam-exit" data-act="cam-exit" aria-label="${t("cameras.exit_fullscreen")}"><ha-icon icon="mdi:fullscreen-exit"></ha-icon></button></div>
       ${cams.length > 1 ? `<div class="cam-thumbs">${cams.map((c, j) => `<button class="cam-thumb ${j === i ? "on" : ""}" data-act="camera" data-cam="${j}">
         <span class="ct-img"><img data-keep data-src="${esc(this._camShownStill(c))}" alt=""></span><span class="ct-name">${esc(this._camName(c))}</span></button>`).join("")}</div>` : ""}
-      <button class="wide-btn" data-act="cam-full"><ha-icon icon="mdi:fullscreen"></ha-icon>Pełny ekran</button></div></div>`;
+      <button class="wide-btn" data-act="cam-full"><ha-icon icon="mdi:fullscreen"></ha-icon>${t("cameras.fullscreen")}</button></div></div>`;
   }
 
   // The player lives in .cam-slot, which morph leaves alone (data-keep), so re-renders never restart it.
@@ -3874,31 +3849,27 @@ class HomedeckCard extends HTMLElement {
   }
 
   _securityTab() {
-    const rel = (iso) => {
-      const min = Math.round((Date.now() - new Date(iso)) / 60000);
-      return min < 1 ? "przed chwilą" : min < 60 ? `${min} min temu` : min < 1440 ? `${Math.round(min / 60)} godz. temu` : `${Math.round(min / 1440)} dni temu`;
-    };
     const rows = this._securityItems().map((x) => `<div class="row" role="button" tabindex="0" data-act="more" data-entity="${esc(x.id)}">
       <div class="ic ${x.alert ? "" : "lime"}"><ha-icon icon="${x.dc === "moisture" ? "mdi:water-outline" : x.dc === "door" ? "mdi:door" : "mdi:shield-outline"}"></ha-icon></div>
-      <div><div class="t">${esc(x.name)}</div><div class="s">${x.st ? "zmiana " + rel(x.st.last_changed) : ""}</div></div>
-      <div class="${x.alert ? "state-bad" : "state-ok"}">${x.off ? "offline" : x.alert ? ALERT_WORD[x.dc] || "uwaga" : "OK"}</div></div>`).join("");
+      <div><div class="t">${esc(x.name)}</div><div class="s">${x.st ? changed(x.st.last_changed) : ""}</div></div>
+      <div class="${x.alert ? "state-bad" : "state-ok"}">${x.off ? t("security.offline_word") : x.alert ? table("security.alert")[x.dc] || t("security.attention") : t("security.ok")}</div></div>`).join("");
     const people = this._persons().map((p) => {
       const { st, name } = this._who(p), id = p.entity;
       return `<div class="row" role="button" tabindex="0" data-act="person" data-entity="${esc(id)}">
         <div class="ic ${st?.state === "home" ? "lime" : ""}"><ha-icon icon="mdi:account-outline"></ha-icon></div>
-        <div><div class="t">${esc(name)}</div><div class="s">${st ? "od " + rel(st.last_changed).replace(" temu", "") : ""}</div></div>
-        <div class="${st?.state === "home" ? "state-ok" : "s"}">${st?.state === "home" ? "w domu" : st?.state === "not_home" ? "poza domem" : esc(st?.state || "")}</div></div>`;
+        <div><div class="t">${esc(name)}</div><div class="s">${st ? since(st.last_changed) : ""}</div></div>
+        <div class="${st?.state === "home" ? "state-ok" : "s"}">${st?.state === "home" ? t("persons.home_lc") : st?.state === "not_home" ? t("persons.away_lc") : esc(st?.state || "")}</div></div>`;
     }).join("");
-    return `<div class="section-title">Ochrona</div>${this._camerasGrid()}<div class="panels">
-      <div class="panel"><h3>Czujniki</h3><div class="rows">${rows || `<div class="empty">Brak czujników</div>`}</div></div>
-      <div class="panel"><h3>Domownicy</h3><div class="rows">${people || `<div class="empty">Brak osób</div>`}</div></div></div>`;
+    return `<div class="section-title">${t("tabs.security")}</div>${this._camerasGrid()}<div class="panels">
+      <div class="panel"><h3>${t("security.sensors")}</h3><div class="rows">${rows || `<div class="empty">${t("security.no_sensors")}</div>`}</div></div>
+      <div class="panel"><h3>${t("security.people")}</h3><div class="rows">${people || `<div class="empty">${t("security.no_people")}</div>`}</div></div></div>`;
   }
 
   _nav() {
     const p = this._pill;
     return `<nav class="nav ${this._navMini ? "folded" : ""}" style="${p ? `--mx:${p.mx}px` : ""}">
-      <i class="nav-pill" style="${p ? `width:${p.w}px;height:${p.h}px;top:${p.y}px;transform:translateX(${p.x}px)` : "opacity:0"}"></i>${this._tabs().map(([k, label, icon]) => `<button class="${this._tab === k ? "sel" : ""}" data-act="tab" data-tab="${k}">
-      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true">${NAV_ICONS[k](this._tab === k)}</svg><span>${label}</span>${k === "heating" ? this._navBadge() : ""}</button>`).join("")}</nav>`;
+      <i class="nav-pill" style="${p ? `width:${p.w}px;height:${p.h}px;top:${p.y}px;transform:translateX(${p.x}px)` : "opacity:0"}"></i>${this._tabs().map(([k]) => `<button class="${this._tab === k ? "sel" : ""}" data-act="tab" data-tab="${k}">
+      <svg class="nav-ic" viewBox="0 0 24 24" aria-hidden="true">${NAV_ICONS[k](this._tab === k)}</svg><span>${t(`tabs.${k}`)}</span>${k === "heating" ? this._navBadge() : ""}</button>`).join("")}</nav>`;
   }
 
   _navBadge() {
@@ -3910,7 +3881,7 @@ class HomedeckCard extends HTMLElement {
     return `<div class="sheet-wrap" data-act="close-sheet"><div class="sheet" role="dialog" aria-label="${esc(r.name)}">
       <div class="hd"><span class="ic lime"><ha-icon icon="${esc(r.icon || "mdi:home-outline")}"></ha-icon></span>
         <div style="flex:1"><h2>${esc(r.name)}</h2><div class="s" style="color:var(--muted);font-size:13px">${this._roomMeta(r)}</div></div>
-        <button class="round" data-act="close-sheet" aria-label="Zamknij"><ha-icon icon="mdi:close"></ha-icon></button></div>
+        <button class="round" data-act="close-sheet" aria-label="${t("common.close")}"><ha-icon icon="mdi:close"></ha-icon></button></div>
       ${this._roomEnergy(r)}${this._roomRows(r)}</div></div>`;
   }
 
@@ -3919,10 +3890,10 @@ class HomedeckCard extends HTMLElement {
     if (!r.energy_meter) return "";
     const power = this._appNum(r.power), today = this._appNum(r.energy_today), month = this._appMonth(r);
     const stat = (icon, k, v) => `<div class="wx-stat"><span>${k}</span><b><ha-icon icon="${icon}"></ha-icon>${esc(v)}</b></div>`;
-    return `${r.energy_name ? `<div class="label vac-label">${esc(r.energy_name)}</div>` : ""}<div class="wx-stats">${stat("mdi:flash-outline", "Moc teraz", power != null ? `${Math.round(power)} W` : "–")}
-      ${stat("mdi:lightning-bolt-outline", "Dziś", today != null ? `${num(today, 2)} kWh` : "–")}
-      ${stat("mdi:calendar-month", "Ten miesiąc", month.kwh != null ? `${num(month.kwh, 2)} kWh` : "–")}
-      ${stat("mdi:cash", "Koszt w miesiącu", month.cost != null ? `${num(month.cost, 2)} zł` : "–")}</div>`;
+    return `${r.energy_name ? `<div class="label vac-label">${esc(r.energy_name)}</div>` : ""}<div class="wx-stats">${stat("mdi:flash-outline", t("rooms.power_now"), power != null ? `${Math.round(power)} W` : "–")}
+      ${stat("mdi:lightning-bolt-outline", t("common.today"), today != null ? `${num(today, 2)} kWh` : "–")}
+      ${stat("mdi:calendar-month", t("common.this_month"), month.kwh != null ? `${num(month.kwh, 2)} kWh` : "–")}
+      ${stat("mdi:cash", t("common.month_cost"), month.cost != null ? money(month.cost) : "–")}</div>`;
   }
 
   // --- live bits ----------------------------------------------------------------------------------
@@ -3957,8 +3928,8 @@ class HomedeckCard extends HTMLElement {
     });
   }
 
-  _clockText() { return CLOCK_FMT.format(new Date()); }
-  _dateText() { return DATE_FMT.format(new Date()); }
+  _clockText() { return time(new Date()); }
+  _dateText() { return date(new Date(), { weekday: "long", day: "numeric", month: "long" }); }
   _position({ pos, at, dur, playing }) {
     let p = Number(pos);
     if (playing === "1" && at) p += (Date.now() - new Date(at)) / 1000;
@@ -4151,7 +4122,7 @@ class HomedeckCard extends HTMLElement {
     } else if (act === "run") {
       this._call(id.split(".")[0], "turn_on", { entity_id: id });
       el.classList.add("busy");
-      el.lastChild.textContent = "Usypiam…";
+      el.lastChild.textContent = t("devices.sleeping");
     } else if (act === "tone") {
       this._tone = this._tone || new Set();
       if (!this._tone.delete(id)) this._tone.add(id);
@@ -4209,4 +4180,4 @@ class HomedeckCard extends HTMLElement {
 
 customElements.define("alvuna-card", HomedeckCard);
 window.customCards = window.customCards || [];
-window.customCards.push({ type: "alvuna-card", name: "Alvuna", description: "Pulpit domu na tablet" });
+window.customCards.push({ type: "alvuna-card", name: "Alvuna", description: t("common.card_description") });

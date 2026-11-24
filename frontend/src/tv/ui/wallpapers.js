@@ -1,23 +1,25 @@
-// Wallpapers: the background behind the whole app, picked per TV in Ustawienia → Tapeta and kept in this TV's
+// Wallpapers: the background behind the whole app, picked per TV in Settings → Wallpaper and kept in this TV's
 // storage. Gradients and photos: either is painted once and costs nothing while things move.
+// `name` and `sub` read tv.wallpapers.<id> in the user's language.
+import { table } from "../../shared/i18n.js";
 const glow = (c, x = "28%") => `radial-gradient(70% 55% at ${x} 0%, ${c}, transparent 72%)`;
 
 export const WALLPAPERS = [
-  { id: "homedeck", tone: "#114556", name: "Alvuna", sub: "Morski, domyślny",
+  { id: "homedeck", tone: "#114556",
     bg: `${glow("rgba(44,140,152,.45)")}, radial-gradient(45% 40% at 95% 0%, rgba(56,170,180,.14), transparent 70%), linear-gradient(180deg, #165566 0%, #114556 32%, #0B2633 70%, #081A24 100%)`, base: "#081A24" },
-  { id: "glebia", tone: "#13284F", name: "Głębia", sub: "Ciemny błękit",
+  { id: "glebia", tone: "#13284F",
     bg: `${glow("rgba(64,120,220,.38)")}, linear-gradient(180deg, #1A3566 0%, #13284F 32%, #0A1630 70%, #060D1F 100%)`, base: "#060D1F" },
-  { id: "noc", tone: "#1A1640", name: "Noc", sub: "Granat z fioletem",
+  { id: "noc", tone: "#1A1640",
     bg: `${glow("rgba(130,96,220,.34)", "70%")}, linear-gradient(180deg, #25204F 0%, #1A1640 32%, #0F0D28 70%, #08071A 100%)`, base: "#08071A" },
-  { id: "zorza", tone: "#0C1E2E", name: "Zorza", sub: "Zieleń i fiolet na granacie",
+  { id: "zorza", tone: "#0C1E2E",
     bg: `radial-gradient(60% 50% at 20% 0%, rgba(60,200,150,.34), transparent 70%), radial-gradient(50% 45% at 85% 5%, rgba(150,90,220,.30), transparent 70%), linear-gradient(180deg, #102A3A 0%, #0C1E2E 40%, #08131F 75%, #050C14 100%)`, base: "#050C14" },
-  { id: "las", tone: "#173B2A", name: "Las", sub: "Głęboka zieleń",
+  { id: "las", tone: "#173B2A",
     bg: `${glow("rgba(90,170,100,.32)")}, linear-gradient(180deg, #1F4A35 0%, #173B2A 32%, #0E241A 70%, #08150F 100%)`, base: "#08150F" },
-  { id: "zachod", tone: "#3A1B2B", name: "Zachód", sub: "Ciepły, wieczorny",
+  { id: "zachod", tone: "#3A1B2B",
     bg: `${glow("rgba(255,140,90,.30)", "35%")}, linear-gradient(180deg, #4E2634 0%, #3A1B2B 32%, #22101C 70%, #12090F 100%)`, base: "#12090F" },
-  { id: "grafit", tone: "#23282C", name: "Grafit", sub: "Neutralny szary",
+  { id: "grafit", tone: "#23282C",
     bg: `${glow("rgba(255,255,255,.10)")}, linear-gradient(180deg, #2D3338 0%, #23282C 32%, #16191C 70%, #0D0F11 100%)`, base: "#0D0F11" },
-  { id: "czern", tone: "#101010", name: "Czerń", sub: "Prawdziwa czerń OLED",
+  { id: "czern", tone: "#101010",
     bg: "#000", base: "#000" },
 ];
 
@@ -29,23 +31,27 @@ const PHOTO_V = 1; // bump when a photo file changes: HA serves /local with a 31
 // Photos are not part of Alvuna's package: a home that wants them puts them in HA's www/alvuna/wallpapers.
 const PHOTOS = "/local/alvuna/wallpapers";
 const shade = "linear-gradient(180deg, rgba(4,12,18,.30) 0%, rgba(4,12,18,.50) 40%, rgba(4,12,18,.78) 100%)";
-const photo = (id, tone, name, sub, base = "#05090D") => ({ id: `foto-${id}`, tone, name, sub, photo: true, base,
+const photo = (id, tone, base = "#05090D") => ({ id: `foto-${id}`, tone, photo: true, base,
   // The blurred copy frosted glass shows (frost.js draws it with a lighter shade, so the photo shows through).
   frostImg: `${PHOTOS}/frost/${id}.webp?v=${PHOTO_V}`,
   bg: `${shade}, url(${PHOTOS}/${id}.webp?v=${PHOTO_V}) center/cover no-repeat`,
   preview: `${shade}, url(${PHOTOS}/thumbs/${id}.webp?v=${PHOTO_V}) center/cover no-repeat` });
 WALLPAPERS.push(
-  photo("zorza", "#356758", "Zorza polarna", "Zielone światła nad jeziorem"),
-  photo("las", "#4e534c", "Mglisty las", "Sosny we mgle"),
-  photo("morze", "#1a2a2f", "Księżyc nad morzem", "Nocne morze"),
-  photo("gory", "#1a5992", "Góry o zmierzchu", "Niebieskie grzbiety"),
-  photo("gwiazdy", "#242135", "Droga Mleczna", "Nocne niebo nad górami"),
-  photo("baltyk", "#a0654a", "Zachód nad morzem", "Ciepłe światło nad wodą"),
-  photo("miasto", "#4a3514", "Światła miasta", "Rozmyte światła nocą"),
-  photo("snieg", "#0e1c25", "Zimowa noc", "Ośnieżony szczyt i gwiazdy"),
-  photo("fale", "#0c2624", "Turkusowe fale", "Abstrakcja w kolorach Alvuna"),
-  photo("mgla", "#4d5351", "Mgła nad jeziorem", "Brzeg o świcie"),
+  photo("zorza", "#356758"),
+  photo("las", "#4e534c"),
+  photo("morze", "#1a2a2f"),
+  photo("gory", "#1a5992"),
+  photo("gwiazdy", "#242135"),
+  photo("baltyk", "#a0654a"),
+  photo("miasto", "#4a3514"),
+  photo("snieg", "#0e1c25"),
+  photo("fale", "#0c2624"),
+  photo("mgla", "#4d5351"),
 );
+
+for (const w of WALLPAPERS) {
+  Object.defineProperties(w, { name: { get: () => table("tv.wallpapers")[w.id]?.name }, sub: { get: () => table("tv.wallpapers")[w.id]?.sub } });
+}
 
 const KEY = "homedeck-wallpaper";
 export function currentWallpaper() {

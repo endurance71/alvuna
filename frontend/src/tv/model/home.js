@@ -1,8 +1,8 @@
 // What the screen shows, worked out from Home Assistant's states and the Alvuna card config. Same rules as the tablet
 // card (src/card/alvuna-card.js: _securityItems, _thermo, _climateSensors, _wxNow, _air, _wxAlert, _sceneOn, _who,
 // _mediaInfo), written as plain functions over (states, config) so the TV app needs no Lovelace card around them.
-import { ids, isNum, AIR_PL, AIR_BAD, IMGW_ALERT_PL, BRANDS, TV_APPS, VAC_STATE_PL, VAC_SUCTION_PL, APP_STATE_PL, APP_ACTIVE, APP_DONE,
-  PROGRAM_PL } from "./format.js";
+import { ids, isNum, AIR_BAD, BRANDS, tvApp, APP_ACTIVE, APP_DONE } from "./format.js";
+import { t, table } from "../../shared/i18n.js";
 
 export class Home {
   constructor(states, config) {
@@ -46,10 +46,10 @@ export class Home {
   // --- rooms ------------------------------------------------------------------------------------
   roomSummary(r) {
     const lights = this.lights(r), on = lights.filter((id) => this.on(id)).length;
-    const t = this.val(r.temperature), h = this.val(r.humidity);
-    const sub = !lights.length ? (h != null ? `Wilgotność ${Math.round(h)}%` : "Brak świateł")
-      : on === 0 ? "Wszystko wyłączone" : on === lights.length ? (on > 1 ? "Wszystkie włączone" : "Włączone") : `Włączone ${on} z ${lights.length}`;
-    return { lights, on, t, h, sub };
+    const temp = this.val(r.temperature), h = this.val(r.humidity);
+    const sub = !lights.length ? (h != null ? t("rooms.humidity", { v: Math.round(h) }) : t("rooms.no_lights"))
+      : on === 0 ? t("rooms.all_off") : on === lights.length ? (on > 1 ? t("rooms.all_on") : t("common.on_n")) : t("rooms.some_on", { n: on, total: lights.length });
+    return { lights, on, t: temp, h, sub };
   }
 
   // --- security ---------------------------------------------------------------------------------
@@ -69,14 +69,14 @@ export class Home {
     const a = st.attributes, target = Number(a.temperature), on = st.state !== "off";
     return { id: cl.entity, a, on, heating: on && a.hvac_action === "heating", target, current: Number(a.current_temperature),
       min: Number(a.min_temp ?? 7), max: Number(a.max_temp ?? 30), step: Number(a.target_temp_step || .5),
-      status: !on ? "Ogrzewanie wyłączone" : `${a.hvac_action === "heating" ? "Grzeje do" : "Utrzymuje"}` };
+      status: !on ? t("climate.heating_off") : t(a.hvac_action === "heating" ? "climate.heating_word" : "climate.holding_word") };
   }
   climateSensors() {
     const c = this.c, cl = c.climate || {};
     const list = cl.sensors || this.rooms().filter((r) => r.temperature || r.humidity)
       .map((r) => ({ name: r.name, icon: r.icon, temperature: r.temperature, humidity: r.humidity }));
     const out = list.map((x) => ({ ...x, t: this.val(x.temperature), h: this.val(x.humidity) }));
-    if (!cl.sensors && c.outdoor_temperature) out.push({ name: "Na zewnątrz", icon: "mdi:tree-outline", outdoor: true,
+    if (!cl.sensors && c.outdoor_temperature) out.push({ name: t("climate.outdoor"), icon: "mdi:tree-outline", outdoor: true,
       temperature: c.outdoor_temperature, humidity: cl.outdoor_humidity, t: this.val(c.outdoor_temperature), h: this.val(cl.outdoor_humidity) });
     return out;
   }
@@ -98,13 +98,13 @@ export class Home {
   }
   air() {
     const c = this.c.air_quality, st = c && this.st(c.index);
-    if (!st || !AIR_PL[st.state]) return null;
+    if (!st || !table("weather.air")[st.state]) return null;
     const pm = (id) => { const v = this.val(id); return v != null ? Math.round(v) : null; };
-    return { level: st.state, label: AIR_PL[st.state], bad: AIR_BAD.includes(st.state), pm10: pm(c.pm10), pm25: pm(c.pm25) };
+    return { level: st.state, label: table("weather.air")[st.state], bad: AIR_BAD.includes(st.state), pm10: pm(c.pm10), pm25: pm(c.pm25) };
   }
   weatherAlert() {
     const st = this.st(this.c.weather_alert)?.state;
-    return st && !["no_alert", "unknown", "unavailable"].includes(st) ? IMGW_ALERT_PL[st] || st : "";
+    return st && !["no_alert", "unknown", "unavailable"].includes(st) ? table("weather.imgw")[st] || st : "";
   }
 
   // --- people -----------------------------------------------------------------------------------
@@ -136,8 +136,8 @@ export class Home {
     const now = new Date(), today = day(now), tomorrow = day(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
     const due = (when) => ids(this.c.waste).map((id) => this.st(id)).filter((st) => st && String(st.attributes.start_time || "").startsWith(when))
       .map((st) => st.attributes.message || st.attributes.friendly_name);
-    if (now.getHours() < 12 && due(today).length) return { when: "Dziś", list: due(today) };
-    return due(tomorrow).length ? { when: "Jutro", list: due(tomorrow) } : null;
+    if (now.getHours() < 12 && due(today).length) return { when: "today", list: due(today) };
+    return due(tomorrow).length ? { when: "tomorrow", list: due(tomorrow) } : null;
   }
   roomsLit() { return this.rooms().filter((r) => this.lights(r).some((id) => this.on(id))).map((r) => r.name); }
 
@@ -148,10 +148,11 @@ export class Home {
     const a = st.attributes, raw = v.battery ? this.st(v.battery)?.state : a.battery_level ?? a.battery;
     const room = this.st(v.room)?.state, suction = this.st(v.suction)?.state ?? a.fan_speed;
     const shown = (x) => x != null && !["unknown", "unavailable", ""].includes(String(x));
-    return { id: v.entity, name: v.name || a.friendly_name || "Odkurzacz", st, state: st.state, label: VAC_STATE_PL[st.state] || st.state,
+    return { id: v.entity, name: v.name || a.friendly_name || t("cleaning.vacuum"), st, state: st.state,
+      label: table("cleaning.vacuum_state")[st.state] || (st.state === "unknown" ? t("common.no_data") : st.state),
       active: ["cleaning", "returning", "paused"].includes(st.state), cleaning: st.state === "cleaning", charging: !!a.charging,
       battery: isNum(raw) ? Number(raw) : null, room: shown(room) ? room : "", time: this.val(v.time), timeUnit: this.st(v.time)?.attributes.unit_of_measurement || "min",
-      area: this.val(v.area), suction: shown(suction) ? VAC_SUCTION_PL[String(suction).toLowerCase()] || suction : "" };
+      area: this.val(v.area), suction: shown(suction) ? table("cleaning.suction")[String(suction).toLowerCase()] || suction : "" };
   }
   appliances() {
     return (this.c.appliances || []).map((ap, i) => {
@@ -159,9 +160,9 @@ export class Home {
       const shown = (x) => x && !["off", "none", "unknown", "unavailable"].includes(x);
       const usable = (id) => { const st = this.st(id); return st && st.state !== "unavailable" ? id : ""; };
       return { i, name: ap.name || this.name(ap.state), icon: ap.icon || "mdi:washing-machine", room: ap.room || "", state: s,
-        label: APP_STATE_PL[s] || s, active: APP_ACTIVE.includes(s), done: APP_DONE.includes(s), paused: /paused/.test(s),
+        label: table("appliances.state")[s] || s, active: APP_ACTIVE.includes(s), done: APP_DONE.includes(s), paused: /paused/.test(s),
         pct: this.val(ap.progress), left: this.val(ap.remaining), total: this.val(ap.duration), power: this.val(ap.power), cycles: this.val(ap.cycles),
-        program: shown(prog) ? PROGRAM_PL[prog] || prog : "", phase: shown(phase) ? phase : "",
+        program: shown(prog) ? table("appliances.program")[prog] || prog : "", phase: shown(phase) ? phase : "",
         pause: usable(ap.pause), resume: usable(ap.resume), unloaded: usable(ap.unloaded),
         // This finished cycle, for "Wyjęte" on a TV where HA's own button is not available (WashData offers it only
         // in some states): hidden here until the next cycle.
@@ -196,7 +197,7 @@ export class Home {
     const pic = a.entity_picture_local || a.entity_picture || "";
     const hay = [a.app_id, a.app_name, a.source, tv.app_id, tv.source].join(" ").toLowerCase();
     const app = [a.app_name, srcName(a.source), tv.app_name, srcName(tv.source)].filter(Boolean)
-      .map((v) => (/^[a-z][\w]*(\.[\w]+)+$/i.test(v) ? (TV_APPS.find(([re]) => re.test(v)) || [])[1] || "" : v)).find(Boolean) || "";
+      .map((v) => (/^[a-z][\w]*(\.[\w]+)+$/i.test(v) ? tvApp(v) : v)).find(Boolean) || "";
     return {
       id: src.entity_id, tv: id, name: tv.friendly_name, on, active, playing: src.state === "playing", st, src, a,
       isTv: tv.device_class === "tv", volume: tv.volume_level, muted: !!tv.is_volume_muted, features: tv.supported_features || 0,

@@ -2,7 +2,8 @@
 // has the same height and the same parts (icon, name, state, value on the right), and a thin bar for values set with
 // left/right ([data-adjust]: brightness, blind, volume, temperature). Back closes the panel and focus goes back to
 // the tile that opened it.
-import { esc, num, plural, wIcon, WEATHER_PL, ALERT_WORD, CALM_WORD, HOUR_FMT, DAY_FMT, fmtTime, ago, isNum } from "../model/format.js";
+import { esc, num, wIcon, wxWord, alertWord, calmWord, time, shortDay, fmtTime, ago, age, since, isNum } from "../model/format.js";
+import { t, table } from "../../shared/i18n.js";
 import { icon } from "./icons.js";
 import { mediaArt, camUrl, ring } from "./home.js";
 import { WALLPAPERS, currentWallpaper } from "./wallpapers.js";
@@ -50,10 +51,10 @@ function roomPanel(h, p, ctx) {
   const r = h.rooms()[p.room];
   if (!r) return "";
   const s = h.roomSummary(r);
-  const sub = [s.t != null && `${num(s.t)}°`, s.h != null && `wilgotność ${Math.round(s.h)}%`].filter(Boolean).join(" · ");
+  const sub = [s.t != null && `${num(s.t)}°`, s.h != null && t("tv.humidity_lc", { v: Math.round(s.h) })].filter(Boolean).join(" · ");
   const rows = [];
   if (s.lights.length) rows.push(row({ key: "power", act: "room-power", attrs: `data-room="${p.room}"`,
-    ic: s.on ? "mdi:lightbulb-off-outline" : "mdi:lightbulb-on-outline", title: s.on ? "Wyłącz wszystkie" : "Włącz wszystkie",
+    ic: s.on ? "mdi:lightbulb-off-outline" : "mdi:lightbulb-on-outline", title: s.on ? t("home.all_off_btn") : t("home.all_on_btn"),
     sub: esc(s.sub) }));
   for (const x of r.lights || []) {
     const id = typeof x === "string" ? x : x.entity, st = h.st(id), on = st?.state === "on", off = !st || st.state === "unavailable";
@@ -61,7 +62,7 @@ function roomPanel(h, p, ctx) {
     const pct = want ?? (on ? Math.round(((st.attributes.brightness ?? 255) / 255) * 100) : 0), lit = want != null ? want > 0 : on;
     rows.push(row({ key: `light:${id}`, act: "light", attrs: `data-entity="${esc(id)}"`, adjust: dim && !off ? "bright" : "",
       ic: lit ? "mdi:lightbulb" : "mdi:lightbulb-outline", icOn: lit, title: h.name(x), cls: `${lit ? "on" : ""} ${off ? "off" : ""}`,
-      sub: off ? "Niedostępne" : lit ? "Włączone" : "Wyłączone", value: off ? "" : dim ? (lit ? `${pct}%` : "0%") : lit ? "Wł." : "Wył.",
+      sub: off ? t("common.unavailable_n") : lit ? t("common.on_n") : t("common.off_n"), value: off ? "" : dim ? (lit ? `${pct}%` : "0%") : lit ? t("tv.on_short") : t("tv.off_short"),
       bar: dim && !off ? pct : null }));
   }
   for (const x of r.covers || []) {
@@ -69,14 +70,14 @@ function roomPanel(h, p, ctx) {
     const pos = ctx.pending[id]?.value ?? Number(st?.attributes.current_position ?? (st?.state === "open" ? 100 : 0));
     rows.push(row({ key: `cover:${id}`, act: "cover", attrs: `data-entity="${esc(id)}"`, adjust: "cover",
       ic: pos > 0 ? "mdi:blinds-open" : "mdi:blinds", icOn: pos > 0, title: h.name(x), cls: pos > 0 ? "on" : "",
-      sub: pos > 0 ? "Otwarta" : "Zamknięta", value: `${pos}%`, bar: pos }));
+      sub: pos > 0 ? t("covers.open") : t("covers.closed"), value: `${pos}%`, bar: pos }));
   }
   for (const [i, d] of (r.devices || []).entries()) {
     const active = h.on(d.active), bat = h.val(d.battery);
     rows.push(row({ key: `dev:${i}`, ic: d.icon || "mdi:laptop", icOn: active, title: d.name || h.name(d.active),
-      sub: active ? "Aktywny" : "Uśpiony", value: bat != null ? `${Math.round(bat)}%` : "" }));
+      sub: active ? t("devices.active") : t("devices.asleep"), value: bat != null ? `${Math.round(bat)}%` : "" }));
   }
-  return shell("", head(r.icon || "mdi:home-outline", r.name, esc(sub), s.on > 0), rows.join("") || `<div class="p-empty">Brak urządzeń w tym pokoju</div>`);
+  return shell("", head(r.icon || "mdi:home-outline", r.name, esc(sub), s.on > 0), rows.join("") || `<div class="p-empty">${t("tv.room_empty")}</div>`);
 }
 
 // --- media ----------------------------------------------------------------------------------------
@@ -95,41 +96,39 @@ function mediaPanel(h, p, ctx) {
   const rows = [
     transport && line("transport", `<div class="transport">${transport}</div>`),
     m.on && (tvf & (F.VOLUME_SET | F.VOLUME_STEP)) && row({ key: "volume", act: tvf & F.VOLUME_MUTE ? "mute" : "none",
-      attrs: `data-entity="${esc(m.tv)}"`, adjust: "volume", ic: m.muted ? "mdi:volume-off" : "mdi:volume-high", title: "Głośność",
-      sub: m.muted ? "Wyciszone · OK włącza dźwięk" : "OK wycisza", value: String(vol), bar: vol }),
+      attrs: `data-entity="${esc(m.tv)}"`, adjust: "volume", ic: m.muted ? "mdi:volume-off" : "mdi:volume-high", title: t("media.volume"),
+      sub: m.muted ? t("tv.media.muted_hint") : t("tv.media.mute_hint"), value: String(vol), bar: vol }),
     (tvf & (F.TURN_ON | F.TURN_OFF)) && row({ key: "power", act: "media-power", attrs: `data-entity="${esc(m.tv)}" data-on="${m.on ? 1 : 0}"`,
-      ic: "mdi:power", icOn: m.on, title: m.on ? "Wyłącz" : "Włącz", sub: m.on ? "Włączony" : "Wyłączony" }),
+      ic: "mdi:power", icOn: m.on, title: m.on ? t("common.turn_off") : t("common.turn_on"), sub: m.on ? t("common.on_m") : t("common.off_m") }),
   ].filter(Boolean).join("");
   const top = `<header class="p-head np">${mediaArt(m, true)}<div class="np-text">
     <div class="kicker">${esc(m.app || m.name)}</div><h1>${esc(m.active ? m.title : m.name)}</h1>
-    <div class="sub">${esc(m.active ? m.artist || (m.playing ? "Odtwarza" : "Wstrzymane") : m.on ? m.input || "Włączony" : "Wyłączony")}</div>
+    <div class="sub">${esc(m.active ? m.artist || (m.playing ? t("tv.media.playing") : t("media.paused")) : m.on ? m.input || t("common.on_m") : t("common.off_m"))}</div>
     ${m.active && m.duration ? `<div class="pbar"><i style="width:${pct.toFixed(1)}%" data-progress="${p.media}"></i></div>
       <div class="times"><span data-elapsed="${p.media}">${fmtTime(h.mediaPosition(m))}</span><span>${fmtTime(m.duration)}</span></div>` : ""}
   </div></header>`;
-  return shell("media-panel", top, rows || `<div class="p-empty">Brak sterowania dla tego urządzenia</div>`);
+  return shell("media-panel", top, rows || `<div class="p-empty">${t("tv.media.no_controls")}</div>`);
 }
 
 // --- weather: a wide view -------------------------------------------------------------------------
-const WIND_DIR = ["Pn", "Pn-Wsch", "Wsch", "Pd-Wsch", "Pd", "Pd-Zach", "Zach", "Pn-Zach"];
-const TIME_FMT = new Intl.DateTimeFormat("pl-PL", { hour: "2-digit", minute: "2-digit" });
 
 const wet = (x) => Number(x.precipitation) >= 0.1 || /rain|pour|snow|hail|lightning/.test(x.condition || "");
 const snowy = (x) => /snow/.test(x.condition || "");
 const nightAt = (d) => { const hr = new Date(d).getHours(); return hr < 6 || hr >= 20; };
 const mm = (v) => `${num(v, v < 10 ? 1 : 0)} mm`;
 
-// One sentence on rain for the next hours, like the weather apps: when it starts, or when it stops.
+// One sentence on rain for the next hours, like the weather apps: when it starts, or when it stops. `dry`: no rain at all.
 function rainLine(hours) {
   const next = hours.slice(0, 12);
-  if (!next.length) return "";
-  const at = (x) => HOUR_FMT.format(new Date(x.datetime));
+  if (!next.length) return null;
+  const at = (x) => time(new Date(x.datetime)), say = (key, x) => ({ text: t(`tv.rain.${key}`, x && { t: at(x) }), dry: key === "dry_until" });
   if (wet(next[0])) {
-    const dry = next.findIndex((x) => !wet(x));
-    if (dry > 0 && next.slice(dry).some(wet)) return `Przelotne ${snowy(next[0]) ? "opady śniegu" : "opady"} w najbliższych godzinach`;
-    return dry < 0 ? `${snowy(next[0]) ? "Śnieg" : "Opady"} przez najbliższe godziny` : `${snowy(next[0]) ? "Śnieg" : "Opady"} do ok. ${at(next[dry])}`;
+    const dry = next.findIndex((x) => !wet(x)), snow = snowy(next[0]);
+    if (dry > 0 && next.slice(dry).some(wet)) return say(snow ? "showers_snow" : "showers");
+    return dry < 0 ? say(snow ? "snow_on" : "rain_on") : say(snow ? "snow_until" : "rain_until", next[dry]);
   }
   const first = next.find(wet);
-  return first ? `${snowy(first) ? "Śnieg" : "Deszcz"} od ok. ${at(first)}` : `Bez opadów do ${at(next[next.length - 1])}`;
+  return first ? say(snowy(first) ? "snow_from" : "rain_from", first) : say("dry_until", next[next.length - 1]);
 }
 
 // The next 24 hours in 12 columns: hour, icon, temperature, and under them one smooth temperature line with the rain as
@@ -152,7 +151,7 @@ function hourStrip(hours) {
     return h ? `<rect x="${(cw * (i + .5) - 14).toFixed(1)}" y="${(H - h).toFixed(1)}" width="28" height="${h.toFixed(1)}" rx="5" class="rain"/>` : "";
   }).join("");
   const dots = P.map(([x, y]) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" class="tdot"/>`).join("");
-  const head = cols.map((x, i) => `<div class="hc"><span>${i === 0 ? "Teraz" : new Date(x.datetime).getHours()}</span>
+  const head = cols.map((x, i) => `<div class="hc"><span>${i === 0 ? t("common.now") : new Date(x.datetime).getHours()}</span>
     ${icon(wIcon(x.condition, nightAt(x.datetime)))}<b>${Math.round(x.temperature)}°</b></div>`).join("");
   const foot = cols.map((x) => `<div class="hc-r">${Number(x.precipitation) >= 0.1 ? num(x.precipitation, 1) : ""}</div>`).join("");
   return `<div class="hstrip"><div class="hcols">${head}</div>
@@ -163,7 +162,7 @@ function hourStrip(hours) {
 }
 
 function weatherPanel(h, ctx) {
-  const w = h.weatherNow(), a = w.w?.attributes || {}, [cond] = WEATHER_PL[w.cond] || [""], fc = ctx.forecast;
+  const w = h.weatherNow(), a = w.w?.attributes || {}, cond = wxWord(w.cond) || "", fc = ctx.forecast;
   const now = Date.now(), hours = (fc?.hourly || []).filter((x) => new Date(x.datetime) > now - 3600e3).slice(0, 24);
   const sun = h.st("sun.sun")?.attributes || {};
   const air = h.air(), alert = h.weatherAlert(), days = (fc?.daily || []).slice(0, 7), today = days[0];
@@ -172,47 +171,47 @@ function weatherPanel(h, ctx) {
   const feels = isNum(a.apparent_temperature) ? Math.round(a.apparent_temperature) : null;
   const rainNow = rainLine(hours);
   const hero = `<div class="wx-hero sky-${sky}">
-    <div class="wh-top"><span>${esc(h.c.weather_name || h.name(h.weatherId()) || "Teraz")}</span>${icon(wIcon(w.cond, w.night))}</div>
+    <div class="wh-top"><span>${esc(h.c.weather_name || h.name(h.weatherId()) || t("common.now"))}</span>${icon(wIcon(w.cond, w.night))}</div>
     <b class="wh-temp">${w.temp != null ? Math.round(w.temp) + "°" : "–"}</b>
     <div class="wh-cond">${esc(cond)}</div>
-    <div class="wh-hl">${today ? `Maks. ${Math.round(today.temperature)}° · Min. ${Math.round(today.templow ?? today.temperature)}°` : ""}${feels != null ? `${today ? " · " : ""}odczuwalna ${feels}°` : ""}</div>
-    ${rainNow ? `<div class="wh-rain">${icon(/Bez/.test(rainNow) ? "mdi:weather-cloudy-clock" : "mdi:umbrella-outline")}${esc(rainNow)}</div>` : ""}</div>`;
+    <div class="wh-hl">${today ? t("weather.high_low", { hi: Math.round(today.temperature), lo: Math.round(today.templow ?? today.temperature) }) : ""}${feels != null ? `${today ? " · " : ""}${t("tv.weather.feels", { t: feels })}` : ""}</div>
+    ${rainNow ? `<div class="wh-rain">${icon(rainNow.dry ? "mdi:weather-cloudy-clock" : "mdi:umbrella-outline")}${esc(rainNow.text)}</div>` : ""}</div>`;
   const tile = (ic, label, value, sub, extra = "") => (value == null ? "" : `<div class="wtile">
     <div class="wt-l">${icon(ic, "", extra)}${label}</div><b>${value}</b><small>${sub || "&nbsp;"}</small></div>`);
-  const dir = isNum(a.wind_bearing) ? WIND_DIR[Math.round(Number(a.wind_bearing) / 45) % 8] : "";
+  const dir = isNum(a.wind_bearing) ? table("weather.wind")[Math.round(Number(a.wind_bearing) / 45) % 8] : "";
   const p0 = hours[0]?.pressure, p6 = hours[6]?.pressure, dp = isNum(p0) && isNum(p6) ? p6 - p0 : null;
   const dayLen = sun.next_rising && sun.next_setting ? (() => {
     const up = new Date(sun.next_rising), down = new Date(sun.next_setting);
     if (down < up) up.setDate(up.getDate() - 1);
     const m = Math.round((down - up) / 60000);
-    return m > 0 && m < 1440 ? `dzień ${Math.floor(m / 60)} h ${m % 60} min` : "";
+    return m > 0 && m < 1440 ? t("tv.weather.day_length", { h: Math.floor(m / 60), m: m % 60 }) : "";
   })() : "";
   const tiles = [
-    tile("mdi:navigation", "Wiatr", isNum(a.wind_speed) ? `${Math.round(a.wind_speed)} <i>${esc(a.wind_speed_unit || "km/h")}</i>` : null,
-      [dir, isNum(a.wind_gust_speed) && `porywy ${Math.round(a.wind_gust_speed)}`].filter(Boolean).join(" · "),
+    tile("mdi:navigation", t("weather.wind_label"), isNum(a.wind_speed) ? `${Math.round(a.wind_speed)} <i>${esc(a.wind_speed_unit || "km/h")}</i>` : null,
+      [dir, isNum(a.wind_gust_speed) && t("tv.weather.gusts", { n: Math.round(a.wind_gust_speed) })].filter(Boolean).join(" · "),
       isNum(a.wind_bearing) ? `style="transform:rotate(${(Number(a.wind_bearing) + 180) % 360}deg)"` : ""),
-    tile("mdi:water-percent", "Wilgotność", isNum(a.humidity) ? `${Math.round(a.humidity)}%` : null, isNum(a.cloud_coverage) ? `zachmurzenie ${Math.round(a.cloud_coverage)}%` : ""),
-    tile("mdi:gauge", "Ciśnienie", isNum(a.pressure) ? `${Math.round(a.pressure)} <i>${esc(a.pressure_unit || "hPa")}</i>` : null,
-      dp == null ? "" : Math.abs(dp) < 1 ? "stałe" : dp > 0 ? "rośnie" : "spada"),
-    tile("mdi:weather-sunset", "Słońce", sun.next_rising && sun.next_setting ? `${TIME_FMT.format(new Date(sun.next_rising))}<i> – </i>${TIME_FMT.format(new Date(sun.next_setting))}` : null, dayLen),
-    air && tile("mdi:leaf", "Powietrze", esc(air.label.replace(/^./, (c) => c.toUpperCase())), air.pm10 != null ? `PM10 ${air.pm10} µg/m³` : ""),
-    hours.length && tile("mdi:water", "Opady", mm(hours.reduce((t, x) => t + Number(x.precipitation || 0), 0)), "w ciągu 24 godzin"),
+    tile("mdi:water-percent", t("common.humidity"), isNum(a.humidity) ? `${Math.round(a.humidity)}%` : null, isNum(a.cloud_coverage) ? t("tv.weather.clouds", { n: Math.round(a.cloud_coverage) }) : ""),
+    tile("mdi:gauge", t("weather.pressure"), isNum(a.pressure) ? `${Math.round(a.pressure)} <i>${esc(a.pressure_unit || "hPa")}</i>` : null,
+      dp == null ? "" : Math.abs(dp) < 1 ? t("tv.weather.steady") : dp > 0 ? t("tv.weather.rising") : t("tv.weather.falling")),
+    tile("mdi:weather-sunset", t("tv.weather.sun"), sun.next_rising && sun.next_setting ? `${time(new Date(sun.next_rising))}<i> – </i>${time(new Date(sun.next_setting))}` : null, dayLen),
+    air && tile("mdi:leaf", t("weather.air_label"), esc(air.label.replace(/^./, (c) => c.toUpperCase())), air.pm10 != null ? `PM10 ${air.pm10} µg/m³` : ""),
+    hours.length && tile("mdi:water", t("tv.weather.precip"), mm(hours.reduce((sum, x) => sum + Number(x.precipitation || 0), 0)), t("tv.weather.in_24h")),
     isNum(a.uv_index) && tile("mdi:sun-wireless-outline", "UV", num(a.uv_index, 0), ""),
   ].filter(Boolean).join("");
   const lo = Math.min(...days.map((d) => d.templow ?? d.temperature)), hi = Math.max(...days.map((d) => d.temperature)), span = Math.max(1, hi - lo);
   const daily = days.map((d, i) => line(`day:${i}`, `<div class="p-row day" data-f="day:${i}" data-act="none">
-      <span class="dn">${i === 0 ? "Dziś" : esc(DAY_FMT.format(new Date(d.datetime)))}</span>${icon(wIcon(d.condition))}
+      <span class="dn">${i === 0 ? t("common.today") : esc(shortDay(new Date(d.datetime)))}</span>${icon(wIcon(d.condition))}
       <span class="pp">${Number(d.precipitation) >= 0.1 ? `${icon("mdi:water")}${mm(Number(d.precipitation))}` : ""}</span>
       <span class="lo">${Math.round(d.templow ?? d.temperature)}°</span>
       <div class="range"><i style="left:${(((d.templow ?? d.temperature) - lo) / span) * 100}%;right:${100 - ((d.temperature - lo) / span) * 100}%"></i></div>
       <span class="hi">${Math.round(d.temperature)}°</span></div>`)).join("");
   const left = `<div class="wx-left">${hero}
-    ${alert ? `<div class="wx-alert">${icon("mdi:alert")}Ostrzeżenie IMGW: <b>${esc(alert)}</b></div>` : ""}
+    ${alert ? `<div class="wx-alert">${icon("mdi:alert")}${t("weather.imgw_line")} <b>${esc(alert)}</b></div>` : ""}
     <div class="wtiles">${tiles}</div></div>`;
   const right = `<div class="wx-right">
-    <div class="wx-sec">Najbliższe 24 godziny</div>
-    ${hours.length ? hourStrip(hours) : `<div class="p-empty">${fc ? "Brak prognozy godzinowej" : "Wczytuję prognozę…"}</div>`}
-    <div class="wx-sec">${days.length ? `Prognoza na ${days.length} ${plural(days.length, "dzień", "dni", "dni")}` : ""}</div>${daily}</div>`;
+    <div class="wx-sec">${t("tv.weather.next_24h")}</div>
+    ${hours.length ? hourStrip(hours) : `<div class="p-empty">${fc ? t("tv.weather.no_hourly") : t("tv.weather.loading")}</div>`}
+    <div class="wx-sec">${days.length ? t("tv.weather.forecast_days", { n: days.length }) : ""}</div>${daily}</div>`;
   return `<div class="panel-wrap"><aside class="panel weather-panel">
     <div class="panel-view"><div class="panel-body wx-cols" data-scroll="fit">${left}${right}</div></div></aside></div>`;
 }
@@ -224,10 +223,10 @@ function climatePanel(h, ctx) {
   const rows = [];
   if (th) {
     rows.push(row({ key: "target", adjust: th.on ? "temp" : "", ic: th.heating ? "mdi:fire" : "mdi:thermostat", icOn: th.heating,
-      title: th.on ? th.status : "Ogrzewanie wyłączone", sub: isFinite(th.current) ? `Teraz ${num(th.current)}°` : "",
+      title: th.on ? th.status : t("climate.heating_off"), sub: isFinite(th.current) ? t("common.now_value", { v: `${num(th.current)}°` }) : "",
       value: th.on ? `${num(th.target)}°` : "", cls: th.heating ? "on" : "" }));
     rows.push(row({ key: "mode", act: "thermo-power", attrs: `data-on="${th.on ? 1 : 0}"`, ic: "mdi:power", icOn: th.on,
-      title: th.on ? "Wyłącz ogrzewanie" : "Włącz ogrzewanie" }));
+      title: th.on ? t("tv.climate.turn_off") : t("tv.climate.turn_on") }));
   }
   // Each sensor is its own tile (three to a line); OK opens that room's last 24 h.
   const cards = h.climateSensors().map((x, i) => {
@@ -235,35 +234,33 @@ function climatePanel(h, ctx) {
     return `<div class="sensor ${x.outdoor ? "out" : ""}" data-f="sensor:${i}" data-act="entity" data-kind="numeric"
       data-entity="${esc(main)}" data-entity2="${esc(second)}" data-name="${esc(x.name)}" data-icon="${esc(x.icon || "mdi:thermometer")}">
       <div class="sn">${icon(x.icon || "mdi:thermometer")}${esc(x.name)}</div><b>${x.t != null ? num(x.t) + "°" : "–"}</b>
-      <span>${x.h != null ? `${Math.round(x.h)}%${!x.outdoor && x.h >= 65 ? " · wilgotno" : !x.outdoor && x.h < 35 ? " · sucho" : ""}` : "&nbsp;"}</span></div>`;
+      <span>${x.h != null ? `${Math.round(x.h)}%${!x.outdoor && x.h >= 65 ? ` · ${t("climate.humid")}` : !x.outdoor && x.h < 35 ? ` · ${t("climate.dry")}` : ""}` : "&nbsp;"}</span></div>`;
   });
   const grid = [];
   for (let i = 0; i < cards.length; i += 3) grid.push(line(`sensors:${i}`, `<div class="sensors">${cards.slice(i, i + 3).join("")}</div>`));
-  return shell("wide", head("mdi:thermometer", "Klimat", avg != null ? `Średnio ${num(avg)}° w domu` : "", true),
+  return shell("wide", head("mdi:thermometer", t("climate.title"), avg != null ? t("tv.climate.average", { t: num(avg) }) : "", true),
     rows.join("") + grid.join(""));
 }
 
 // --- one sensor: its last 24 h -----------------------------------------------------------------------
-const HM = new Intl.DateTimeFormat("pl-PL", { hour: "2-digit", minute: "2-digit" });
 const dur = (ms) => {
   const m = Math.round(ms / 60000);
   return m < 1 ? "<1 min" : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ""}`;
 };
-// A time of day, with "wczoraj" in front when it was not today.
-const when = (t) => `${new Date(t).toDateString() === new Date().toDateString() ? "" : "wczoraj "}${HM.format(new Date(t))}`;
-const EVENT_NOUN = { door: ["otwarcie", "otwarcia", "otwarć"], window: ["otwarcie", "otwarcia", "otwarć"],
-  opening: ["otwarcie", "otwarcia", "otwarć"], garage_door: ["otwarcie", "otwarcia", "otwarć"],
-  moisture: ["wykrycie wody", "wykrycia wody", "wykryć wody"], motion: ["ruch", "ruchy", "ruchów"] };
+// A time of day, with "yesterday" in front when it was not today.
+const when = (ms) => (new Date(ms).toDateString() === new Date().toDateString() ? time(new Date(ms)) : t("tv.history.yesterday", { t: time(new Date(ms)) }));
+// What a spell of "on" is called, by device class: tv.events.<kind>.count ("3 otwarcia") and .none ("Bez otwarć").
+const EVENT_KIND = { door: "open", window: "open", opening: "open", garage_door: "open", moisture: "water", motion: "motion" };
 const histKey = (p) => [p.entity, p.entity2].filter(Boolean).join(",");
-const loading = (hist) => (!hist ? `<div class="p-empty">Wczytuję historię z ostatnich 24 godzin…</div>`
-  : hist.error ? `<div class="p-empty">Nie udało się wczytać historii</div>` : "");
+const loading = (hist) => (!hist ? `<div class="p-empty">${t("tv.history.loading")}</div>`
+  : hist.error ? `<div class="p-empty">${t("tv.history.error")}</div>` : "");
 // Hour marks every 6 h under a 24 h axis.
 const hourTicks = (start, end, W) => {
   let out = "";
   const first = new Date(start); first.setMinutes(0, 0, 0); first.setHours(Math.ceil(first.getHours() / 6) * 6);
   for (let t = first.getTime(); t <= end; t += 6 * 3600e3) {
     const x = ((t - start) / (end - start)) * W;
-    out += `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="0" y2="100%" class="tick"/><text x="${x.toFixed(1)}" y="99%" class="tickl">${HM.format(new Date(t))}</text>`;
+    out += `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="0" y2="100%" class="tick"/><text x="${x.toFixed(1)}" y="99%" class="tickl">${time(new Date(t))}</text>`;
   }
   return out;
 };
@@ -271,9 +268,9 @@ const hourTicks = (start, end, W) => {
 function binaryPanel(h, p, ctx) {
   const st = h.st(p.entity), dc = st?.attributes.device_class, on = st?.state === "on";
   const off = !st || ["unavailable", "unknown"].includes(st.state);
-  const word = off ? "niedostępny" : on ? ALERT_WORD[dc] || "uwaga" : CALM_WORD[dc] || "w porządku";
-  const hist = ctx.hist[histKey(p)], noun = EVENT_NOUN[dc] || ["zdarzenie", "zdarzenia", "zdarzeń"];
-  const sub = `${esc(word)}${st?.last_changed ? ` od ${HM.format(new Date(st.last_changed))}` : ""}`;
+  const word = off ? t("tv.binary.unavailable") : on ? alertWord(dc) || t("security.attention") : calmWord(dc) || t("tv.binary.ok");
+  const hist = ctx.hist[histKey(p)], kind = EVENT_KIND[dc] || "other";
+  const sub = `${esc(word)}${st?.last_changed ? ` ${t("tv.since_time", { t: time(new Date(st.last_changed)) })}` : ""}`;
   let body = loading(hist);
   if (!body) {
     // "On" spells (open, wet) within the window, from the state changes.
@@ -289,24 +286,24 @@ function binaryPanel(h, p, ctx) {
     body = `<div class="stl">
         <svg class="tl24" viewBox="0 0 ${W} 86" preserveAspectRatio="none"><rect x="0" y="8" width="${W}" height="44" rx="10" class="bg"/>${bars}${hourTicks(hist.start, Date.now(), W)}</svg></div>
       <div class="sstats">
-        <div><span>Ostatnie 24 h</span><b>${spells.length ? `${spells.length} ${plural(spells.length, ...noun)}` : `Bez ${noun[2]}`}</b></div>
-        <div><span>Łącznie</span><b>${spells.length ? dur(total) : "–"}</b></div>
-        <div><span>Ostatnio</span><b>${last ? `${when(last.from)}${last.ongoing ? " · trwa" : ""}` : "ponad dobę temu"}</b></div>
+        <div><span>${t("heating.last_24h")}</span><b>${spells.length ? t(`tv.events.${kind}.count`, { n: spells.length }) : t(`tv.events.${kind}.none`)}</b></div>
+        <div><span>${t("tv.history.total")}</span><b>${spells.length ? dur(total) : "–"}</b></div>
+        <div><span>${t("tv.history.last")}</span><b>${last ? `${when(last.from)}${last.ongoing ? ` · ${t("tv.history.ongoing")}` : ""}` : t("tv.history.over_day")}</b></div>
       </div>
-      ${spells.length ? `<div class="wx-sec">Zdarzenia</div>` : ""}
+      ${spells.length ? `<div class="wx-sec">${t("tv.history.events")}</div>` : ""}
       ${spells.slice(-12).reverse().map((x, i) => row({ key: `ev:${i}`, ic: on && x.ongoing ? "mdi:alert-circle" : "mdi:history",
-        icOn: false, cls: x.ongoing ? "alert" : "", title: x.ongoing ? `Od ${when(x.from)}` : `${when(x.from)} – ${HM.format(new Date(x.to))}`,
-        sub: x.ongoing ? `${esc(ALERT_WORD[dc] || "aktywne")} · trwa` : esc(ALERT_WORD[dc] || "aktywne"), value: dur(x.to - x.from) })).join("")}`;
+        icOn: false, cls: x.ongoing ? "alert" : "", title: x.ongoing ? t("tv.history.from", { t: when(x.from) }) : `${when(x.from)} – ${time(new Date(x.to))}`,
+        sub: x.ongoing ? `${esc(alertWord(dc) || t("tv.binary.active"))} · ${t("tv.history.ongoing")}` : esc(alertWord(dc) || t("tv.binary.active")), value: dur(x.to - x.from) })).join("")}`;
   }
   return shell("", head(on ? "mdi:shield-alert-outline" : off ? "mdi:shield-off-outline" : "mdi:shield-check-outline",
     p.name || h.name(p.entity), sub, !on && !off), body);
 }
 
 function numericPanel(h, p, ctx) {
-  const hist = ctx.hist[histKey(p)], t = h.val(p.entity), hu = p.entity2 ? h.val(p.entity2) : null;
+  const hist = ctx.hist[histKey(p)], v0 = h.val(p.entity), hu = p.entity2 ? h.val(p.entity2) : null;
   const unit = h.st(p.entity)?.attributes.unit_of_measurement || "", isT = /°/.test(unit) || /temp/.test(p.entity);
   const fmt = (v) => (v == null ? "–" : isT ? `${num(v)}°` : `${Math.round(v)}${unit === "%" ? "%" : ` ${unit}`}`);
-  const sub = [t != null && fmt(t), hu != null && `wilgotność ${Math.round(hu)}%`].filter(Boolean).join(" · ");
+  const sub = [v0 != null && fmt(v0), hu != null && t("tv.humidity_lc", { v: Math.round(hu) })].filter(Boolean).join(" · ");
   let body = loading(hist);
   if (!body) {
     const series = (id) => (hist.data[id] || []).map((x) => ({ t: x.t, v: Number(x.s) })).filter((x) => isFinite(x.v));
@@ -324,15 +321,15 @@ function numericPanel(h, p, ctx) {
       return { mn, mx, avg: pts.reduce((s2, x) => s2 + x.v, 0) / pts.length, first: pts[0].v };
     };
     const sa = stats(a);
-    const delta = sa && t != null ? t - sa.first : null;
+    const delta = sa && v0 != null ? v0 - sa.first : null;
     body = `<div class="nchart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${hourTicks(start, end, W)}${line(b, "hum")}${line(a, "tmp")}</svg>
-        <div class="legend"><span class="tmp">${isT ? "Temperatura" : "Wartość"}</span>${b.length ? `<span class="hum">Wilgotność</span>` : ""}</div></div>
+        <div class="legend"><span class="tmp">${isT ? t("common.temperature") : t("tv.history.value")}</span>${b.length ? `<span class="hum">${t("common.humidity")}</span>` : ""}</div></div>
       ${sa ? `<div class="sstats">
-        <div><span>Najniżej · ${HM.format(new Date(sa.mn.t))}</span><b>${fmt(sa.mn.v)}</b></div>
-        <div><span>Najwyżej · ${HM.format(new Date(sa.mx.t))}</span><b>${fmt(sa.mx.v)}</b></div>
-        <div><span>Średnio</span><b>${fmt(sa.avg)}</b></div>
-        <div><span>Od wczoraj</span><b>${delta == null ? "–" : `${delta > 0 ? "+" : delta < 0 ? "−" : ""}${isT ? num(Math.abs(delta)) + "°" : Math.round(Math.abs(delta))}`}</b></div>
-      </div>` : `<div class="p-empty">Brak zapisanych pomiarów z ostatniej doby</div>`}`;
+        <div><span>${t("heating.min")} · ${time(new Date(sa.mn.t))}</span><b>${fmt(sa.mn.v)}</b></div>
+        <div><span>${t("heating.max")} · ${time(new Date(sa.mx.t))}</span><b>${fmt(sa.mx.v)}</b></div>
+        <div><span>${t("heating.avg")}</span><b>${fmt(sa.avg)}</b></div>
+        <div><span>${t("tv.history.since_yesterday")}</span><b>${delta == null ? "–" : `${delta > 0 ? "+" : delta < 0 ? "−" : ""}${isT ? num(Math.abs(delta)) + "°" : Math.round(Math.abs(delta))}`}</b></div>
+      </div>` : `<div class="p-empty">${t("tv.history.no_data")}</div>`}`;
   }
   return shell("wide", head(p.icon || "mdi:thermometer", p.name || h.name(p.entity), sub, true), body);
 }
@@ -362,13 +359,13 @@ function summaryPanel(h, ctx) {
   const attn = (kind, x, key) => `data-kind="${kind}" data-id="${esc(x.id || x.notification_id)}" data-key="${esc(key)}"`;
   const todo = [
     ...alerts.map((a) => row({ key: `alarm:${a.id}`, act: "attn", attrs: `${attn("alarm", a, attnKey.alarm(a))} data-name="${esc(a.name)}"`,
-      ic: "mdi:shield-alert-outline", cls: "alert", title: `${a.name} ${ALERT_WORD[a.dc] || "uwaga"}`, sub: `od ${ago(a.st.last_changed).replace(" temu", "")}` })),
+      ic: "mdi:shield-alert-outline", cls: "alert", title: `${a.name} ${alertWord(a.dc) || t("security.attention")}`, sub: since(a.st.last_changed) })),
     ...notifs.map((n) => row({ key: `notif:${n.notification_id}`, act: "attn", attrs: attn("notif", n, ""), cls: "notif",
-      ic: "mdi:bell-outline", icOn: true, title: n.title || "Powiadomienie", sub: strip(n.message), value: n.created_at ? ago(n.created_at).replace(" temu", "") : "" })),
+      ic: "mdi:bell-outline", icOn: true, title: n.title || t("tv.notif.title"), sub: strip(n.message), value: n.created_at ? age(n.created_at) : "" })),
     ...bats.map((b) => row({ key: `bat:${b.id}`, act: "attn", attrs: attn("bat", b, attnKey.bat(b)), ic: b.value <= 5 ? "mdi:battery-alert-variant-outline" : "mdi:battery-low",
-      cls: "warn", title: b.name, sub: "Słaba bateria", value: `${b.value}%` })),
+      cls: "warn", title: b.name, sub: t("tv.summary.battery_low"), value: `${b.value}%` })),
     ...ups.map((u) => row({ key: `upd:${u.id}`, act: "attn", attrs: attn("upd", u, attnKey.upd(u)), ic: "mdi:package-up", title: u.name,
-      sub: `Aktualizacja${u.version ? ` do ${esc(u.version)}` : ""}` })),
+      sub: u.version ? t("tv.summary.update_to", { v: esc(u.version) }) : t("tv.summary.update") })),
   ];
   // The house at a glance: compact cards, two to a line; OK does the obvious thing.
   const lit = h.lightsOn().length, rooms = h.roomsLit(), ppl = h.persons(), home = ppl.filter((p) => p.home);
@@ -380,19 +377,19 @@ function summaryPanel(h, ctx) {
   const card = (key, ic, label, value, sub, { act = "none", attrs = "", cls = "" } = {}) => `<div class="scard ${cls}" data-f="${key}" data-act="${act}" ${attrs}>
     <div class="ic">${icon(ic)}</div><span>${label}</span><b>${value}</b><small>${sub || "&nbsp;"}</small></div>`;
   const cards = [
-    card("lights", lit ? "mdi:lightbulb-on-outline" : "mdi:lightbulb-off-outline", "Światła", lit ? `${lit} ${plural(lit, "włączone", "włączone", "włączonych")}` : "Wyłączone",
-      lit ? `${esc(rooms.join(", "))} · OK gasi` : "Wszystkie zgaszone", { act: lit ? "all" : "none", attrs: `data-on="0"`, cls: lit ? "lit" : "" }),
-    ppl.length && card("people", "mdi:account-group-outline", "Domownicy", `${home.length} z ${ppl.length} w domu`, esc(home.map((p) => p.name).join(", ") || "Nikogo")),
-    th && card("heat", th.heating ? "mdi:fire" : "mdi:thermostat", "Ogrzewanie", th.on ? `${num(th.target)}°` : "Wyłączone",
-      `${th.heating ? "Grzeje" : th.on ? "Utrzymuje" : ""}${isFinite(th.current) ? `${th.on ? " · " : ""}teraz ${num(th.current)}°` : ""}`, { act: "climate", cls: th.heating ? "lit" : "" }),
+    card("lights", lit ? "mdi:lightbulb-on-outline" : "mdi:lightbulb-off-outline", t("tv.summary.lights"), lit ? t("tv.summary.lights_on", { n: lit }) : t("common.off_n"),
+      lit ? `${esc(rooms.join(", "))} · ${t("tv.summary.ok_off")}` : t("tv.summary.all_off"), { act: lit ? "all" : "none", attrs: `data-on="0"`, cls: lit ? "lit" : "" }),
+    ppl.length && card("people", "mdi:account-group-outline", t("security.people"), t("tv.summary.people_home", { n: home.length, total: ppl.length }), esc(home.map((p) => p.name).join(", ") || t("tv.summary.nobody"))),
+    th && card("heat", th.heating ? "mdi:fire" : "mdi:thermostat", t("tabs.heating"), th.on ? `${num(th.target)}°` : t("common.off_n"),
+      `${th.heating ? t("tv.summary.heating") : th.on ? t("climate.holding_word") : ""}${isFinite(th.current) ? `${th.on ? " · " : ""}${t("heating.now_lc", { t: num(th.current) })}` : ""}`, { act: "climate", cls: th.heating ? "lit" : "" }),
     ...h.working(true, ctx.hidden).map(({ kind, v, ap }) => kind === "vac"
-      ? card("dev:vac", "mdi:robot-vacuum", esc(v.name), esc(v.label), esc(v.room || (v.battery != null ? `bateria ${Math.round(v.battery)}%` : "")), { act: "device", attrs: `data-dev="vac"`, cls: "lit" })
+      ? card("dev:vac", "mdi:robot-vacuum", esc(v.name), esc(v.label), esc(v.room || (v.battery != null ? t("tv.battery_lc", { n: Math.round(v.battery) }) : "")), { act: "device", attrs: `data-dev="vac"`, cls: "lit" })
       : card(`dev:${ap.i}`, ap.icon, esc(ap.name), esc(ap.active && ap.left > 0 ? `${Math.round(ap.left)} min` : ap.label),
-        esc(ap.active ? [ap.program, ap.pct != null ? `${Math.round(ap.pct)}%` : ""].filter(Boolean).join(" · ") : "OK, gdy wyjęte"),
+        esc(ap.active ? [ap.program, ap.pct != null ? `${Math.round(ap.pct)}%` : ""].filter(Boolean).join(" · ") : t("tv.summary.unload_hint")),
         ap.active ? { act: "device", attrs: `data-dev="${ap.i}"`, cls: "lit" } : { act: "unload", attrs: `data-key="${esc(ap.doneKey)}" data-entity="${esc(ap.unloaded)}"` })),
-    waste && card("waste", "mdi:trash-can-outline", `${waste.when} wywóz`, esc(waste.list[0]), esc(waste.list.slice(1).join(", "))),
-    wa && card("wxalert", "mdi:alert", "Ostrzeżenie IMGW", esc(wa), "", { act: "weather", cls: "warn" }),
-    air?.bad && card("air", "mdi:smog", "Powietrze", esc(air.label), "Lepiej nie wietrzyć", { act: "weather", cls: "warn" }),
+    waste && card("waste", "mdi:trash-can-outline", t(`tv.summary.waste_${waste.when}`), esc(waste.list[0]), esc(waste.list.slice(1).join(", "))),
+    wa && card("wxalert", "mdi:alert", t("tv.summary.imgw"), esc(wa), "", { act: "weather", cls: "warn" }),
+    air?.bad && card("air", "mdi:smog", t("weather.air_label"), esc(air.label), t("weather.no_airing"), { act: "weather", cls: "warn" }),
   ].filter(Boolean);
   const grid = [];
   // What plays gets the whole width: its artwork, and a title that may take two lines.
@@ -400,26 +397,26 @@ function summaryPanel(h, ctx) {
   if (m) grid.push(line("playing", `<div class="scard playing" data-f="playing" data-act="media" data-media="${media.indexOf(m)}"
     ${playing.length > 1 ? 'data-adjust="playing"' : ""}>
     <div class="pl-view"><div class="pl-track" style="transform:translateX(${-pi * 100}%)">${playing.map((x) => `<div class="pl-slide">
-      ${mediaArt(x, false)}<div class="pl"><span>${x.active ? "Teraz gra" : "Włączone"} · ${esc(x.app || x.name)}</span>
+      ${mediaArt(x, false)}<div class="pl"><span>${x.active ? t("tv.media.now_playing") : t("common.on_n")} · ${esc(x.app || x.name)}</span>
       <b>${esc(x.active ? x.title : x.input || x.app)}</b><small>${esc([x.active ? x.artist : "", x.name].filter(Boolean).join(" · "))}</small></div></div>`).join("")}
     </div></div>
     ${playing.length > 1 ? `<div class="dots">${playing.map((_, i) => `<i class="${i === pi ? "on" : ""}"></i>`).join("")}</div>` : ""}</div>`));
   for (let i = 0; i < cards.length; i += 2) grid.push(line(`grid:${i}`, cards.slice(i, i + 2).join("")));
   const count = todo.length;
-  return shell("summary", head(count ? "mdi:bell-ring-outline" : "mdi:check-circle-outline", "Podsumowanie",
-      count ? `${count} ${plural(count, "sprawa wymaga", "sprawy wymagają", "spraw wymaga")} uwagi` : "Nic nie wymaga uwagi", !count, gear),
-    (todo.length ? `<div class="wx-sec">Wymaga uwagi</div>${todo.join("")}` : "") + `<div class="wx-sec">Dom</div>${grid.join("")}`, "left");
+  return shell("summary", head(count ? "mdi:bell-ring-outline" : "mdi:check-circle-outline", t("tv.summary.title"),
+      count ? t("tv.summary.attention", { n: count }) : t("tv.summary.all_clear"), !count, gear),
+    (todo.length ? `<div class="wx-sec">${t("tv.summary.attention_title")}</div>${todo.join("")}` : "") + `<div class="wx-sec">${t("tabs.home")}</div>${grid.join("")}`, "left");
 }
 
 // One item that needs attention, and what can be done about it.
 function attnPanel(h, p, ctx) {
   if (p.kind === "notif") {
     const n = (ctx.notifs || {})[p.id];
-    if (!n) return shell("", head("mdi:bell-check-outline", "Powiadomienie odrzucone", ""), `<div class="p-empty">Nie ma go już w Home Assistant.</div>`);
+    if (!n) return shell("", head("mdi:bell-check-outline", t("tv.notif.dismissed"), ""), `<div class="p-empty">${t("tv.notif.gone")}</div>`);
     const text = esc(String(n.message || "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_`#>]/g, "")).replace(/\n/g, "<br>");
-    return shell("", head("mdi:bell-outline", n.title || "Powiadomienie", n.created_at ? esc(ago(n.created_at)) : "", true),
-      `<div class="p-note">${text}</div>` + row({ key: "dismiss", act: "notif-dismiss", attrs: `data-id="${esc(p.id)}"`, ic: "mdi:check", title: "Odrzuć",
-        sub: "Znika też z Home Assistanta" }));
+    return shell("", head("mdi:bell-outline", n.title || t("tv.notif.title"), n.created_at ? esc(ago(n.created_at)) : "", true),
+      `<div class="p-note">${text}</div>` + row({ key: "dismiss", act: "notif-dismiss", attrs: `data-id="${esc(p.id)}"`, ic: "mdi:check", title: t("tv.notif.dismiss"),
+        sub: t("tv.notif.dismiss_hint") }));
   }
   const rows = [];
   let ic = "mdi:alert-circle-outline", title = p.name || h.name(p.id), sub = "";
@@ -428,22 +425,22 @@ function attnPanel(h, p, ctx) {
     ic = "mdi:package-up";
     title = a.title || a.friendly_name || p.id;
     sub = `${esc(a.installed_version || "?")} → ${esc(a.latest_version || "?")}`;
-    rows.push(row({ key: "skip", act: "upd-skip", attrs: `data-entity="${esc(p.id)}"`, ic: "mdi:debug-step-over", title: "Pomiń tę wersję",
-      sub: "Znika też z Home Assistanta, wróci przy następnej" }));
-    rows.push(row({ key: "hide", act: "hide", attrs: `data-key="${esc(p.key)}"`, ic: "mdi:eye-off-outline", title: "Ukryj tylko tutaj", sub: "Do następnej wersji" }));
+    rows.push(row({ key: "skip", act: "upd-skip", attrs: `data-entity="${esc(p.id)}"`, ic: "mdi:debug-step-over", title: t("tv.update.skip"),
+      sub: t("tv.update.skip_hint") }));
+    rows.push(row({ key: "hide", act: "hide", attrs: `data-key="${esc(p.key)}"`, ic: "mdi:eye-off-outline", title: t("tv.update.hide"), sub: t("tv.update.hide_hint") }));
   } else if (p.kind === "bat") {
     ic = "mdi:battery-low";
-    sub = `Bateria ${esc(h.st(p.id)?.state ?? "?")}%`;
-    rows.push(row({ key: "hide", act: "hide", attrs: `data-key="${esc(p.key)}"`, ic: "mdi:eye-off-outline", title: "Ukryj do wymiany baterii",
-      sub: "Wróci, gdy po wymianie znów będzie słaba" }));
+    sub = t("tv.battery", { n: esc(h.st(p.id)?.state ?? "?") });
+    rows.push(row({ key: "hide", act: "hide", attrs: `data-key="${esc(p.key)}"`, ic: "mdi:eye-off-outline", title: t("tv.battery_hide"),
+      sub: t("tv.battery_hide_hint") }));
   } else if (p.kind === "alarm") {
     const st = h.st(p.id);
     ic = "mdi:shield-alert-outline";
-    sub = `${esc(ALERT_WORD[st?.attributes.device_class] || "uwaga")}${st?.last_changed ? ` od ${esc(ago(st.last_changed).replace(" temu", ""))}` : ""}`;
+    sub = `${esc(alertWord(st?.attributes.device_class) || t("security.attention"))}${st?.last_changed ? ` ${esc(since(st.last_changed))}` : ""}`;
     rows.push(row({ key: "history", act: "entity", attrs: `data-kind="binary" data-entity="${esc(p.id)}" data-name="${esc(title)}"`, ic: "mdi:history",
-      title: "Pokaż historię", sub: "Ostatnie 24 godziny" }));
-    rows.push(row({ key: "hide", act: "hide", attrs: `data-key="${esc(p.key)}"`, ic: "mdi:eye-off-outline", title: "Ukryj, dopóki się nie zamknie",
-      sub: "Wróci przy następnym otwarciu" }));
+      title: t("tv.alarm.history"), sub: t("tv.alarm.history_hint") }));
+    rows.push(row({ key: "hide", act: "hide", attrs: `data-key="${esc(p.key)}"`, ic: "mdi:eye-off-outline", title: t("tv.alarm.hide"),
+      sub: t("tv.alarm.hide_hint") }));
   }
   return shell("", head(ic, title, sub), rows.join(""));
 }
@@ -458,41 +455,41 @@ function devicePanel(h, p) {
     if (!v) return "";
     const rows = [
       row({ key: "vac-go", act: "vac", attrs: `data-entity="${esc(v.id)}" data-cmd="${v.cleaning ? "pause" : "start"}"`, ic: v.cleaning ? "mdi:pause" : "mdi:play",
-        icOn: !v.cleaning, title: v.cleaning ? "Wstrzymaj" : v.state === "paused" ? "Wznów sprzątanie" : "Sprzątaj", sub: v.cleaning ? "Zostaje tam, gdzie jest" : "Cały dom, jak w aplikacji" }),
+        icOn: !v.cleaning, title: v.cleaning ? t("common.pause") : v.state === "paused" ? t("tv.vac.resume") : t("cleaning.start"), sub: v.cleaning ? t("tv.vac.pause_hint") : t("tv.vac.start_hint") }),
       v.state !== "docked" && row({ key: "vac-home", act: "vac", attrs: `data-entity="${esc(v.id)}" data-cmd="return_to_base"`, ic: "mdi:home-import-outline",
-        title: "Wróć do stacji", sub: "Kończy sprzątanie" }),
+        title: t("tv.vac.dock"), sub: t("tv.vac.dock_hint") }),
     ].filter(Boolean).join("");
     const tiles = [
-      stat(v.charging ? "mdi:battery-charging" : "mdi:battery-outline", "Bateria", v.battery != null ? `${Math.round(v.battery)}%` : null),
-      stat("mdi:map-marker-outline", "Pokój", esc(v.room)),
-      stat("mdi:timer-outline", "Czas", v.time != null ? `${Math.round(v.time)} <i>${esc(v.timeUnit)}</i>` : null),
-      stat("mdi:texture-box", "Powierzchnia", v.area != null ? `${Math.round(v.area)} <i>m²</i>` : null),
-      stat("mdi:fan", "Ssanie", esc(v.suction)),
+      stat(v.charging ? "mdi:battery-charging" : "mdi:battery-outline", t("common.battery"), v.battery != null ? `${Math.round(v.battery)}%` : null),
+      stat("mdi:map-marker-outline", t("heating.room"), esc(v.room)),
+      stat("mdi:timer-outline", t("cleaning.time"), v.time != null ? `${Math.round(v.time)} <i>${esc(v.timeUnit)}</i>` : null),
+      stat("mdi:texture-box", t("cleaning.area"), v.area != null ? `${Math.round(v.area)} <i>m²</i>` : null),
+      stat("mdi:fan", t("tv.vac.suction"), esc(v.suction)),
     ].join("");
     return shell("", head("mdi:robot-vacuum", v.name, esc(v.label), v.active),
-      `<div class="dev-hero ${v.active ? "on" : ""}">${icon("mdi:robot-vacuum", "xl")}<div><b>${esc(v.label)}</b><span>${esc(v.room || (v.battery != null ? `Bateria ${Math.round(v.battery)}%` : ""))}</span></div></div>
+      `<div class="dev-hero ${v.active ? "on" : ""}">${icon("mdi:robot-vacuum", "xl")}<div><b>${esc(v.label)}</b><span>${esc(v.room || (v.battery != null ? t("tv.battery", { n: Math.round(v.battery) }) : ""))}</span></div></div>
       ${tiles ? `<div class="wtiles dev-tiles">${tiles}</div>` : ""}${rows}`);
   }
   const ap = h.appliances()[p.dev];
   if (!ap) return "";
   const rows = [
-    ap.active && !ap.paused && ap.pause && row({ key: "pause", act: "press", attrs: `data-entity="${esc(ap.pause)}"`, ic: "mdi:pause", title: "Wstrzymaj", sub: "Cykl poczeka" }),
-    ap.paused && ap.resume && row({ key: "resume", act: "press", attrs: `data-entity="${esc(ap.resume)}"`, ic: "mdi:play", icOn: true, title: "Wznów", sub: "Cykl rusza dalej" }),
+    ap.active && !ap.paused && ap.pause && row({ key: "pause", act: "press", attrs: `data-entity="${esc(ap.pause)}"`, ic: "mdi:pause", title: t("common.pause"), sub: t("tv.app.pause_hint") }),
+    ap.paused && ap.resume && row({ key: "resume", act: "press", attrs: `data-entity="${esc(ap.resume)}"`, ic: "mdi:play", icOn: true, title: t("common.resume"), sub: t("tv.app.resume_hint") }),
     ap.done && row({ key: "unloaded", act: "unload", attrs: `data-key="${esc(ap.doneKey)}" data-entity="${esc(ap.unloaded)}"`, ic: "mdi:check", icOn: true,
-      title: "Wyjęte", sub: "Znika z Podsumowania do następnego prania" }),
+      title: t("appliances.unloaded"), sub: t("tv.app.unloaded_hint") }),
   ].filter(Boolean).join("");
   const pct = ap.active ? ap.pct : ap.done ? 100 : 0;
   const tiles = [
-    stat("mdi:file-document-outline", "Program", esc(ap.program), "wide"),
-    stat("mdi:water-sync", "Faza", esc(ap.phase)),
-    stat("mdi:timer-outline", "Cały cykl", ap.total != null ? `${Math.round(ap.total)} <i>min</i>` : null),
-    stat("mdi:flash-outline", "Moc", ap.power != null ? `${Math.round(ap.power)} <i>W</i>` : null),
-    stat("mdi:counter", "Cykle", ap.cycles != null ? String(ap.cycles) : null),
+    stat("mdi:file-document-outline", t("appliances.program_label"), esc(ap.program), "wide"),
+    stat("mdi:water-sync", t("appliances.phase"), esc(ap.phase)),
+    stat("mdi:timer-outline", t("tv.app.total"), ap.total != null ? `${Math.round(ap.total)} <i>min</i>` : null),
+    stat("mdi:flash-outline", t("common.power_draw"), ap.power != null ? `${Math.round(ap.power)} <i>W</i>` : null),
+    stat("mdi:counter", t("appliances.cycles_label"), ap.cycles != null ? String(ap.cycles) : null),
   ].join("");
   return shell("", head(ap.icon, ap.name, esc([ap.label, ap.room].filter(Boolean).join(" · ")), ap.active || ap.done),
     `<div class="dev-hero ring-hero ${ap.active ? "on" : ap.done ? "done" : ""}"><div class="bigring">${ring(pct, 200)}
       <div>${ap.done && !ap.active ? icon("mdi:check-bold") : `<b>${pct != null ? Math.round(pct) : 0}%</b>`}</div></div>
-      <div><b>${ap.active && ap.left > 0 ? `${Math.round(ap.left)} min` : esc(ap.label)}</b><span>${ap.active && ap.left > 0 ? "do końca" : esc(ap.room)}</span></div></div>
+      <div><b>${ap.active && ap.left > 0 ? `${Math.round(ap.left)} min` : esc(ap.label)}</b><span>${ap.active && ap.left > 0 ? t("tv.app.to_go") : esc(ap.room)}</span></div></div>
     ${tiles ? `<div class="wtiles dev-tiles">${tiles}</div>` : ""}${rows}`);
 }
 
@@ -502,14 +499,14 @@ function settingsPanel() {
   const w = currentWallpaper();
   const a = currentAccent(), p = prefs();
   const toggle = (key, ic, title, sub) => row({ key: `pref:${key}`, act: "pref", attrs: `data-key="${key}"`, ic, icOn: p[key], title, sub,
-    value: p[key] ? "Włączone" : "Wyłączone", cls: p[key] ? "on" : "" });
-  return shell("summary", head("mdi:cog-outline", "Ustawienia", "Na tym telewizorze"),
-    `<div class="wx-sec">Wygląd</div>` + row({ key: "wallpaper", act: "wallpapers", ic: "mdi:image-outline", title: "Tapeta", sub: esc(w.sub), value: `${esc(w.name)} ${icon("mdi:chevron-right")}` })
-    + row({ key: "accent", act: "accents", ic: "mdi:palette-outline", title: "Kolor akcentu", sub: "Ikony włączonych, postęp, zaznaczenia",
+    value: p[key] ? t("common.on_n") : t("common.off_n"), cls: p[key] ? "on" : "" });
+  return shell("summary", head("mdi:cog-outline", t("common.settings"), t("tv.settings.subtitle")),
+    `<div class="wx-sec">${t("tv.settings.look")}</div>` + row({ key: "wallpaper", act: "wallpapers", ic: "mdi:image-outline", title: t("tv.settings.wallpaper"), sub: esc(w.sub), value: `${esc(w.name)} ${icon("mdi:chevron-right")}` })
+    + row({ key: "accent", act: "accents", ic: "mdi:palette-outline", title: t("tv.settings.accent"), sub: t("tv.settings.accent_hint"),
       value: `<i class="adot" style="background:${a.c}"></i>${esc(a.name)} ${icon("mdi:chevron-right")}` })
-    + `<div class="wx-sec">Optymalizacja</div>`
-    + toggle("frost", "mdi:blur", "Szronione szkło", "Kafle przepuszczają rozmytą tapetę; wyłączone są gładkie")
-    + toggle("anim", "mdi:animation-outline", "Animacje", "Wysuwanie paneli, przejścia i powiększanie; wyłącz na słabszym TV"));
+    + `<div class="wx-sec">${t("tv.settings.performance")}</div>`
+    + toggle("frost", "mdi:blur", t("tv.settings.frost"), t("tv.settings.frost_hint"))
+    + toggle("anim", "mdi:animation-outline", t("tv.settings.anim"), t("tv.settings.anim_hint")));
 }
 
 // Accents as swatches, three to a line; OK puts one on at once (this panel shows it straight away).
@@ -518,7 +515,7 @@ function accentsPanel() {
     <div class="aswatch" style="background:${a.c};color:${a.ink}">${a.id === cur ? icon("mdi:check-bold") : icon("mdi:lightbulb-on")}</div><b>${esc(a.name)}</b></div>`);
   const lines = [];
   for (let i = 0; i < cards.length; i += 3) lines.push(line(`ac:${i}`, cards.slice(i, i + 3).join("")));
-  return shell("summary", head("mdi:palette-outline", "Kolor akcentu", "To, co się świeci i jest zaznaczone", true), `<div class="acgrid">${lines.join("")}</div>`);
+  return shell("summary", head("mdi:palette-outline", t("tv.settings.accent"), t("tv.settings.accent_sub"), true), `<div class="acgrid">${lines.join("")}</div>`);
 }
 
 // Wallpapers as previews, two to a line; OK puts one on at once (the screen behind the panel shows it).
@@ -532,17 +529,17 @@ function wallpapersPanel() {
     for (let i = 0; i < list.length; i += 2) lines.push(line(`${key}:${i}`, list.slice(i, i + 2).map(card).join("")));
     return `<div class="wgrid">${lines.join("")}</div>`;
   };
-  return shell("summary", head("mdi:image-outline", "Tapeta", "Tło całego ekranu"),
-    `<div class="wx-sec">Zdjęcia</div>${grid("ph", WALLPAPERS.filter((w) => w.photo))}
-     <div class="wx-sec">Kolory</div>${grid("gr", WALLPAPERS.filter((w) => !w.photo))}`);
+  return shell("summary", head("mdi:image-outline", t("tv.settings.wallpaper"), t("tv.settings.wallpaper_sub")),
+    `<div class="wx-sec">${t("tv.settings.photos")}</div>${grid("ph", WALLPAPERS.filter((w) => w.photo))}
+     <div class="wx-sec">${t("tv.settings.colors")}</div>${grid("gr", WALLPAPERS.filter((w) => !w.photo))}`);
 }
 
 // --- instances ------------------------------------------------------------------------------------
 function instancesPanel(ctx) {
   const rows = ctx.instances.map((x) => row({ key: `inst:${x.id}`, act: "switch", attrs: `data-id="${esc(x.id)}"`, ic: "mdi:home-outline",
     icOn: x.id === ctx.instance?.id, cls: x.id === ctx.instance?.id ? "on" : "", title: x.name,
-    sub: x.id === ctx.instance?.id ? "Teraz wyświetlany" : esc(x.url.replace(/^https?:\/\//, "")) }));
-  return shell("", head("mdi:home-switch-outline", "Przełącz dom", "Inny serwer Home Assistant"), rows.join(""));
+    sub: x.id === ctx.instance?.id ? t("tv.instances.current") : esc(x.url.replace(/^https?:\/\//, "")) }));
+  return shell("", head("mdi:home-switch-outline", t("tv.instances.title"), t("tv.instances.sub")), rows.join(""));
 }
 
 // --- camera, full screen --------------------------------------------------------------------------
@@ -555,6 +552,6 @@ export function renderCamera(h, i, ui) {
     <img src="${esc(camUrl(h, c))}" alt="" decoding="async"><span>${esc(h.name(c))}</span></div>`).join("");
   return `<div class="camera-full ${ui.stripHidden ? "bare" : ""}">
     <div class="cam-stage" data-keep data-cam="${esc(cam.entity)}" data-preview="${esc(camUrl(h, cam))}" data-still="${esc(camUrl(h, cam, 0))}"></div>
-    <div class="cam-top"><span class="live ${ui.live ? "on" : ""}"><i></i>${ui.live ? "Na żywo" : "Podgląd"}</span>${esc(h.name(cam))}</div>
+    <div class="cam-top"><span class="live ${ui.live ? "on" : ""}"><i></i>${ui.live ? t("cameras.live") : t("tv.camera.preview")}</span>${esc(h.name(cam))}</div>
     <div class="cam-strip" data-line="cams"><div class="track" data-track>${thumbs}</div></div></div>`;
 }

@@ -1,38 +1,25 @@
 // Wording and number formats, taken over from the tablet card (src/card/alvuna-card.js) so both read the same.
 
-export const WEATHER_PL = {
-  "clear-night": ["Pogodnie", "mdi:weather-night"],
-  cloudy: ["Pochmurno", "mdi:weather-cloudy"],
-  exceptional: ["Nietypowo", "mdi:alert-circle-outline"],
-  fog: ["Mgła", "mdi:weather-fog"],
-  hail: ["Grad", "mdi:weather-hail"],
-  lightning: ["Burza", "mdi:weather-lightning"],
-  "lightning-rainy": ["Burza z deszczem", "mdi:weather-lightning-rainy"],
-  partlycloudy: ["Częściowe zachmurzenie", "mdi:weather-partly-cloudy"],
-  pouring: ["Ulewa", "mdi:weather-pouring"],
-  rainy: ["Deszcz", "mdi:weather-rainy"],
-  snowy: ["Śnieg", "mdi:weather-snowy"],
-  "snowy-rainy": ["Deszcz ze śniegiem", "mdi:weather-snowy-rainy"],
-  sunny: ["Słonecznie", "mdi:weather-sunny"],
-  windy: ["Wietrznie", "mdi:weather-windy"],
-  "windy-variant": ["Wietrznie", "mdi:weather-windy-variant"],
+import { t, table, date } from "../../shared/i18n.js";
+
+// Weather condition icons; the words are weather.conditions in the i18n tables (the TV has room for the long
+// "partly cloudy").
+const WEATHER_ICON = {
+  "clear-night": "mdi:weather-night", cloudy: "mdi:weather-cloudy", exceptional: "mdi:alert-circle-outline", fog: "mdi:weather-fog",
+  hail: "mdi:weather-hail", lightning: "mdi:weather-lightning", "lightning-rainy": "mdi:weather-lightning-rainy",
+  partlycloudy: "mdi:weather-partly-cloudy", pouring: "mdi:weather-pouring", rainy: "mdi:weather-rainy", snowy: "mdi:weather-snowy",
+  "snowy-rainy": "mdi:weather-snowy-rainy", sunny: "mdi:weather-sunny", windy: "mdi:weather-windy", "windy-variant": "mdi:weather-windy-variant",
 };
+export const wxWord = (cond) => (cond === "partlycloudy" ? t("weather.partlycloudy_long") : table("weather.conditions")[cond]);
 export const wIcon = (cond, night) => (cond === "partlycloudy" && night ? "mdi:weather-night-partly-cloudy"
-  : (WEATHER_PL[cond] || [])[1] || "mdi:weather-partly-cloudy");
+  : WEATHER_ICON[cond] || "mdi:weather-partly-cloudy");
 
-// What an open (or wet) binary sensor means, by device class.
-export const ALERT_WORD = { door: "otwarte", window: "otwarte", opening: "otwarte", garage_door: "otwarta",
-  moisture: "zalanie", smoke: "dym", gas: "gaz", carbon_monoxide: "czad", safety: "alarm", problem: "problem" };
-export const CALM_WORD = { door: "zamknięte", window: "zamknięte", opening: "zamknięte", garage_door: "zamknięta",
-  moisture: "sucho", smoke: "brak dymu", gas: "brak gazu", carbon_monoxide: "brak czadu" };
+// What an open (or wet) binary sensor means, by device class: security.alert, and security.calm for closed (or dry).
+export const alertWord = (dc) => table("security.alert")[dc];
+export const calmWord = (dc) => table("security.calm")[dc];
 
-export const AIR_PL = { very_good: "bardzo dobre", good: "dobre", moderate: "umiarkowane", sufficient: "dostateczne", bad: "złe",
-  very_bad: "bardzo złe" };
+// GIOŚ air quality (weather.air) and IMGW-PIB warnings (weather.imgw) are worded by the i18n tables.
 export const AIR_BAD = ["sufficient", "bad", "very_bad"];
-export const IMGW_ALERT_PL = { storms: "Burze", dense_fog: "Gęsta mgła", heavy_rainfall: "Intensywne opady deszczu",
-  heavy_snowfall: "Intensywne opady śniegu", icing: "Oblodzenie", freezing_rain: "Marznący deszcz", snowfall: "Opady śniegu",
-  frosts: "Przymrozki", thaw: "Roztopy", heavy_rain_with_storms: "Ulewy z burzami", heavy_frost: "Silny mróz",
-  strong_wind: "Silny wiatr", heat: "Upał", snow_blizzard: "Zamieć śnieżna" };
 
 // Streaming apps a TV can only name: [match on app id, name or source, logo in /local/logos/, background, paint white].
 export const BRANDS = [
@@ -47,29 +34,20 @@ export const BRANDS = [
   [/tv\.launcherx|com\.tcl\./, "tcl", "linear-gradient(135deg,#9e001e,#e4002b)", true],
 ];
 // What a Google TV reports as the open app (only the package): a readable name.
+// Names starting with "media." are i18n keys, not brands.
 export const TV_APPS = [
-  [/tv\.launcherx/, "Ekran główny"], [/netflix/, "Netflix"], [/amazonvideo|primevideo/, "Prime Video"],
+  [/tv\.launcherx/, "media.home_screen"], [/netflix/, "Netflix"], [/amazonvideo|primevideo/, "Prime Video"],
   [/com\.wbd\.stream|hbo/, "Max"], [/youtube\.tvmusic/, "YouTube Music"], [/youtube/, "YouTube"],
   [/canal/, "Canal+"], [/disney/, "Disney+"], [/skyshowtime/, "SkyShowtime"], [/playnow|rodzina\.tvstart/, "PLAY NOW"],
-  [/tvn\.player/, "Player"], [/polsat/, "Polsat Box Go"], [/spotify/, "Spotify"], [/tv\.settings|tcl\.settings/, "Ustawienia"],
+  [/tvn\.player/, "Player"], [/polsat/, "Polsat Box Go"], [/spotify/, "Spotify"], [/tv\.settings|tcl\.settings/, "media.tv_settings"],
 ];
+export const tvApp = (v) => { const n = (TV_APPS.find(([re]) => re.test(v)) || [])[1] || ""; return n.startsWith("media.") ? t(n) : n; };
 
 export const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-export const plural = (n, one, few, many) => {
-  if (n === 1) return one;
-  const d = n % 10, h = n % 100;
-  return d >= 2 && d <= 4 && (h < 12 || h > 14) ? few : many;
-};
-const NUM_FMT = new Map();
-export const num = (v, digits = 1) => {
-  let f = NUM_FMT.get(digits);
-  if (!f) NUM_FMT.set(digits, (f = new Intl.NumberFormat("pl-PL", { minimumFractionDigits: digits, maximumFractionDigits: digits })));
-  return f.format(Number(v));
-};
-export const CLOCK_FMT = new Intl.DateTimeFormat("pl-PL", { hour: "2-digit", minute: "2-digit" });
-export const DATE_FMT = new Intl.DateTimeFormat("pl-PL", { weekday: "long", day: "numeric", month: "long" });
-export const HOUR_FMT = new Intl.DateTimeFormat("pl-PL", { hour: "2-digit", minute: "2-digit" });
-export const DAY_FMT = new Intl.DateTimeFormat("pl-PL", { weekday: "short" });
+export { num, time } from "../../shared/i18n.js";
+// "poniedziałek, 24 listopada": the date over the clock.
+export const longDate = (d) => date(d, { weekday: "long", day: "numeric", month: "long" });
+export const shortDay = (d) => date(d, { weekday: "short" });
 export const ids = (list) => (list || []).map((x) => (typeof x === "string" ? x : x.entity));
 export const isNum = (v) => v != null && v !== "" && !isNaN(v);
 export const fmtTime = (s) => {
@@ -78,19 +56,16 @@ export const fmtTime = (s) => {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = String(s % 60).padStart(2, "0");
   return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
 };
-export const ago = (iso) => {
+// How long ago: a unit (now, min, hour, day) and a count, worded as "5 min temu" (ago), "5 min" (age) or "od 5 min" (since).
+const agoParts = (iso) => {
   const min = Math.round((Date.now() - new Date(iso)) / 60000);
-  return min < 1 ? "przed chwilą" : min < 60 ? `${min} min temu` : min < 1440 ? `${Math.round(min / 60)} godz. temu`
-    : `${Math.round(min / 1440)} ${plural(Math.round(min / 1440), "dzień", "dni", "dni")} temu`;
+  return min < 1 ? ["now", 0] : min < 60 ? ["min", min] : min < 1440 ? ["hour", Math.round(min / 60)] : ["day", Math.round(min / 1440)];
 };
+export const ago = (iso) => { const [u, n] = agoParts(iso); return t(`common.ago.${u}`, { n }); };
+export const age = (iso) => { const [u, n] = agoParts(iso); return t(`common.age.${u}`, { n }); };
+export const since = (iso) => { const [u, n] = agoParts(iso); return t(`common.since.${u}`, { n }); };
 
-// Robot vacuum and WashData appliances (washer, dishwasher: feminine in Polish), as on the tablet card.
-export const VAC_STATE_PL = { cleaning: "Sprząta", docked: "W stacji", returning: "Wraca do stacji", paused: "Wstrzymany", idle: "Gotowy",
-  error: "Błąd", unavailable: "Niedostępny", unknown: "Brak danych" };
-export const VAC_SUCTION_PL = { quiet: "Cicho", silent: "Cicho", standard: "Standard", strong: "Mocno", turbo: "Turbo", max: "Max" };
-export const APP_STATE_PL = { off: "Wyłączona", idle: "Gotowa", starting: "Uruchamia się", running: "Pracuje", paused: "Wstrzymana",
-  user_paused: "Wstrzymana", ending: "Kończy", finished: "Zakończona", anti_wrinkle: "Ochrona przed zagnieceniem",
-  delay_wait: "Opóźniony start", interrupted: "Przerwana", force_stopped: "Zatrzymana", clean: "Gotowe do wyjęcia", unknown: "Brak danych" };
+// Robot vacuum and WashData appliances, as on the tablet card: cleaning.vacuum_state, cleaning.suction, appliances.state
+// and appliances.program in the i18n tables.
 export const APP_ACTIVE = ["starting", "running", "paused", "user_paused", "ending", "anti_wrinkle", "delay_wait"];
 export const APP_DONE = ["finished", "clean"];
-export const PROGRAM_PL = { "detecting...": "Rozpoznaje program", detecting: "Rozpoznaje program" };
