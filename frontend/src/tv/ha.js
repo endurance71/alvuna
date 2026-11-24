@@ -31,7 +31,9 @@ export async function pair({ name, onCode, onBusy }) {
       const res = await fetch(`/api/alvuna/pair/${req.request_id}`, { headers: { "X-Alvuna-Secret": req.secret }, cache: "no-store" })
         .catch(() => null);
       if (!res || res.status === 202) continue;
-      if (res.ok) { saveTokens((await res.json()).tokens); return; }
+      // Saved under this page's own origin: behind a proxy Home Assistant may see another form of its address
+      // (":443"), and the token store only accepts tokens whose hassUrl is exactly location.origin.
+      if (res.ok) { saveTokens({ ...(await res.json()).tokens, hassUrl: location.origin }); return; }
       break; // expired or rejected: ask for a new code
     }
   }
@@ -47,6 +49,19 @@ export async function signOut() {
   saveTokens(null);
 }
 
+// Only Home Assistant's explicit "no" counts: while it restarts, a sign-in can fail with an auth error for a moment, and
+// throwing the tokens away then would make a paired TV ask for a new code after every restart. Asks /auth/token with
+// the refresh token: 400 (invalid_grant) means revoked or deleted; anything else (down, starting, 5xx) means wait.
+async function tokensRejected() {
+  const tok = await loadTokens();
+  if (!tok?.refresh_token) return false; // a long-lived token cannot be checked here; keep it
+  try {
+    const res = await fetch("/auth/token", { method: "POST", cache: "no-store",
+      body: new URLSearchParams({ grant_type: "refresh_token", client_id: tok.clientId, refresh_token: tok.refresh_token }) });
+    return res.status === 400 || res.status === 403;
+  } catch (e) { return false; }
+}
+
 export async function connect({ onStates, onStatus }) {
   // Without any token getAuth sends the browser to HA's login page and comes back here.
   const auth = await getAuth({ hassUrl: location.origin, loadTokens, saveTokens });
@@ -54,15 +69,22 @@ export async function connect({ onStates, onStatus }) {
   try {
     conn = await createConnection({ auth });
   } catch (e) {
-    if (e === ERR_INVALID_AUTH) { saveTokens(null); location.reload(); }
+    if (e === ERR_INVALID_AUTH) {
+      if (await tokensRejected()) { saveTokens(null); location.reload(); }
+      else setTimeout(() => location.reload(), 10000); // Home Assistant is starting: try again shortly
+    }
     throw e;
   }
   conn.addEventListener("disconnected", () => onStatus("offline"));
   conn.addEventListener("ready", () => onStatus("online"));
   // Tokens refused on reconnect (the TV was removed in Home Assistant, or its user deleted): forget them and start
   // again, which shows the pairing code (or HA's sign-in with ?login=1).
-  conn.addEventListener("reconnect-error", (_conn, err) => {
-    if (err === ERR_INVALID_AUTH) { saveTokens(null); location.reload(); } else onStatus("offline");
+  conn.addEventListener("reconnect-error", async (_conn, err) => {
+    onStatus("offline");
+    if (err !== ERR_INVALID_AUTH) return; // the library keeps trying by itself
+    if (await tokensRejected()) { saveTokens(null); location.reload(); return; }
+    // Refused while Home Assistant was starting: the library has given up, so try again ourselves.
+    setTimeout(() => conn.reconnect(true), 10000);
   });
   subscribeEntities(conn, onStates);
   return conn;

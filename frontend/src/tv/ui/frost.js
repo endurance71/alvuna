@@ -91,6 +91,10 @@ export function alignFrost() {
   const on = document.body.classList.contains("frost");
   if (!on) { for (const z of document.querySelectorAll(".fzw")) z.remove(); return; }
   const body = document.body, els = [...document.querySelectorAll(SEL)], jobs = [];
+  // A tile that is no longer glass (a light turned on: lit tiles are solid white) loses its pane; left in place it
+  // showed as a glass band over the white tile, hidden only while a panel was open.
+  const glass = new Set(els);
+  for (const z of document.querySelectorAll(".fzw")) if (!glass.has(z.parentElement)) z.remove();
   for (const el of els) {
     let x = 0, y = 0;
     for (let n = el; n && n !== body; n = n.offsetParent) { x += n.offsetLeft; y += n.offsetTop; }

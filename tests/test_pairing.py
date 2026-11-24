@@ -60,6 +60,7 @@ async def test_pair_approve_and_remove(hass: HomeAssistant, hass_client_no_auth,
     assert paired.status == HTTPStatus.OK
     tokens = (await paired.json())["tokens"]
     assert tokens["refresh_token"] and tokens["clientId"].endswith("/alvuna/tv/")
+    assert not tokens["hassUrl"].endswith((":80", ":443"))
     # Collected once only.
     assert (await client.get(status_url, headers={"X-Alvuna-Secret": req["secret"]})).status == HTTPStatus.NOT_FOUND
 

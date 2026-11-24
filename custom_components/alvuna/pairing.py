@@ -172,7 +172,8 @@ class PairStartView(HomeAssistantView):
         except ValueError:
             body = {}
         name = str(body.get("name") or "TV")[:40].strip() or "TV"
-        origin = f"{request.url.scheme}://{request.url.host}" + (f":{request.url.port}" if request.url.port else "")
+        # As the browser writes it (no :443 or :80): the frontend's token store compares it with location.origin.
+        origin = str(request.url.origin())
         req = await pairing.async_start(_address(request), name, origin)
         if req is None:
             return self.json_message("Too many pairing requests, try again later", HTTPStatus.TOO_MANY_REQUESTS)
