@@ -514,6 +514,7 @@ function settingsPanel(h) {
     // OK or ←/→ go round the three looks; each is shown on the home screen behind the panel at once.
     + row({ key: "pref:glass", act: "pref-step", adjust: "pref", attrs: `data-key="glass"`, ic: "mdi:blur", title: t("tv.settings.glass"),
       sub: t(`tv.settings.glass_${p.glass}_hint`), value: t(`tv.settings.glass_${p.glass}`) })
+    + toggle("ring", "mdi:border-radius", t("tv.settings.ring"), t("tv.settings.ring_hint"))
     + sec("screen")
     + minutes("saver", "mdi:monitor-star", t("tv.settings.saver"), t("tv.settings.saver_hint"), t("tv.settings.off"))
     + toggle("dim", "mdi:brightness-6", t("tv.settings.dim"), t("tv.settings.dim_hint"))

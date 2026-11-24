@@ -527,3 +527,17 @@ body.solid #home .tile:not(.on):not(.cam):not(.alert), body.solid #home .td-card
 body.has-panel #home .fzw { visibility: hidden; }
 body.frost #home .tile.sec.off { opacity: .7; }
 body.no-anim *, body.no-anim *::before, body.no-anim *::after { transition: none !important; animation: none !important; }
+
+/* --- the focused tile is lit, not only grown -------------------------------------------------------------------
+   Scale alone was hard to see from the sofa. A white layer brightens the focused tile's glass: in frosted mode inside
+   the glass (.fzw::after, under the text, fading with opacity on the GPU); in the other looks the background switches
+   at once. Lit tiles go from 94 % to full white. */
+.fzw::after { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,.22); opacity: 0; transition: opacity .18s; }
+.f > .fzw::after { opacity: 1; }
+#home .tile.f:not(.on):not(.cam):not(.alert), #home .td-card.f, #home .instance.f, #edge .edge.f { background: rgba(255,255,255,.24); }
+body.solid #home .tile.f:not(.on):not(.cam):not(.alert), body.solid #home .instance.f, body.solid #edge .edge.f {
+  background: linear-gradient(rgba(255,255,255,.2), rgba(255,255,255,.2)), var(--sheet-bg); }
+#home .tile.on.f { background: #fff; }
+/* Ustawienia → Obramowanie zaznaczenia: a ring in the accent colour around whatever has the focus (an outline follows
+   the rounded corners and grows with the scale). */
+body.ring .f { outline: 4px solid var(--lime); outline-offset: 4px; }

@@ -824,7 +824,9 @@
       "glass_clear": "Transparent",
       "glass_frost_hint": "Blurred wallpaper; the nicest",
       "glass_solid_hint": "Wallpaper's color; the lightest",
-      "glass_clear_hint": "The wallpaper shows through"
+      "glass_clear_hint": "The wallpaper shows through",
+      "ring": "Focus outline",
+      "ring_hint": "A ring in the accent color"
     },
     "instances": {
       "current": "Showing now",

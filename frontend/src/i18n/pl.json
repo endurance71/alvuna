@@ -860,7 +860,9 @@
       "glass_clear": "Przezroczyste",
       "glass_frost_hint": "Rozmyta tapeta, najładniejsze",
       "glass_solid_hint": "W kolorze tapety, najlżejsze",
-      "glass_clear_hint": "Tapeta prześwituje"
+      "glass_clear_hint": "Tapeta prześwituje",
+      "ring": "Obramowanie zaznaczenia",
+      "ring_hint": "Ramka w kolorze akcentu"
     },
     "instances": {
       "current": "Teraz wyświetlany",
