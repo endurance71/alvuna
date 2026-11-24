@@ -97,3 +97,24 @@ async def test_subscription_follows_changes(hass: HomeAssistant, hass_ws_client)
     async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=6))
     await hass.async_block_till_done()
     assert (await client.receive_json())["event"] == {"source": "dashboard", "dashboard": "dom-test"}
+
+
+async def test_forecast_is_shared(hass: HomeAssistant, hass_ws_client) -> None:
+    from homeassistant.core import SupportsResponse
+
+    assert await async_setup_component(hass, "http", {})
+    hass.states.async_set("weather.dom", "cloudy")
+    calls = []
+
+    async def get_forecasts(call):
+        calls.append(call)
+        return {"weather.dom": {"forecast": [{"temperature": 4}]}}
+
+    hass.services.async_register("weather", "get_forecasts", get_forecasts, supports_response=SupportsResponse.ONLY)
+    assert await async_setup_component(hass, DOMAIN, {})
+    client = await hass_ws_client(hass)
+    for _ in range(2):
+        await client.send_json_auto_id({"type": "alvuna/forecast", "entity_id": "weather.dom", "forecast_type": "hourly"})
+        res = await client.receive_json()
+        assert res["result"]["forecast"] == [{"temperature": 4}]
+    assert len(calls) == 1

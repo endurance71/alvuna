@@ -1,0 +1,30 @@
+name: Release
+
+# Publishing a GitHub release attaches alvuna.zip (the integration with its built frontend), which is what HACS and
+# the Home Assistant Marketplace install (hacs.json: zip_release).
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  zip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund && node build.mjs
+        working-directory: frontend
+      - name: Set the version from the tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          jq --arg v "$version" '.version = $v' custom_components/alvuna/manifest.json > m.json
+          mv m.json custom_components/alvuna/manifest.json
+      - run: cd custom_components/alvuna && zip -r ../../alvuna.zip . -x '__pycache__/*'
+      - run: gh release upload "$GITHUB_REF_NAME" alvuna.zip --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
 import voluptuous as vol
 
 from homeassistant.components import websocket_api
+from homeassistant.auth.permissions.const import POLICY_READ
 from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError, Unauthorized
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.area_registry import EVENT_AREA_REGISTRY_UPDATED
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.device_registry import EVENT_DEVICE_REGISTRY_UPDATED
@@ -22,9 +26,42 @@ REGISTRY_EVENTS = (EVENT_AREA_REGISTRY_UPDATED, EVENT_DEVICE_REGISTRY_UPDATED, E
                    EVENT_FLOOR_REGISTRY_UPDATED)
 
 
+FORECAST_TTL = 900  # seconds; forecasts change hourly at most, and every tablet and TV would otherwise ask on its own
+DATA_FORECASTS = f"{DOMAIN}_forecasts"
+
+
 @callback
 def async_register_commands(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_subscribe_layout)
+    websocket_api.async_register_command(hass, ws_forecast)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/forecast",
+        vol.Required("entity_id"): cv.entity_domain("weather"),
+        vol.Required("forecast_type"): vol.In(["daily", "hourly", "twice_daily"]),
+    }
+)
+@websocket_api.async_response
+async def ws_forecast(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    """A weather entity's forecast, shared by every screen for a quarter of an hour. An empty list when the entity
+    has no such forecast."""
+    entity_id, kind = msg["entity_id"], msg["forecast_type"]
+    if not connection.user.permissions.check_entity(entity_id, POLICY_READ):
+        raise Unauthorized(entity_id=entity_id)
+    cache: dict[tuple[str, str], tuple[float, list[Any]]] = hass.data.setdefault(DATA_FORECASTS, {})
+    hit = cache.get((entity_id, kind))
+    if hit is None or time.monotonic() - hit[0] > FORECAST_TTL:
+        try:
+            res = await hass.services.async_call("weather", "get_forecasts", {"type": kind}, target={"entity_id": entity_id},
+                                                 blocking=True, return_response=True)
+            forecast = (res or {}).get(entity_id, {}).get("forecast") or []
+        except HomeAssistantError:
+            forecast = []
+        hit = (time.monotonic(), forecast)
+        cache[(entity_id, kind)] = hit
+    connection.send_result(msg["id"], {"forecast": hit[1], "age": int(time.monotonic() - hit[0])})
 
 
 def current_layout(hass: HomeAssistant) -> dict[str, Any]:
