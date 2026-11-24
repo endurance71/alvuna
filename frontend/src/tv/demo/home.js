@@ -4,7 +4,10 @@ const IMG = "/img";
 
 // The demo speaks the page's language: /app/?lang=en for the English page (the app's own texts follow userLocale in
 // ha.js; the home's names are translated here).
-export const LANG = new URLSearchParams(location.search).get("lang") === "en" ? "en" : "pl";
+const PARAMS = new URLSearchParams(location.search);
+export const LANG = PARAMS.get("lang") === "en" ? "en" : "pl";
+// Opened on a TV by the LG app's "Try a sample home" (app/?tv=1), not inside the website's photo.
+export const TV = PARAMS.has("tv");
 const EN = {
   "Słońce": "Sun", "Sufit": "Ceiling", "Lampa stojąca": "Floor lamp", "Listwa LED": "LED strip", "Kinkiet": "Wall light",
   "Roleta": "Blind", "Temperatura": "Temperature", "Wilgotność": "Humidity", "Nad wyspą": "Island", "Pod szafkami": "Under cabinets",

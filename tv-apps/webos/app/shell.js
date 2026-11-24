@@ -13,6 +13,9 @@
   var SERVICE = "luna://app.alvuna.tv.service/";
   var KEY = "alvuna-server"; // { url, name, uuid } of the server picked last
   var RETRY_MS = 15000;
+  // A sample home to try Alvuna without Home Assistant: the website's demo (the real TV app with made-up devices), in
+  // TV mode, where Back on its first row returns here. Opened from "not found" and "Alvuna is not installed".
+  var DEMO = "https://alvuna.shipapp.pl/app/";
   var box = document.getElementById("box");
   var webos = !!window.PalmSystem || /Web0S|webOS/i.test(navigator.userAgent);
   var bridges = []; // a PalmServiceBridge that is garbage-collected cancels its call
@@ -48,7 +51,9 @@
     lost_text: "{name} nie odpowiada. Ponawiam co 15 s.",
     alvuna_ok: "Alvuna gotowa",
     alvuna_missing: "bez integracji Alvuna",
-    offline: "Telewizor nie jest połączony z siecią."
+    offline: "Telewizor nie jest połączony z siecią.",
+    demo: "Wypróbuj przykładowy dom",
+    demo_hint: "Bez Home Assistanta, z przykładowymi urządzeniami"
   } : {
     searching: "Looking for Home Assistant on your network…",
     stage_mdns: "Listening for network announcements (mDNS)",
@@ -77,7 +82,9 @@
     lost_text: "{name} does not answer. Retrying every 15 s.",
     alvuna_ok: "Alvuna ready",
     alvuna_missing: "without Alvuna",
-    offline: "The TV is not connected to a network."
+    offline: "The TV is not connected to a network.",
+    demo: "Try a sample home",
+    demo_hint: "No Home Assistant needed, made-up devices"
   };
   document.documentElement.lang = PL ? "pl" : "en";
 
@@ -228,8 +235,8 @@
   function notFound(msg) {
     stop();
     render('<h1 class="err">' + T.none_title + "</h1><p>" + (msg || T.none_text) + '</p><div class="list"><div class="row">' +
-      '<button class="f btn">' + T.again + '</button><button class="f btn">' + T.manual + "</button></div></div>",
-      [search, function () { manual(notFound); }]);
+      '<button class="f btn">' + T.again + '</button><button class="f btn">' + T.manual + "</button></div>" + demoButton() + "</div>",
+      [search, function () { manual(notFound); }, demo]);
     screen.name = "none";
     screen.back = exit;
   }
@@ -238,8 +245,14 @@
     stop();
     render('<h1 class="err">' + T.no_alvuna_title + "</h1><p>" + fill(T.no_alvuna_text, server.name || host(server.url)) +
       '</p><div class="list"><div class="row"><button class="f btn">' + T.retry + '</button><button class="f btn">' + T.other +
-      "</button></div></div>", [function () { check(server, true); }, search]);
+      "</button></div>" + demoButton() + "</div>", [function () { check(server, true); }, search, demo]);
     screen.back = exit;
+  }
+
+  function demoButton() { return '<button class="f">' + T.demo + "<small>" + T.demo_hint + "</small></button>"; }
+  function demo() {
+    stop();
+    location.href = DEMO + "?tv=1&lang=" + (PL ? "pl" : "en");
   }
 
   function manual(back) {

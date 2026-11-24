@@ -44,8 +44,11 @@
     <li><b>W Twoim Home Assistancie:</b> przy parowaniu integracja tworzy osobnego użytkownika dla telewizora (bez uprawnień
       administratora) i zapisuje Twoje ustawienia układu (ukryte elementy, nazwy, kolejność). Kontrolujesz to Ty, jako
       administrator Home Assistanta.</li>
-    <li><b>W sieci lokalnej:</b> aplikacja wyszukuje Home Assistanta w Twojej sieci (mDNS), żeby nie trzeba było wpisywać
-      adresu pilotem.</li>
+    <li><b>W sieci lokalnej:</b> aplikacja szuka Home Assistanta w Twojej sieci, żeby nie trzeba było wpisywać adresu
+      pilotem: nasłuchuje jego ogłoszenia (mDNS), pyta o nazwę homeassistant.local, a gdy to nic nie da, sprawdza port 8123
+      pod adresami podsieci, w której jest telewizor. Te zapytania nie wychodzą poza Twoją sieć.</li>
+    <li><b>Przykładowy dom:</b> przycisk „Wypróbuj przykładowy dom” otwiera pokaz z tej strony (alvuna.shipapp.pl) z
+      wymyślonymi urządzeniami. Nie łączy się wtedy z Twoim Home Assistantem i niczego o nim nie wysyła.</li>
   </ul>
 
   <h2>Czego nie robimy</h2>

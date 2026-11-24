@@ -44,8 +44,11 @@
     <li><b>In your Home Assistant:</b> when you pair a TV, the integration creates a separate user for it (without admin
       rights) and stores your layout adjustments (hidden items, names, order). You control these as the administrator of
       your Home Assistant.</li>
-    <li><b>On your local network:</b> the app looks for Home Assistant on your network (mDNS), so you don't have to type an
-      address with the remote.</li>
+    <li><b>On your local network:</b> the app looks for Home Assistant on your network so you don't have to type an
+      address with the remote: it listens for its announcement (mDNS), asks for homeassistant.local and, if that finds
+      nothing, checks port 8123 on the addresses of the TV's own subnet. These requests stay inside your network.</li>
+    <li><b>Sample home:</b> "Try a sample home" opens the demo from this website (alvuna.shipapp.pl) with made-up
+      devices. It does not connect to your Home Assistant and sends nothing about it.</li>
   </ul>
 
   <h2>What we don't do</h2>

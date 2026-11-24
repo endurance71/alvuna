@@ -3,17 +3,18 @@
    because a live backdrop-filter costs the C4 most of its frames. In a desktop or phone browser, where the whole screen
    is scaled down into a photo, those canvas layers flickered, while backdrop-filter is cheap there. So the demo keeps
    the app's setting (Kafle → Szronione szkło), hides the canvases (display: none makes no layer) and frosts the same
-   surfaces here. Under an open panel the home screen is dimmed and its blur is off. */
-.fzw { display: none !important; }
-body.frost #home .tile:not(.on):not(.cam):not(.alert), body.frost #home .td-card, body.frost #home .instance, body.frost #edge .edge {
+   surfaces here. Under an open panel the home screen is dimmed and its blur is off. Only in a browser (html.web): opened
+   on a TV from the LG app (app/?tv=1) the demo keeps the app's own canvas frost, drawn 1:1 there. */
+html.web .fzw { display: none !important; }
+html.web body.frost #home .tile:not(.on):not(.cam):not(.alert), html.web body.frost #home .td-card, html.web body.frost #home .instance, html.web body.frost #edge .edge {
   background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.22);
   -webkit-backdrop-filter: blur(32px) saturate(1.4); backdrop-filter: blur(32px) saturate(1.4);
 }
-body.frost #home .tile.alert { background: rgba(255,90,78,.24); -webkit-backdrop-filter: blur(32px) saturate(1.4); backdrop-filter: blur(32px) saturate(1.4); }
-body.has-panel #home .tile, body.has-panel #home .td-card, body.has-panel #home .instance { -webkit-backdrop-filter: none; backdrop-filter: none; }
+html.web body.frost #home .tile.alert { background: rgba(255,90,78,.24); -webkit-backdrop-filter: blur(32px) saturate(1.4); backdrop-filter: blur(32px) saturate(1.4); }
+html.web body.has-panel #home .tile, html.web body.has-panel #home .td-card, html.web body.has-panel #home .instance { -webkit-backdrop-filter: none; backdrop-filter: none; }
 /* The focused tile lights up (the app does it inside the hidden canvas layer, .fzw::after). */
-body.frost #home .tile.f:not(.on):not(.cam):not(.alert), body.frost #home .td-card.f, body.frost #home .instance.f, body.frost #edge .edge.f { background: rgba(255,255,255,.26); }
-body.frost #home .tile.alert.f { background: rgba(255,90,78,.45); }
+html.web body.frost #home .tile.f:not(.on):not(.cam):not(.alert), html.web body.frost #home .td-card.f, html.web body.frost #home .instance.f, html.web body.frost #edge .edge.f { background: rgba(255,255,255,.26); }
+html.web body.frost #home .tile.alert.f { background: rgba(255,90,78,.45); }
 /* A visitor driving the demo with the mouse: a ring like a touch indicator instead of the arrow (the TV has no cursor;
    the Magic Remote's pointer is a dot that focuses what it is over). Hidden until the mouse moves over the TV. */
 html.pointing, html.pointing * { cursor: none !important; }

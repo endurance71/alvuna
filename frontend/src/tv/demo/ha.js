@@ -2,7 +2,7 @@
 // (frontend/build-site.mjs), so every tile, panel and animation is the app's own. A made-up home answers instead of
 // Home Assistant: its states change when the remote switches something, as they would in a real home.
 // window.__demo lets the page around it drive a tour: notifications, the doorbell camera, the clock.
-import { HOME, layout, forecast, LANG, tr } from "./home.js";
+import { HOME, layout, forecast, LANG, TV, tr } from "./home.js";
 
 // The look of the room the website shows the TV in: the demo's own photo wallpaper (site/img/wallpapers, a generated
 // misty fjord in the app's "Mgła" slot) and the oak accent. Frosted glass stays the app's setting; demo.css draws it.
@@ -118,10 +118,20 @@ window.__demo = {
   watch: (fn) => { watchers.add(fn); fn(states); return () => watchers.delete(fn); },
 };
 
+// On a TV (the LG app's "Try a sample home"): Back on the first row returns to the LG app's search screen instead of
+// leaving the app (main.js asks window.webOS.platformBack first), and a note says this is a sample home.
+if (TV) {
+  window.webOS = { ...(window.webOS || {}), platformBack: () => history.back() };
+  setTimeout(() => window.__demo.notify(LANG === "en" ? "Sample home" : "Przykładowy dom",
+    LANG === "en" ? "Made-up devices. Back on the first row returns to the search." : "Urządzenia są przykładowe. Wstecz na pierwszym rzędzie wraca do wyszukiwania.", 10), 2500);
+} else {
+  document.documentElement.classList.add("web");
+}
+
 // The ring that stands in for the mouse pointer over the TV (demo.css): it follows the mouse, presses with it and
 // leaves with it. Moved with the translate property, not transform: the press shrinks it with scale, which applies
 // to transform as well and pulled the ring towards the corner on every click.
-addEventListener("DOMContentLoaded", () => {
+if (!TV) addEventListener("DOMContentLoaded", () => {
   const ring = document.createElement("div");
   ring.id = "demo-cursor";
   // On <html>, not <body>: the app moves the body with a transform, which would carry a fixed child along.

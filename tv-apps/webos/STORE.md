@@ -4,21 +4,19 @@ Checklist for submitting `app.alvuna.tv` through [LG Seller Lounge](https://sell
 public developer pages, read 2026-11-24; Seller Lounge itself is behind a login, so items marked **(check in the form)**
 could not be confirmed and must be read off the submission form.
 
-## 0. Decide before submitting
+## 0. Decided (2026-11-24)
 
-- [ ] **How LG QA tests an app that needs Home Assistant.** QA will not have one. Pairing gives the TV a Home Assistant
-  user limited to the local network, so a public demo server does not help. Options, best first:
-  1. a built-in demo home (sample data, no server), reachable from the "not found" screen; LG QA can then test every
-     screen with the remote (needs work in the TV frontend);
-  2. a video of the whole flow (search → pairing code → approve in Home Assistant → home screen) plus the reviewer
-     notes below.
-- [ ] **Privacy policy URL**: publish section 6 (for example as `PRIVACY.md` in the GitHub repository, or a page on
-  the project's site) and paste its URL.
-- [ ] **Lowest webOS version.** The shell runs anywhere (ES5), but the TV app it opens is built for Chromium 108
-  (`frontend/build.mjs`, `target: chrome108`), which is webOS TV 24. Pick **webOS TV 24 and later** unless the frontend
-  is tested on 22/23 (Chromium 87/94). Tested so far: OLED55C4 (a 2024 set, firmware 43.21.96, which ships Node 20.12, i.e. the webOS TV 26 platform).
-- [ ] **Countries and languages.** The app speaks English and Polish (shell: by the TV's language; TV app: by the Home
-  Assistant user's language).
+- [x] **How LG QA tests without Home Assistant:** "Try a sample home" on the "not found" and "Alvuna is not installed"
+  screens opens `https://alvuna.shipapp.pl/app/?tv=1&lang=<pl|en>`: the real TV app (the same build as the website's
+  demo) with made-up devices, every screen and panel working with the remote. In TV mode it keeps the app's own canvas
+  frost and Back on its first row returns to the search screen (`history.back()`, through `window.webOS.platformBack`).
+- [x] **Privacy policy URL:** https://alvuna.shipapp.pl/en/privacy.html (Polish: https://alvuna.shipapp.pl/privacy.html).
+- [x] **Support:** https://alvuna.shipapp.pl/en/#pomoc, e-mail kontakt@shipapp.pl, issues https://github.com/endurance71/alvuna/issues.
+- [x] **Publisher:** ShipApp, a brand of MT Hub Damian Motyliński (76-200 Słupsk, NIP 8393229228). `vendor`: ShipApp.
+- [ ] **Lowest webOS version:** the TV app is built for Chromium 108, which is **webOS TV 24 and later**; pick that
+  unless the frontend is tested on 22/23 (Chromium 87/94). Tested: OLED55C4 (webOS TV 26 platform).
+- [x] **Countries and languages:** English and Polish (the LG app by the TV's language, the TV app by the Home Assistant
+  user's language, the sample home by the TV's language).
 
 ## 1. Package
 
@@ -57,19 +55,18 @@ All drawn by `swift tools/make_icons.swift` from `art/icon.svg`.
 
 ## 3. Screenshots
 
-LG's public pages give no count or size for listing screenshots **(check in the form)**; prepare 1920×1080 PNGs. Take
-them with no personal data on screen: no real names of people, no camera views of the house, no addresses.
+Ready in `store/screenshots/en` and `store/screenshots/pl`: 1920×1080 PNG of the sample home (no real person, house or
+address), rendered from the demo build (`frontend/build-site.mjs`) and the LG app's own page:
 
-- [ ] Home screen of the TV app (tiles of rooms, scenes, weather).
-- [ ] A detail panel (a light or climate).
-- [ ] The pairing screen with its six-character code.
-- [ ] The shell's search screen ("Looking for Home Assistant on your network…").
-- [ ] Optional: the server list, or the screensaver.
-
-How to take them at full size: open `http://<home-assistant>:8123/alvuna/tv/?login=1` in a desktop browser window
-whose page area is exactly 1920×1080 (the app is drawn for that size and scales to fit any other), sign in with a demo
-user on a demo home, and save each screen. The shell's screens: serve `tv-apps/webos/app/` over HTTP and open
-`index.html` (without the webOS service it falls back to `homeassistant.local` and manual entry).
+| | |
+|---|---|
+| `01-home.png` | the home screen: security with cameras, what is running, scenes, rooms |
+| `02-room.png` | a room's side panel: lights with brightness, a blind |
+| `03-scenes.png` | scenes and rooms, a scene focused |
+| `04-doorbell.png` | a camera full screen with a doorbell notification |
+| `05-attention.png` | the summary panel: what needs attention |
+| `06-settings.png` | settings on the TV: wallpaper, accent, tiles, screensaver |
+| `07-sample-home.png` | the LG app: "Home Assistant not found" with Try a sample home |
 
 ## 4. Listing text
 
@@ -85,6 +82,8 @@ user on a demo home, and save each screen. The shell's screens: serve `tv-apps/w
   > Marketplace → Alvuna). The app finds Home Assistant by itself; nothing is typed on the TV. It shows a short code,
   > you approve the TV in Home Assistant, and the TV gets its own user that works only on your home network. Remove
   > the TV in Home Assistant to revoke it.
+  >
+  > No Home Assistant yet? "Try a sample home" shows the app with made-up devices.
   >
   > English and Polish. No account, no cloud, no ads, no tracking.
 - Keywords: home assistant, smart home, home automation, dashboard, lights, climate, cameras
@@ -103,6 +102,8 @@ user on a demo home, and save each screen. The shell's screens: serve `tv-apps/w
   > telewizor w Home Assistancie, a telewizor dostaje własnego użytkownika działającego tylko w sieci domowej. Usunięcie
   > telewizora w Home Assistancie odbiera mu dostęp.
   >
+  > Nie masz jeszcze Home Assistanta? „Wypróbuj przykładowy dom” pokazuje aplikację z przykładowymi urządzeniami.
+  >
   > Po polsku i po angielsku. Bez konta, bez chmury, bez reklam i bez śledzenia.
 
 ## 5. Reviewer notes (paste into the test-information field)
@@ -119,28 +120,18 @@ user on a demo home, and save each screen. The shell's screens: serve `tv-apps/w
 > leaves the app through the platform's back behaviour. The Magic Remote pointer focuses what it rests on, click selects,
 > the wheel moves between rows.
 >
-> [Attach the demo video link / describe the demo home here, see section 0.]
+> **To test without Home Assistant:** on the "Home Assistant not found" screen choose **Try a sample home**. It opens
+> the full TV app with a made-up home (internet needed): rooms, lights, scenes, cameras, settings, all working with the
+> remote and the pointer. Back on its first row returns to the search screen; Back there leaves the app.
+>
+> In a real home the integration can close the app after a period without remote input (an option in Home Assistant,
+> 10 minutes by default) to protect OLED screens; the sample home has it off.
 
 ## 6. Privacy statement
 
-> **Alvuna for LG webOS: privacy**
->
-> Alvuna connects your TV to your own Home Assistant server on your local network. It has no account, no cloud service,
-> no advertising and no analytics, and it sends nothing to Alvuna's authors or to any third party.
->
-> - **Finding Home Assistant.** The app looks for Home Assistant on your local network: it listens for Home Assistant's
->   mDNS announcement, asks for `homeassistant.local`, and, if those find nothing, checks port 8123 on the addresses of
->   your TV's own subnet. These requests stay inside your network.
-> - **What the TV stores.** The address, name and identifier of the Home Assistant server you picked, so the app can
->   open it next time. After pairing, the Home Assistant sign-in tokens for the TV's own user, stored by your Home
->   Assistant's web page on the TV, as any browser would.
-> - **Pairing.** Approving the TV in Home Assistant creates a Home Assistant user for that TV, without administrator
->   rights and limited to the local network. Removing the TV in Home Assistant deletes that user and its tokens.
-> - **Your home's data** (devices, states, camera images) travels only between your TV and your Home Assistant.
-> - **Removing data.** Uninstalling the app removes what it stored on the TV; removing the TV in Home Assistant revokes
->   its access.
->
-> Questions: [contact address or the GitHub issues URL].
+Published at https://alvuna.shipapp.pl/en/privacy.html (and in Polish at https://alvuna.shipapp.pl/privacy.html): what
+the TV stores, pairing, the local network search (mDNS, homeassistant.local, port 8123 on the TV's subnet), the sample
+home, deleting data, the website's cookieless visit statistics, the publisher and the contact. Paste the URL.
 
 ## 7. QA rules: remote and Back key
 
