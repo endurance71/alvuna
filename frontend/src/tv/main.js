@@ -161,17 +161,17 @@ function animateNav(kind, fromW) {
   // A panel of another width: the content takes its new width at once, the sheet behind it eases there.
   const toW = fromW && panel.offsetWidth;
   if (toW && fromW !== toW) panel.animate([{ transform: `scaleX(${fromW / toW})` }, { transform: "none" }],
-    { duration: 440, easing: "cubic-bezier(.32,.72,0,1)", pseudoElement: "::before" });
+    { duration: 520, easing: "cubic-bezier(.32,.72,0,1)", pseudoElement: "::before" });
   const away = panelEl.querySelector(".panel-wrap.left") ? -1 : 1, dx = (kind === "push" ? 80 : -80) * away;
   const frames = kind === "fade" ? [{ opacity: 0 }, { opacity: 1 }]
     : [{ transform: `translateX(${dx}px)`, opacity: 0 }, { transform: "none", opacity: 1 }];
   const parts = kind === "fade" ? panel.querySelectorAll(":scope > .panel-view") : panel.querySelectorAll(":scope > .p-head, :scope > .panel-view");
-  for (const el of parts) el.animate(frames, { duration: kind === "fade" ? 280 : 440, easing: "cubic-bezier(.32,.72,0,1)" });
+  for (const el of parts) el.animate(frames, { duration: kind === "fade" ? 360 : 520, easing: "cubic-bezier(.32,.72,0,1)" });
 }
 
 // Closing plays the way out (the panel slides back to its edge, the camera fades) while focus is already back on the
 // home screen, so the remote never waits for the animation; the layer is dropped once it has finished.
-const OUT_MS = 420;
+const OUT_MS = 560; // the way out in the CSS (.55s on --sheet-out), plus a frame
 let outTimer = 0;
 function closeLayer() {
   if (S.camera != null) {
