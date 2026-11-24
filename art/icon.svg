@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Alvuna: a house holding the four deck tiles, the lit one in lime, on the teal tile the apps use. -->
+  <rect x="16" y="16" width="480" height="480" rx="116" fill="#1A6676"/>
+  <g transform="translate(67 67) scale(.738)">
+    <path d="M84 236 L256 88 L428 236 V420 Q428 448 400 448 H112 Q84 448 84 420 Z" fill="none" stroke="#FFFFFF" stroke-width="34" stroke-linejoin="round"/>
+    <rect x="152" y="204" width="94" height="94" rx="20" fill="#B8F03C"/>
+    <rect x="266" y="204" width="94" height="94" rx="20" fill="#FFFFFF" fill-opacity=".38"/>
+    <rect x="152" y="318" width="94" height="94" rx="20" fill="#FFFFFF" fill-opacity=".38"/>
+    <rect x="266" y="318" width="94" height="94" rx="20" fill="#FFFFFF" fill-opacity=".38"/>
+  </g>
+</svg>
