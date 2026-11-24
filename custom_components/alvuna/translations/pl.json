@@ -30,7 +30,7 @@
       "wrong_code": "To nie jest kod z telewizora."
     },
     "create_entry": {
-      "default": "Alvuna działa. Otwórz aplikację Alvuna na telewizorze (albo http://<ten Home Assistant>/alvuna/tv/ w jego przeglądarce): pokaże kod, który wpiszesz w sekcji Wykryte. Panel Alvuna w menu bocznym zmienia to, co widać na TV."
+      "default": "Alvuna działa. Otwórz aplikację Alvuna na telewizorze (albo adres tego Home Assistanta z dopiskiem /alvuna/tv/ w przeglądarce telewizora): pokaże kod, który wpiszesz w sekcji Wykryte. Panel Alvuna w menu bocznym zmienia to, co widać na TV."
     }
   },
   "options": {
