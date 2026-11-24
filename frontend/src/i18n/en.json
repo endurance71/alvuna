@@ -826,12 +826,17 @@
       "glass_solid_hint": "Wallpaper's color; the lightest",
       "glass_clear_hint": "The wallpaper shows through",
       "ring": "Focus outline",
-      "ring_hint": "A ring in the accent color"
+      "ring_hint": "A ring in the accent color",
+      "connection": "Connection",
+      "homes": "Homes",
+      "logout": "Sign this TV out",
+      "logout_hint": "Of {name}; then pair again",
+      "logout_confirm": "Press OK again to sign out"
     },
     "instances": {
       "current": "Showing now",
-      "title": "Switch home",
-      "sub": "Another Home Assistant server"
+      "title": "Homes",
+      "sub": "OK switches, the bin removes from the list"
     },
     "camera": {
       "preview": "Preview"
@@ -933,6 +938,15 @@
     "pair_busy": "Home Assistant is not answering, or Alvuna is not set up there yet. Trying again…",
     "pair_login": "To use your own account instead, open {url}",
     "camera_unknown": "Camera {entity} is not in Alvuna’s layout",
-    "no_layout": "No layout yet: add the Alvuna integration in Home Assistant."
+    "no_layout": "No layout yet: add the Alvuna integration in Home Assistant.",
+    "home": {
+      "add": "Add a home",
+      "add_hint": "Another Home Assistant with Alvuna",
+      "add_sub": "Its Home Assistant's address",
+      "address_hint": "For example 192.168.1.20, homeassistant.local or https://home.example.com. Without a port, 8123.",
+      "connect": "Connect",
+      "connect_hint": "The TV goes there and asks to be paired",
+      "bad_address": "That does not look like an address"
+    }
   }
 }

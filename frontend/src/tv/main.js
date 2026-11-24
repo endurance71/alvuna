@@ -3,7 +3,7 @@
 // card's config (a `custom:homedeck-card` on the Lovelace dashboard named in ?dashboard=).
 import "./ui/icons.js";
 import { connect, call, loadDeckConfig, onDashboardChange, loadForecast, cameraStream, loadHistory, subscribeNotifications, entityPlatforms,
-  userLocale, hasTokens, pair, subscribeLayout, subscribeTv } from "./ha.js";
+  userLocale, hasTokens, pair, subscribeLayout, subscribeTv, signOut } from "./ha.js";
 import { Home } from "./model/home.js";
 import { esc, time, longDate, fmtTime, wIcon } from "./model/format.js";
 import { setLocale, t, language } from "../shared/i18n.js";
@@ -16,7 +16,7 @@ import { renderPanel, renderCamera, attentionCount, attnKey } from "./ui/panels.
 import { patch } from "./ui/morph.js";
 import { Focus } from "./ui/focus.js";
 import { icon, preloadIcons } from "./ui/icons.js";
-import { loadInstances, currentInstance, switchTo, reachable } from "./instances.js";
+import { loadInstances, saveInstances, currentInstance, withHere, normalizeAddress, addInstance, removeInstance, switchTo, reachable } from "./instances.js";
 
 const WEBOS = /Web0S|webOS/i.test(navigator.userAgent);
 // Icons used by the screens themselves (kept in step with the code: grep -oh '"mdi:[a-z0-9-]*"' src).
@@ -28,12 +28,12 @@ const APP_ICONS = ["mdi:alert", "mdi:alert-circle", "mdi:alert-circle-outline", 
   "mdi:television", "mdi:thermometer", "mdi:thermostat", "mdi:tree-outline", "mdi:volume-high", "mdi:volume-off",
   "mdi:water-outline", "mdi:water-percent", "mdi:weather-windy", "mdi:weather-sunset-up", "mdi:weather-sunset-down",
   "mdi:gauge", "mdi:eye-outline", "mdi:sun-wireless-outline", "mdi:umbrella-outline", "mdi:navigation", "mdi:wifi-off",
-  "mdi:keyboard-return", "mdi:arrow-left", "mdi:home-thermometer-outline", "mdi:play-circle-outline", "mdi:history", "mdi:shield-off-outline", "mdi:bell-outline", "mdi:bell-ring-outline", "mdi:battery-low", "mdi:battery-alert-variant-outline", "mdi:package-up", "mdi:account-group-outline", "mdi:trash-can-outline", "mdi:check-circle-outline", "mdi:check", "mdi:eye-off-outline", "mdi:debug-step-over", "mdi:bell-check-outline", "mdi:monitor-star", "mdi:brightness-6", "mdi:cursor-move", "mdi:exit-run", "mdi:blur", "mdi:animation-outline", "mdi:check-bold", "mdi:border-radius"];
+  "mdi:keyboard-return", "mdi:arrow-left", "mdi:home-thermometer-outline", "mdi:play-circle-outline", "mdi:history", "mdi:shield-off-outline", "mdi:bell-outline", "mdi:bell-ring-outline", "mdi:battery-low", "mdi:battery-alert-variant-outline", "mdi:package-up", "mdi:account-group-outline", "mdi:trash-can-outline", "mdi:check-circle-outline", "mdi:check", "mdi:eye-off-outline", "mdi:debug-step-over", "mdi:bell-check-outline", "mdi:monitor-star", "mdi:brightness-6", "mdi:cursor-move", "mdi:exit-run", "mdi:blur", "mdi:animation-outline", "mdi:check-bold", "mdi:border-radius", "mdi:home-plus-outline", "mdi:logout", "mdi:home-remove-outline", "mdi:home-switch-outline", "mdi:home-outline", "mdi:arrow-right", "mdi:web"];
 const params = new URLSearchParams(location.search);
-const instances = loadInstances();
+let instances = loadInstances();
 // ?dashboard=<path> reads the Alvuna card written on that dashboard; without it the layout comes from the integration.
 let dashboard = params.get("dashboard") || "";
-const instance = currentInstance(instances, dashboard);
+let instance = currentInstance(instances, dashboard);
 
 const S = { states: {}, config: null, panel: null, camera: null, camUi: { stripHidden: false, live: false }, forecast: null,
   status: "connecting", toast: "", pending: {}, saver: false, lastInput: Date.now(), hist: {}, notifs: {}, platforms: {},
@@ -57,7 +57,7 @@ applyPrefs();
 refreshFrost().then(() => alignFrost());
 const edgeEl = $("#edge"), homeEl = $("#home"), panelEl = $("#panel"), camEl = $("#camera"), saverEl = $("#saver"), statusEl = $("#status"), toastEl = $("#toast");
 
-const ctx = () => ({ instances, instance, forecast: S.forecast, pending: S.pending, hist: S.hist, notifs: S.notifs, platforms: S.platforms, playIdx: S.playIdx, hidden: S.hidden, hero: params.get("hero") || S.config?.tv_hero || "today" });
+const ctx = () => ({ instances, instance, logoutArmed: !!S.logoutArmed, addAddr: S.addAddr || "", forecast: S.forecast, pending: S.pending, hist: S.hist, notifs: S.notifs, platforms: S.platforms, playIdx: S.playIdx, hidden: S.hidden, hero: params.get("hero") || S.config?.tv_hero || "today" });
 const home = () => new Home(S.states, S.config);
 
 // --- render ---------------------------------------------------------------------------------------
@@ -222,6 +222,23 @@ function act(el) {
     case "climate": return openPanel({ type: "climate" });
     case "entity": return openPanel({ type: "entity", kind: d.kind, entity: d.entity, entity2: d.entity2 || "", name: d.name || "", icon: d.icon || "" });
     case "instances": return openPanel({ type: "instances" });
+    case "add-home": S.addAddr = ""; return openPanel({ type: "addhome" });
+    // OK on the address field: the TV's own keyboard comes up for the <input>; Enter there connects (see keydown).
+    case "add-focus": { const input = document.getElementById("addr"); if (input) { input.focus(); input.select?.(); } return; }
+    case "add-go": return addHome();
+    case "inst-del":
+      instances = removeInstance(instances, d.id);
+      saveInstances(instances);
+      return render();
+    // Twice, so a slip of the remote does not sign the TV out: the first OK arms it for five seconds.
+    case "logout":
+      if (!S.logoutArmed) {
+        S.logoutArmed = true;
+        clearTimeout(act.logout);
+        act.logout = setTimeout(() => { S.logoutArmed = false; render(); }, 5000);
+        return render();
+      }
+      return signOut().then(() => location.replace(`/alvuna/tv/${location.search}`));
     case "settings": return openPanel({ type: "settings" });
     case "wallpapers": return openPanel({ type: "wallpapers" });
     case "wallpaper": setWallpaper(d.id); refreshFrost(); return render();
@@ -321,6 +338,13 @@ const isBack = (ev) => ev.keyCode === 461 || ev.key === "GoBack" || ev.key === "
 window.addEventListener("keydown", (ev) => {
   const woke = wake();
   if (woke) { ev.preventDefault(); return; }
+  // Typing an address: the keys belong to the field (and the TV's keyboard); Enter connects, Back leaves the field.
+  if (document.activeElement?.tagName === "INPUT") {
+    S.lastInput = Date.now();
+    if (ev.key === "Enter" || ev.keyCode === 13) { ev.preventDefault(); addHome(); }
+    else if (isBack(ev)) { ev.preventDefault(); S.addAddr = document.activeElement.value; document.activeElement.blur(); }
+    return;
+  }
   const dir = KEYS[ev.key];
   if (dir) {
     ev.preventDefault();
@@ -590,6 +614,20 @@ async function mountCamera(h) {
   setTimeout(() => { if (alive() && !started) { stopCamera(); v.remove(); stills(); } }, 12000);
 }
 
+// --- another home: an address typed with the remote, checked, added to the list and opened (it pairs the TV there)
+async function addHome() {
+  const input = document.getElementById("addr");
+  if (input) { S.addAddr = input.value; input.blur(); }
+  const url = normalizeAddress(S.addAddr);
+  if (!url) return toast(t("tv.home.bad_address"));
+  const to = { id: new URL(url).host, name: new URL(url).hostname, url };
+  toast(t("tv.switching", { name: to.name }));
+  if (!(await reachable(to))) return toast(t("tv.unreachable", { name: to.name }));
+  instances = addInstance(instances, url);
+  saveInstances(instances);
+  switchTo(instances.find((x) => x.url === url) || to, instances);
+}
+
 // --- messages from Home Assistant (alvuna.notify, alvuna.show_camera) ----------------------------------
 function tvMessage(ev) {
   if (ev.type === "notify") {
@@ -630,6 +668,10 @@ async function pairScreen() {
     // The user's own language and formats, before anything but the splash is drawn (render waits for the config).
     const loc = await userLocale(conn);
     setLocale(loc);
+    // This home in the list, under its own name, so other homes can switch back to it.
+    instances = withHere(instances, instance, loc.locationName);
+    instance = instances[0];
+    saveInstances(instances);
     document.documentElement.lang = loc.language || language();
     if (dashboard) await loadConfig();
     else {

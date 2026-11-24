@@ -38,7 +38,8 @@ export function renderPanel(h, p, ctx) {
   if (p.type === "summary") return summaryPanel(h, ctx);
   if (p.type === "attn") return attnPanel(h, p, ctx);
   if (p.type === "device") return devicePanel(h, p);
-  if (p.type === "settings") return settingsPanel(h);
+  if (p.type === "settings") return settingsPanel(h, ctx);
+  if (p.type === "addhome") return addHomePanel(ctx);
   if (p.type === "wallpapers") return wallpapersPanel();
   if (p.type === "accents") return accentsPanel();
   return "";
@@ -495,7 +496,7 @@ function devicePanel(h, p) {
 
 // --- settings ---------------------------------------------------------------------------------------
 // One row per option, each opening its own panel; this TV's choices, kept in its storage.
-function settingsPanel(h) {
+function settingsPanel(h, ctx) {
   const w = currentWallpaper(), a = currentAccent(), p = prefs();
   const toggle = (key, ic, title, sub) => row({ key: `pref:${key}`, act: "pref", attrs: `data-key="${key}"`, ic, icOn: p[key], title, sub,
     value: p[key] ? t("common.on_n") : t("common.off_n"), cls: p[key] ? "on" : "" });
@@ -521,7 +522,14 @@ function settingsPanel(h) {
     + toggle("shift", "mdi:cursor-move", t("tv.settings.shift"), t("tv.settings.shift_hint"))
     + minutes("exit", "mdi:exit-run", t("tv.settings.exit"), t("tv.settings.exit_hint"), t("tv.settings.never"))
     + sec("performance")
-    + toggle("anim", "mdi:animation-outline", t("tv.settings.anim"), t("tv.settings.anim_hint")));
+    + toggle("anim", "mdi:animation-outline", t("tv.settings.anim"), t("tv.settings.anim_hint"))
+    // This TV and its homes: which Home Assistant it is on, others to switch to or add, and signing out of this one.
+    + sec("connection")
+    + row({ key: "conn:homes", act: "instances", ic: "mdi:home-switch-outline", title: t("tv.settings.homes"), sub: esc(ctx.instance?.name || ""),
+      value: `${ctx.instances.length || 1} ${icon("mdi:chevron-right")}` })
+    + row({ key: "conn:add", act: "add-home", ic: "mdi:home-plus-outline", title: t("tv.home.add"), sub: t("tv.home.add_hint"), value: icon("mdi:chevron-right") })
+    + row({ key: "conn:logout", act: "logout", ic: "mdi:logout", title: t("tv.settings.logout"), cls: ctx.logoutArmed ? "alert" : "",
+      sub: ctx.logoutArmed ? t("tv.settings.logout_confirm") : t("tv.settings.logout_hint", { name: esc(ctx.instance?.name || "") }) }));
 }
 
 // Accents as swatches, three to a line; OK puts one on at once (this panel shows it straight away).
@@ -551,10 +559,27 @@ function wallpapersPanel() {
 
 // --- instances ------------------------------------------------------------------------------------
 function instancesPanel(ctx) {
-  const rows = ctx.instances.map((x) => row({ key: `inst:${x.id}`, act: "switch", attrs: `data-id="${esc(x.id)}"`, ic: "mdi:home-outline",
-    icOn: x.id === ctx.instance?.id, cls: x.id === ctx.instance?.id ? "on" : "", title: x.name,
-    sub: x.id === ctx.instance?.id ? t("tv.instances.current") : esc(x.url.replace(/^https?:\/\//, "")) }));
-  return shell("", head("mdi:home-switch-outline", t("tv.instances.title"), t("tv.instances.sub")), rows.join(""));
+  // A home per line: OK switches to it; the bin next to it takes it off this TV's list (this home itself cannot be
+  // removed here: signing out is in Ustawienia).
+  const rows = ctx.instances.map((x) => {
+    const here = x.id === ctx.instance?.id;
+    return `<div class="p-line" data-line="inst:${esc(x.id)}">
+      <div class="p-row ${here ? "on" : ""}" data-f="inst:${esc(x.id)}" data-act="switch" data-id="${esc(x.id)}">
+        <div class="ic ${here ? "lime" : ""}">${icon("mdi:home-outline")}</div>
+        <div class="t"><b>${esc(x.name)}</b><span>${here ? t("tv.instances.current") : esc(x.url.replace(/^https?:\/\//, ""))}</span></div></div>
+      ${here ? "" : `<div class="btn round small" data-f="del:${esc(x.id)}" data-act="inst-del" data-id="${esc(x.id)}">${icon("mdi:home-remove-outline")}</div>`}</div>`;
+  });
+  const add = row({ key: "inst:add", act: "add-home", ic: "mdi:home-plus-outline", title: t("tv.home.add"), sub: t("tv.home.add_hint"), value: icon("mdi:chevron-right") });
+  return shell("", head("mdi:home-switch-outline", t("tv.instances.title"), t("tv.instances.sub")), rows.join("") + add);
+}
+
+// Another home by its address: typed with the remote on the TV's own keyboard (OK on the field), then Połącz.
+function addHomePanel(ctx) {
+  return shell("", head("mdi:home-plus-outline", t("tv.home.add"), t("tv.home.add_sub")),
+    `<div class="p-line" data-line="addr"><label class="p-input" data-f="addr" data-act="add-focus">${icon("mdi:web")}
+      <input id="addr" type="url" inputmode="url" value="${esc(ctx.addAddr)}" placeholder="192.168.1.20" spellcheck="false" autocomplete="off"></label></div>
+     <p class="p-note">${t("tv.home.address_hint")}</p>`
+    + row({ key: "addr:go", act: "add-go", ic: "mdi:arrow-right", icOn: true, title: t("tv.home.connect"), sub: t("tv.home.connect_hint") }));
 }
 
 // --- camera, full screen --------------------------------------------------------------------------

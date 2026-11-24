@@ -56,13 +56,16 @@ class AlvunaConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="pairing_expired")
         if user_input is not None:
             name = user_input["name"].strip() or self._request["name"]
-            user = await pairing.async_approve(self._request["request_id"], name)
+            user = await pairing.async_approve(self._request["request_id"], name, user_input.get("local_only", True))
             if user is None:
                 return self.async_abort(reason="pairing_expired")
             return self.async_create_entry(title=name, data={CONF_KIND: KIND_TV, CONF_USER_ID: user.id})
         return self.async_show_form(
             step_id="pair",
-            data_schema=vol.Schema({vol.Required("name", default=self._request["name"]): selector.TextSelector()}),
+            data_schema=vol.Schema({
+                vol.Required("name", default=self._request["name"]): selector.TextSelector(),
+                vol.Required("local_only", default=True): selector.BooleanSelector(),
+            }),
             description_placeholders={"code": self._request["code"]},
         )
 

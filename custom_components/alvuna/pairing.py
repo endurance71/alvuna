@@ -118,13 +118,16 @@ class Pairing:
         self._prune()
         return self.requests.get(request_id)
 
-    async def async_approve(self, request_id: str, name: str) -> User | None:
-        """Create the TV's user and tokens; None when the request has expired meanwhile."""
+    async def async_approve(self, request_id: str, name: str, local_only: bool = True) -> User | None:
+        """Create the TV's user and tokens; None when the request has expired meanwhile.
+
+        local_only: the user may sign in from the local network only. Off for a TV that reaches this Home Assistant
+        over the internet (a remote home through Nabu Casa, Tailscale Funnel or a reverse proxy)."""
         req = self.get(request_id)
         if req is None or req.tokens is not None:
             return None
         auth = self.hass.auth
-        user = await auth.async_create_user(f"Alvuna TV · {name}", group_ids=[GROUP_ID_USER], local_only=True)
+        user = await auth.async_create_user(f"Alvuna TV · {name}", group_ids=[GROUP_ID_USER], local_only=local_only)
         client_id = f"{req.origin}{URL_TV}/"
         refresh = await auth.async_create_refresh_token(user, client_id=client_id)
         access = auth.async_create_access_token(refresh)

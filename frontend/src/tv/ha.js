@@ -37,6 +37,16 @@ export async function pair({ name, onCode, onBusy }) {
   }
 }
 
+// Signs this TV out of this Home Assistant: its refresh token is revoked there (so a copy is useless) and forgotten
+// here. The next start shows the pairing code (or HA's sign-in with ?login=1).
+export async function signOut() {
+  const tok = await loadTokens();
+  if (tok?.refresh_token) {
+    try { await fetch("/auth/token", { method: "POST", body: new URLSearchParams({ action: "revoke", token: tok.refresh_token }) }); } catch (e) { /* offline: forget it anyway */ }
+  }
+  saveTokens(null);
+}
+
 export async function connect({ onStates, onStatus }) {
   // Without any token getAuth sends the browser to HA's login page and comes back here.
   const auth = await getAuth({ hassUrl: location.origin, loadTokens, saveTokens });
@@ -81,7 +91,8 @@ export async function userLocale(conn) {
   const ask = (msg) => conn.sendMessagePromise(msg).catch(() => null);
   const [user, config] = await Promise.all([ask({ type: "frontend/get_user_data", key: "language" }), ask({ type: "get_config" })]);
   const v = user?.value || {};
-  return { language: v.language || config?.language, numberFormat: v.number_format, timeFormat: v.time_format, currency: config?.currency };
+  return { language: v.language || config?.language, numberFormat: v.number_format, timeFormat: v.time_format, currency: config?.currency,
+    locationName: config?.location_name };
 }
 
 export const onDashboardChange = (conn, cb) => conn.subscribeEvents(cb, "lovelace_updated");

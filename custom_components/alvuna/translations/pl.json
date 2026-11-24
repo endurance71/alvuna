@@ -7,12 +7,14 @@
       },
       "pair": {
         "title": "Parowanie telewizora",
-        "description": "Telewizor prosi o dostęp do Alvuny. Sparuj go tylko, jeśli na ekranie widać kod **{code}**. Dostanie własnego użytkownika Home Assistanta: bez uprawnień administratora, tylko w sieci lokalnej.",
+        "description": "Telewizor prosi o dostęp do Alvuny. Sparuj go tylko, jeśli na ekranie widać kod **{code}**. Dostanie własnego użytkownika Home Assistanta: bez uprawnień administratora.",
         "data": {
-          "name": "Nazwa telewizora"
+          "name": "Nazwa telewizora",
+          "local_only": "Tylko sieć lokalna"
         },
         "data_description": {
-          "name": "Widoczna w Home Assistancie, np. TV w salonie."
+          "name": "Widoczna w Home Assistancie, np. TV w salonie.",
+          "local_only": "Wyłącz dla telewizora w innym domu, który łączy się z tym Home Assistantem przez internet."
         }
       }
     },

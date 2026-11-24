@@ -7,12 +7,14 @@
       },
       "pair": {
         "title": "Pair a TV",
-        "description": "A TV is asking to show Alvuna. Pair it only if its screen shows the code **{code}**. It gets its own Home Assistant user: not an administrator, local network only.",
+        "description": "A TV is asking to show Alvuna. Pair it only if its screen shows the code **{code}**. It gets its own Home Assistant user: not an administrator.",
         "data": {
-          "name": "TV name"
+          "name": "TV name",
+          "local_only": "Local network only"
         },
         "data_description": {
-          "name": "Shown in Home Assistant, e.g. Living room TV."
+          "name": "Shown in Home Assistant, e.g. Living room TV.",
+          "local_only": "Turn off for a TV in another home that reaches this Home Assistant over the internet."
         }
       }
     },

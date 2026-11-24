@@ -108,3 +108,14 @@ async def test_person_browser_gets_empty_channel(hass: HomeAssistant, hass_ws_cl
     ws = await hass_ws_client(hass)
     await ws.send_json_auto_id({"type": "alvuna/tv/subscribe"})
     assert (await ws.receive_json())["result"] == {"paired": False}
+
+
+async def test_remote_tv(hass: HomeAssistant, hass_client_no_auth) -> None:
+    """A TV in another home may be approved without the local-network limit."""
+    await _setup(hass)
+    client = await hass_client_no_auth()
+    req = await (await client.post("/api/alvuna/pair", json={"name": "Dom 2"})).json()
+    flow = _flow(hass, req["request_id"])
+    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {"name": "TV Słupsk", "local_only": False})
+    user = await hass.auth.async_get_user(result["result"].data["user_id"])
+    assert not user.local_only

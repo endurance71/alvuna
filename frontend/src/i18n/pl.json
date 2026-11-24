@@ -862,12 +862,17 @@
       "glass_solid_hint": "W kolorze tapety, najlżejsze",
       "glass_clear_hint": "Tapeta prześwituje",
       "ring": "Obramowanie zaznaczenia",
-      "ring_hint": "Ramka w kolorze akcentu"
+      "ring_hint": "Ramka w kolorze akcentu",
+      "connection": "Połączenie",
+      "homes": "Domy",
+      "logout": "Wyloguj ten telewizor",
+      "logout_hint": "Z domu {name}; potem nowe parowanie",
+      "logout_confirm": "Naciśnij OK jeszcze raz, żeby wylogować"
     },
     "instances": {
       "current": "Teraz wyświetlany",
-      "title": "Przełącz dom",
-      "sub": "Inny serwer Home Assistant"
+      "title": "Domy",
+      "sub": "OK przełącza, kosz usuwa z listy"
     },
     "camera": {
       "preview": "Podgląd"
@@ -969,6 +974,15 @@
     "pair_busy": "Home Assistant nie odpowiada albo nie ma w nim jeszcze Alvuny. Próbuję dalej…",
     "pair_login": "Żeby użyć własnego konta, otwórz {url}",
     "camera_unknown": "Kamery {entity} nie ma w układzie Alvuny",
-    "no_layout": "Nie ma jeszcze układu: dodaj integrację Alvuna w Home Assistancie."
+    "no_layout": "Nie ma jeszcze układu: dodaj integrację Alvuna w Home Assistancie.",
+    "home": {
+      "add": "Dodaj dom",
+      "add_hint": "Inny Home Assistant z Alvuną",
+      "add_sub": "Adres jego Home Assistanta",
+      "address_hint": "Na przykład 192.168.1.20, homeassistant.local albo https://dom.example.com. Bez portu przyjmuję 8123.",
+      "connect": "Połącz",
+      "connect_hint": "Telewizor przejdzie tam i poprosi o sparowanie",
+      "bad_address": "To nie wygląda na adres"
+    }
   }
 }

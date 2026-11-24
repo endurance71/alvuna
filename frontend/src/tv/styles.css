@@ -562,3 +562,15 @@ body.frost #home .tile.alert { position: relative; isolation: isolate; backgroun
 .tile.alert > .fzw::after { background: rgba(255,120,100,.32); }
 #home .tile.alert.f { background: rgba(255,90,78,.42); }
 #home .tile.alert.f::after { box-shadow: 0 0 0 4px var(--alert), 0 24px 48px rgba(0,0,0,.45); }
+
+/* --- Połączenie: homes, adding one, signing out ------------------------------------------------------------------ */
+.btn.round.small { width: 112px; height: 112px; flex: none; border-radius: 26px; }
+.btn.round.small hd-icon { font-size: 40px; }
+.p-input { position: relative; flex: 1; display: flex; align-items: center; gap: 22px; height: 112px; padding: 0 30px; border-radius: 26px;
+  background: rgba(0,0,0,.25); border: 1.5px solid var(--glass-line); transition: transform .3s var(--ease); }
+.p-input hd-icon { font-size: 34px; color: var(--muted); }
+.p-input input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: #fff; font: 600 34px var(--font, Figtree), sans-serif; caret-color: var(--lime); }
+.p-input input::placeholder { color: rgba(255,255,255,.3); }
+.p-input.f { transform: scale(1.03); border-color: rgba(var(--lime-rgb),.7); background: rgba(0,0,0,.35); }
+.p-input:focus-within { border-color: var(--lime); }
+.p-note { margin: 16px 6px 4px; font-size: 24px; color: var(--muted); line-height: 1.4; }
