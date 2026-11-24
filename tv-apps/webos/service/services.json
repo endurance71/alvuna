@@ -1,0 +1,10 @@
+{
+  "id": "app.alvuna.tv.service",
+  "description": "Finds Home Assistant on the local network for the Alvuna TV app",
+  "services": [
+    {
+      "name": "app.alvuna.tv.service",
+      "description": "Finds Home Assistant on the local network for the Alvuna TV app"
+    }
+  ]
+}

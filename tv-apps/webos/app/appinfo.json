@@ -1,0 +1,17 @@
+{
+  "id": "app.alvuna.tv",
+  "version": "1.0.0",
+  "vendor": "Alvuna",
+  "type": "web",
+  "main": "index.html",
+  "title": "Alvuna",
+  "appDescription": "Home Assistant on your TV",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "iconColor": "#1A6676",
+  "bgColor": "#0B2633",
+  "splashBackground": "splash.png",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true,
+  "requiredACG": []
+}

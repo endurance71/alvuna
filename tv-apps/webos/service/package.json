@@ -1,0 +1,8 @@
+{
+  "name": "app.alvuna.tv.service",
+  "version": "1.0.0",
+  "description": "Finds Home Assistant on the local network for the Alvuna TV app",
+  "main": "service.js",
+  "private": true,
+  "license": "MIT"
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- A transparent glyph: the LG launcher draws the tile itself in appinfo's iconColor (#1A6676), like its own apps'
+       white glyphs. A house holding the four deck tiles, the lit one in Alvuna lime. -->
+  <path d="M84 236 L256 88 L428 236 V420 Q428 448 400 448 H112 Q84 448 84 420 Z" fill="none" stroke="#FFFFFF" stroke-width="34" stroke-linejoin="round"/>
+  <rect x="152" y="204" width="94" height="94" rx="20" fill="#B8F03C"/>
+  <rect x="266" y="204" width="94" height="94" rx="20" fill="#FFFFFF" fill-opacity=".38"/>
+  <rect x="152" y="318" width="94" height="94" rx="20" fill="#FFFFFF" fill-opacity=".38"/>
+  <rect x="266" y="318" width="94" height="94" rx="20" fill="#FFFFFF" fill-opacity=".38"/>
+</svg>
