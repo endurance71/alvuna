@@ -1,55 +1,34 @@
 # Alvuna
 
-A Home Assistant dashboard for the wall tablet and the TV. Install it, add the integration, and your home is
-on screen: rooms from your areas, lights, scenes, weather, media, climate, cameras. No YAML, and nothing to type on the
-TV.
+Home Assistant on the TV. Install it, add the integration, open the app on the TV: your home is there, laid out for
+the remote. Rooms from your areas, lights, scenes, weather, media, climate, cameras, the washing machine, waste
+collection. Nobody builds a dashboard, and nothing is typed on the TV.
 
-- **Tablet card**: one full-screen card (`custom:alvuna-card`) for a wall tablet or a phone.
-- **TV app**: a 10-foot interface driven by the remote. It has rows of tiles, detail panels, a screensaver that
-  protects OLED screens, and full-screen cameras.
-- **Automatic layout**: built from Home Assistant's areas, floors and entities, and kept up to date as they change.
-- **TV pairing**: the TV shows a code, Home Assistant shows "Discovered: Alvuna TV", you approve it. Each TV gets its
-  own user (not an administrator, local network only), and removing the TV revokes it.
-- **English and Polish**, following each user's language and number/time formats.
+- **A ready layout**: Alvuna builds it from Home Assistant's areas, floors and devices, and keeps it current as they
+  change. It picks each room's thermometer, one player per TV, readable names, and recognises WashData appliances,
+  waste calendars, air quality and weather warnings.
+- **The Alvuna panel** in Home Assistant's sidebar, for administrators: hide what should not show, rename, reorder, add a
+  script as a scene. Changes reach every TV at once.
+- **On the TV**, hold OK on a tile to hide it.
+- **Pairing by code**: the TV shows a code; in Home Assistant, under Discovered, type it. Each TV gets its own user
+  (not an administrator; local network only unless you allow a TV in another home), and removing it revokes it.
+- **Several homes** on one TV, each paired on its own; **English and Polish**.
 
 ## Install
 
-1. In Home Assistant open **Settings → Marketplace** (HACS on 2026.10 and older). Add this repository as a custom
+1. In Home Assistant open **Settings → Marketplace** (HACS on 2026.10 and older), add this repository as a custom
    repository (`https://github.com/endurance71/alvuna`, type *Integration*) and install **Alvuna**.
-2. Restart Home Assistant.
-3. Go to **Settings → Devices & services → Add integration → Alvuna**.
-
-The card is loaded for you; there is no dashboard resource to add.
-
-## Tablet
-
-Edit a dashboard, add a card and pick **Alvuna**. With no options it shows the automatic layout. A panel view, or a
-dashboard with a single card, gives it the whole screen.
-
-Every key of the card's config overrides the automatic layout, so you can still hand-write rooms, scenes, media,
-cameras and the rest. **Settings → Devices & services → Alvuna → Configure** offers:
-
-- **Layout**:
-  - *Automatic* builds the layout from your areas.
-  - *From a dashboard* uses the Alvuna card config written on that dashboard. This is for hand-made setups.
-- **Hidden areas** and **hidden entities**.
-- **Weather**: which weather entity to use.
-- **TV screensaver after** and **TV app closes after**, in minutes.
+2. Restart Home Assistant, then **Settings → Devices & services → Add integration → Alvuna**.
 
 ## TV
 
-Open `http://<your-home-assistant>:8123/alvuna/tv/` in the TV's browser, or use the Alvuna TV app (LG webOS and
-Google TV apps are coming).
+Install the Alvuna app (LG webOS; Google TV is coming), or open `http://<your-home-assistant>:8123/alvuna/tv/` in the
+TV's browser. The app finds Home Assistant on the network and shows a code: in Home Assistant, **Settings → Devices &
+services → Discovered → Alvuna TV**, type the code and name the TV. Settings on the TV (gear in the summary panel): the
+look of the tiles, screensaver and OLED care, homes (switch, add, remove) and signing out.
 
-1. The TV shows a six-character code.
-2. In Home Assistant, **Settings → Devices & services** lists **Alvuna TV** under *Discovered*. Choose **Add**, check
-   that the code matches the screen, and name the TV.
-3. The TV opens your home.
-
-Each paired TV is a device with a **Connected** sensor, and it can be targeted by two actions:
-
-- `alvuna.notify` shows a message on the TV.
-- `alvuna.show_camera` opens a camera full screen, for example when the doorbell rings.
+Each paired TV is a device with a **Connected** sensor, and the actions `alvuna.notify` (a message on the TV) and
+`alvuna.show_camera` (a camera full screen, e.g. when the doorbell rings) can target it.
 
 ## Requirements
 
@@ -71,13 +50,12 @@ The built frontend is not committed. The release workflow builds it and attaches
 
 ## Po polsku
 
-Alvuna to pulpit Home Assistanta na tablet ścienny i telewizor.
+Alvuna to Home Assistant na telewizorze: gotowy układ z obszarów i urządzeń, bez tworzenia dashboardów.
 
 1. Zainstaluj ją z **Ustawienia → Marketplace** (albo z HACS), zrestartuj Home Assistanta i dodaj integrację
    **Alvuna**.
-2. Tablet: dodaj kartę **Alvuna** na dowolnym dashboardzie.
-3. Telewizor: otwórz `/alvuna/tv/` na telewizorze. W Home Assistancie, w sekcji *Wykryte*, zatwierdź urządzenie
-   **Alvuna TV** z kodem widocznym na ekranie.
+2. Telewizor: uruchom aplikację Alvuna (albo `/alvuna/tv/` w przeglądarce TV). W Home Assistancie, w sekcji
+   *Wykryte*, wybierz **Alvuna TV** i wpisz kod z ekranu.
 
-Układ powstaje sam z obszarów i pięter. W opcjach integracji możesz ukryć obszary i encje albo wskazać dashboard
-z ręczną konfiguracją karty.
+Układ powstaje sam z obszarów i pięter. W panelu **Alvuna** w menu bocznym ukryjesz elementy, zmienisz nazwy
+i kolejność albo dodasz skrypt jako scenę; na telewizorze przytrzymanie OK na kaflu też pozwala go ukryć.

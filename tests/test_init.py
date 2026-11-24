@@ -25,15 +25,10 @@ async def test_only_once(hass: HomeAssistant) -> None:
     assert result["reason"] == "already_configured"
 
 
-async def test_serves_card_and_tv(hass: HomeAssistant, hass_client_no_auth) -> None:
+async def test_serves_tv_and_panel(hass: HomeAssistant, hass_client_no_auth) -> None:
     entry = await _add(hass)
-    extra = hass.data["frontend_extra_module_url"]
-    url = next(u for u in extra.urls if u.startswith("/alvuna/static/alvuna-card.js?v="))
+    assert "alvuna" in hass.data["frontend_panels"]
     client = await hass_client_no_auth()
-
-    card = await client.get(url)
-    assert card.status == 200
-    assert "max-age" in card.headers["Cache-Control"]
 
     page = await client.get("/alvuna/tv/?dashboard=x")
     assert page.status == 200
@@ -41,13 +36,15 @@ async def test_serves_card_and_tv(hass: HomeAssistant, hass_client_no_auth) -> N
     html = await page.text()
     script = html.split('src="')[1].split('"')[0]
     assert (await client.get(f"/alvuna/tv/{script}")).status == 200
+    panel = await client.get("/alvuna/static/alvuna-panel.js")
+    assert panel.status == 200 and "max-age" in panel.headers["Cache-Control"]
 
     bare = await client.get("/alvuna/tv?dashboard=x", allow_redirects=False)
     assert bare.status == 302
     assert bare.headers["Location"] == "/alvuna/tv/?dashboard=x"
 
     assert await hass.config_entries.async_unload(entry.entry_id)
-    assert url not in extra.urls
+    assert "alvuna" not in hass.data["frontend_panels"]
 
 
 async def test_options(hass: HomeAssistant) -> None:

@@ -92,20 +92,6 @@ export async function connect({ onStates, onStatus }) {
 
 export const call = (conn, domain, service, data = {}, target) => haCall(conn, domain, service, data, target);
 
-// The Alvuna card config from a Lovelace dashboard: the first `custom:alvuna-card` (or the older custom:homedeck-card) anywhere in it.
-export async function loadDeckConfig(conn, dashboard) {
-  const cfg = await conn.sendMessagePromise({ type: "lovelace/config", url_path: dashboard || null });
-  const find = (v) => {
-    if (Array.isArray(v)) { for (const x of v) { const f = find(x); if (f) return f; } return null; }
-    if (!v || typeof v !== "object") return null;
-    if (v.type === "custom:alvuna-card" || v.type === "custom:homedeck-card") return v;
-    for (const x of Object.values(v)) { const f = find(x); if (f) return f; }
-    return null;
-  };
-  const card = find(cfg);
-  if (!card) throw new Error(t("tv.no_card", { dashboard }));
-  return card;
-}
 
 // The signed-in user's language and number/time formats (what HA's own frontend shows them), with the server's language
 // as the fallback, and the server's currency: what setLocale takes.
@@ -116,8 +102,6 @@ export async function userLocale(conn) {
   return { language: v.language || config?.language, numberFormat: v.number_format, timeFormat: v.time_format, currency: config?.currency,
     locationName: config?.location_name };
 }
-
-export const onDashboardChange = (conn, cb) => conn.subscribeEvents(cb, "lovelace_updated");
 
 // The layout from the integration (alvuna/layout/subscribe), now and after every change; rejects without the integration.
 export const subscribeLayout = (conn, cb) => conn.subscribeMessage(cb, { type: "alvuna/layout/subscribe" });

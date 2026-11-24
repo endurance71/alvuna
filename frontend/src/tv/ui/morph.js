@@ -1,4 +1,4 @@
-// Updates `from` in place to match `to` (from the tablet card, src/card/alvuna-card.js), so unchanged nodes keep
+// Updates `from` in place to match `to` (as in the HomeDeck tablet card), so unchanged nodes keep
 // their images, icons and running transitions. `data-keep` elements are driven from script: only their data-* follow.
 // Classes set by the focus engine (focused item, rows above the focus); the markup never carries them.
 const KEEP_CLASS = ["f", "above"];

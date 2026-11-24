@@ -1,4 +1,4 @@
-"""Serves Alvuna's frontend: the tablet card (loaded on every Home Assistant page) and the TV app."""
+"""Serves Alvuna's frontend: the TV app and the Alvuna panel in Home Assistant's sidebar."""
 
 from __future__ import annotations
 
@@ -9,17 +9,16 @@ from pathlib import Path
 from aiohttp import web
 
 from homeassistant.components import panel_custom
-from homeassistant.components.frontend import add_extra_js_url, async_remove_panel, remove_extra_js_url
+from homeassistant.components.frontend import async_remove_panel
 from homeassistant.components.http import HomeAssistantView, StaticPathConfig
 from homeassistant.core import HomeAssistant, callback
 
-from .const import CARD_FILE, DOMAIN, PANEL_FILE, URL_STATIC, URL_TV
+from .const import DOMAIN, PANEL_FILE, URL_STATIC, URL_TV
 
 _LOGGER = logging.getLogger(__name__)
 
 WWW = Path(__file__).parent / "www"
 DATA_PATHS = f"{DOMAIN}_static_paths"
-DATA_CARD_URL = f"{DOMAIN}_card_url"
 DATA_PANEL = f"{DOMAIN}_panel"
 
 
@@ -28,10 +27,9 @@ def _file_hash(path: Path) -> str:
 
 
 async def async_register_frontend(hass: HomeAssistant) -> None:
-    """Register the static paths (once per run) and add the card to the frontend."""
-    card = WWW / "static" / CARD_FILE
-    if not card.is_file():
-        _LOGGER.error("Alvuna's frontend is missing (%s); reinstall the integration", card)
+    """Register the static paths (once per run) and the sidebar panel."""
+    if not (WWW / "tv" / "index.html").is_file():
+        _LOGGER.error("Alvuna's frontend is missing (%s); reinstall the integration", WWW)
         return
     if not hass.data.get(DATA_PATHS):
         # The view goes in before the static path, so /alvuna/tv/ is the app's page and not the folder.
@@ -44,10 +42,6 @@ async def async_register_frontend(hass: HomeAssistant) -> None:
             ]
         )
         hass.data[DATA_PATHS] = True
-    version = await hass.async_add_executor_job(_file_hash, card)
-    url = f"{URL_STATIC}/{CARD_FILE}?v={version}"
-    add_extra_js_url(hass, url)
-    hass.data[DATA_CARD_URL] = url
     # The Alvuna panel in the sidebar (administrators only): the automatic layout, with hiding, names, order, additions.
     panel = WWW / "static" / PANEL_FILE
     if panel.is_file():
@@ -66,9 +60,7 @@ async def async_register_frontend(hass: HomeAssistant) -> None:
 
 @callback
 def async_unregister_frontend(hass: HomeAssistant) -> None:
-    """Stop adding the card to frontend pages."""
-    if url := hass.data.pop(DATA_CARD_URL, None):
-        remove_extra_js_url(hass, url)
+    """Take the panel out of the sidebar."""
     if hass.data.pop(DATA_PANEL, None):
         async_remove_panel(hass, DOMAIN)
 

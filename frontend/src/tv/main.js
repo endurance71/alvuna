@@ -1,8 +1,8 @@
 // Alvuna TV: a Home Assistant dashboard built for the TV and its remote. Rows of tiles (Google TV style), detail
-// panels, a screensaver for the OLED and an exit after a long idle. The data and wording rules come from the tablet
-// card's config (a `custom:homedeck-card` on the Lovelace dashboard named in ?dashboard=).
+// panels, a screensaver for the OLED and an exit after a long idle. What it shows is the layout the Alvuna integration
+// builds from the home's areas and devices, adjusted in the Alvuna panel (alvuna/layout/subscribe); nobody writes it.
 import "./ui/icons.js";
-import { connect, call, loadDeckConfig, onDashboardChange, loadForecast, cameraStream, loadHistory, subscribeNotifications, entityPlatforms,
+import { connect, call, loadForecast, cameraStream, loadHistory, subscribeNotifications, entityPlatforms,
   userLocale, hasTokens, pair, subscribeLayout, subscribeTv, signOut, hideItem } from "./ha.js";
 import { Home } from "./model/home.js";
 import { esc, time, longDate, fmtTime, wIcon } from "./model/format.js";
@@ -31,9 +31,7 @@ const APP_ICONS = ["mdi:alert", "mdi:alert-circle", "mdi:alert-circle-outline", 
   "mdi:keyboard-return", "mdi:arrow-left", "mdi:home-thermometer-outline", "mdi:play-circle-outline", "mdi:history", "mdi:shield-off-outline", "mdi:bell-outline", "mdi:bell-ring-outline", "mdi:battery-low", "mdi:battery-alert-variant-outline", "mdi:package-up", "mdi:account-group-outline", "mdi:trash-can-outline", "mdi:check-circle-outline", "mdi:check", "mdi:eye-off-outline", "mdi:debug-step-over", "mdi:bell-check-outline", "mdi:monitor-star", "mdi:brightness-6", "mdi:cursor-move", "mdi:exit-run", "mdi:blur", "mdi:animation-outline", "mdi:check-bold", "mdi:border-radius", "mdi:home-plus-outline", "mdi:logout", "mdi:home-remove-outline", "mdi:home-switch-outline", "mdi:home-outline", "mdi:arrow-right", "mdi:web", "mdi:dots-horizontal-circle-outline", "mdi:close"];
 const params = new URLSearchParams(location.search);
 let instances = loadInstances();
-// ?dashboard=<path> reads the Alvuna card written on that dashboard; without it the layout comes from the integration.
-let dashboard = params.get("dashboard") || "";
-let instance = currentInstance(instances, dashboard);
+let instance = currentInstance(instances);
 
 const S = { states: {}, config: null, panel: null, camera: null, camUi: { stripHidden: false, live: false }, forecast: null,
   status: "connecting", toast: "", pending: {}, saver: false, lastInput: Date.now(), hist: {}, notifs: {}, platforms: {},
@@ -541,7 +539,7 @@ async function refreshForecast(force) {
 }
 
 async function loadConfig(config) {
-  S.config = config || await loadDeckConfig(conn, dashboard);
+  S.config = config;
   watched = home().watched();
   seen = {};
   for (const id of watched) seen[id] = S.states[id];
@@ -710,24 +708,19 @@ async function pairScreen() {
     instance = instances[0];
     saveInstances(instances);
     document.documentElement.lang = loc.language || language();
-    if (dashboard) await loadConfig();
-    else {
-      // The integration's layout, kept current; without the integration the old default dashboard is the fallback.
-      let first;
-      const ready = new Promise((ok) => { first = ok; });
-      await subscribeLayout(conn, (ev) => {
-        if (ev.source === "dashboard") { dashboard = ev.dashboard; loadConfig().then(first, first); }
-        else if (ev.config) loadConfig(ev.config).then(first, first);
-        else first();
-      }).catch(() => { dashboard = "homedeck-test"; return loadConfig(); });
-      await Promise.race([ready, new Promise((ok) => setTimeout(ok, 8000))]);
-      if (!S.config) throw new Error(t("tv.no_layout"));
-    }
+    // The integration's layout, kept current (a change in the panel or in HA's areas reaches the screen by itself).
+    let first;
+    const ready = new Promise((ok) => { first = ok; });
+    await subscribeLayout(conn, (ev) => {
+      if (ev.config) loadConfig(ev.config).then(first, first);
+      else first();
+    }).catch(() => first());
+    await Promise.race([ready, new Promise((ok) => setTimeout(ok, 8000))]);
+    if (!S.config) throw new Error(t("tv.no_layout"));
     subscribeTv(conn, tvMessage).catch(() => {});
     refreshCamStills(home(), schedule);
     subscribeNotifications(conn, (all) => { S.notifs = all; schedule(); }).catch(() => {});
     entityPlatforms(conn).then((p) => { S.platforms = p; schedule(); });
-    onDashboardChange(conn, (ev) => { if (dashboard && (ev.data?.url_path || null) === dashboard) loadConfig().catch(() => {}); });
     refreshForecast();
     setInterval(() => refreshForecast(), 15 * 60000);
     setInterval(tick, 1000);

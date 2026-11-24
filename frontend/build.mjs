@@ -17,8 +17,6 @@ mkdirSync(`${WWW}static/fonts`, { recursive: true });
 mkdirSync(`${WWW}tv`, { recursive: true });
 cpSync("static/fonts", `${WWW}static/fonts`, { recursive: true });
 
-await build({ entryPoints: ["src/card/alvuna-card.js"], outfile: `${WWW}static/alvuna-card.js`, bundle: true, minify: true,
-  format: "esm", target: "es2022", external, logLevel: "warning" });
 // The Alvuna panel in the sidebar (administrators only), registered by frontend.py through panel_custom.
 await build({ entryPoints: ["src/panel/alvuna-panel.js"], outfile: `${WWW}static/alvuna-panel.js`, bundle: true, minify: true,
   format: "esm", target: "es2022", external, logLevel: "warning" });

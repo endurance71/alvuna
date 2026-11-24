@@ -1,12 +1,11 @@
 // The homes this TV knows: Home Assistant servers with Alvuna, kept in this origin's storage as "homedeck-instances"
-//   [{ id, name, url, dashboard? }]
+//   [{ id, name, url }]
 // Each server signs the TV in on its own (pairing, see ha.js): no token is ever stored in this list or passed along.
 // Switching opens the other server's /alvuna/tv/ with the list in the fragment (#instances=…, which the browser never
 // sends to a server), so the list follows the TV from home to home; that server pairs the TV if it does not know it yet.
 const KEY = "homedeck-instances";
 
-const clean = (x) => ({ id: String(x.id), name: String(x.name || x.id), url: String(x.url).replace(/\/$/, ""),
-  ...(x.dashboard ? { dashboard: String(x.dashboard) } : {}) });
+const clean = (x) => ({ id: String(x.id), name: String(x.name || x.id), url: String(x.url).replace(/\/$/, "") });
 
 export function loadInstances() {
   let list = [];
@@ -29,8 +28,8 @@ export function saveInstances(list) {
 const sameOrigin = (url) => { try { return new URL(url).origin === location.origin; } catch (e) { return false; } };
 
 // This server, from the list or as it is: always "here".
-export function currentInstance(list, dashboard) {
-  return list.find((x) => sameOrigin(x.url)) || { id: location.host, name: location.hostname, url: location.origin, dashboard };
+export function currentInstance(list) {
+  return list.find((x) => sameOrigin(x.url)) || { id: location.host, name: location.hostname, url: location.origin };
 }
 
 // The list with this server first, named after its home, so the TV can come back here from any other home.
@@ -70,6 +69,5 @@ export async function reachable(inst) {
 
 export function switchTo(inst, list) {
   const base = inst.url.replace(/\/$/, "");
-  const q = inst.dashboard ? `?${new URLSearchParams({ dashboard: inst.dashboard })}` : "";
-  location.href = `${base}/alvuna/tv/${q}#${new URLSearchParams({ instances: JSON.stringify(list.map(clean)) })}`;
+  location.href = `${base}/alvuna/tv/#${new URLSearchParams({ instances: JSON.stringify(list.map(clean)) })}`;
 }

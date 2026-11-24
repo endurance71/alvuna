@@ -1,4 +1,4 @@
-// Wording and number formats, taken over from the tablet card (src/card/alvuna-card.js) so both read the same.
+// Wording and number formats, taken over from the HomeDeck tablet card.
 
 import { t, table, date } from "../../shared/i18n.js";
 

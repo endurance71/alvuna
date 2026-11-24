@@ -1,5 +1,5 @@
-// What the screen shows, worked out from Home Assistant's states and the Alvuna card config. Same rules as the tablet
-// card (src/card/alvuna-card.js: _securityItems, _thermo, _climateSensors, _wxNow, _air, _wxAlert, _sceneOn, _who,
+// What the screen shows, worked out from Home Assistant's states and Alvuna's layout. Same rules as the HomeDeck tablet
+// card (HomeDeck's homedeck-card.js: _securityItems, _thermo, _climateSensors, _wxNow, _air, _wxAlert, _sceneOn, _who,
 // _mediaInfo), written as plain functions over (states, config) so the TV app needs no Lovelace card around them.
 import { ids, isNum, AIR_BAD, BRANDS, tvApp, APP_ACTIVE, APP_DONE } from "./format.js";
 import { t, table } from "../../shared/i18n.js";

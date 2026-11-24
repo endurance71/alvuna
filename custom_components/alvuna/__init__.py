@@ -1,4 +1,4 @@
-"""Alvuna: a Home Assistant dashboard for wall tablets and TVs."""
+"""Alvuna: Home Assistant on the TV, a dashboard built for the remote."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Alvuna itself serves the card, the TV app and pairing; a paired TV gets its device and sensor."""
+    """Alvuna itself serves the TV app, its panel and pairing; a paired TV gets its device and sensor."""
     if entry.data.get(CONF_KIND) == KIND_TV:
         await hass.config_entries.async_forward_entry_setups(entry, TV_PLATFORMS)
         return True
@@ -49,7 +49,7 @@ async def _options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if entry.data.get(CONF_KIND) == KIND_TV:
         return await hass.config_entries.async_unload_platforms(entry, TV_PLATFORMS)
-    # The static paths stay until Home Assistant restarts; the card stops loading on new pages.
+    # The static paths stay until Home Assistant restarts; the panel leaves the sidebar.
     async_unregister_frontend(hass)
     async_unload_pairing(hass)
     hass.data.pop(DATA_OVERRIDES, None)
