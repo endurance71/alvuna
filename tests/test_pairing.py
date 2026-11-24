@@ -1,7 +1,6 @@
 """Pairing a TV, its channel and its removal."""
 
 from http import HTTPStatus
-from unittest.mock import patch
 
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
@@ -9,7 +8,13 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from datetime import timedelta
+
+from homeassistant.util import dt as dt_util
+from pytest_homeassistant_custom_component.common import async_fire_time_changed
+
 from custom_components.alvuna.const import DOMAIN
+from custom_components.alvuna.pairing import DATA_PAIRING, EXPIRES
 
 
 async def _setup(hass: HomeAssistant):
@@ -88,11 +93,14 @@ async def test_limits_and_expiry(hass: HomeAssistant, hass_client_no_auth) -> No
     codes = [await client.post("/api/alvuna/pair", json={}) for _ in range(4)]
     assert [c.status for c in codes] == [200, 200, 200, HTTPStatus.TOO_MANY_REQUESTS]
     first = await codes[0].json()
-    with patch("custom_components.alvuna.pairing.time.monotonic", return_value=10**9):
-        gone = await client.get(f"/api/alvuna/pair/{first['request_id']}", headers={"X-Alvuna-Secret": first["secret"]})
-        assert gone.status == HTTPStatus.NOT_FOUND
-        await hass.async_block_till_done()
-        assert not hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    # Ten minutes pass and nobody asks again: the timer alone clears the Discovered cards.
+    for req in hass.data[DATA_PAIRING].requests.values():
+        req.created -= EXPIRES + 1
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=EXPIRES + 5))
+    await hass.async_block_till_done()
+    assert not hass.config_entries.flow.async_progress_by_handler(DOMAIN)
+    gone = await client.get(f"/api/alvuna/pair/{first['request_id']}", headers={"X-Alvuna-Secret": first["secret"]})
+    assert gone.status == HTTPStatus.NOT_FOUND
 
 
 async def test_person_browser_gets_empty_channel(hass: HomeAssistant, hass_ws_client) -> None:

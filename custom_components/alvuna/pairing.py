@@ -13,6 +13,7 @@ ten minutes to approve, and the tokens only go to the holder of the secret, once
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from http import HTTPStatus
 import secrets
@@ -26,6 +27,7 @@ from homeassistant.auth.models import User
 from homeassistant.components.http import KEY_HASS, HomeAssistantView
 from homeassistant.config_entries import SOURCE_INTEGRATION_DISCOVERY
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.event import async_call_later
 
 from .const import DOMAIN, URL_TV
 
@@ -61,6 +63,7 @@ class Pairing:
         self.hass = hass
         self.requests: dict[str, Request] = {}
         self.by_address: dict[str, list[float]] = {}
+        self._timers: list[Callable[[], None]] = []
 
     @callback
     def _prune(self) -> None:
@@ -95,7 +98,20 @@ class Pairing:
             data={"request_id": req.request_id, "code": req.code, "name": name},
         )
         req.flow_id = result.get("flow_id")
+        # The "Discovered" card goes away by itself when the code expires, even if nothing asks again.
+        self._timers.append(async_call_later(self.hass, EXPIRES + 1, self._expire))
         return req
+
+    @callback
+    def _expire(self, _now: Any) -> None:
+        self._timers = self._timers[1:]
+        self._prune()
+
+    @callback
+    def async_stop(self) -> None:
+        for cancel in self._timers:
+            cancel()
+        self._timers = []
 
     @callback
     def get(self, request_id: str) -> Request | None:
@@ -185,4 +201,6 @@ def async_setup_pairing(hass: HomeAssistant) -> None:
 
 @callback
 def async_unload_pairing(hass: HomeAssistant) -> None:
+    if pairing := hass.data.get(DATA_PAIRING):
+        pairing.async_stop()
     hass.data[DATA_PAIRING] = None
