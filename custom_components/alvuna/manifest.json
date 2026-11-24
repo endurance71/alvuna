@@ -1,9 +1,15 @@
 {
   "domain": "alvuna",
   "name": "Alvuna",
-  "codeowners": ["@endurance71"],
+  "codeowners": [
+    "@endurance71"
+  ],
   "config_flow": true,
-  "dependencies": ["frontend", "http"],
+  "dependencies": [
+    "frontend",
+    "http",
+    "websocket_api"
+  ],
   "documentation": "https://github.com/endurance71/alvuna",
   "integration_type": "hub",
   "iot_class": "local_push",

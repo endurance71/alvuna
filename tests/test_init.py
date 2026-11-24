@@ -48,3 +48,15 @@ async def test_serves_card_and_tv(hass: HomeAssistant, hass_client_no_auth) -> N
 
     assert await hass.config_entries.async_unload(entry.entry_id)
     assert url not in extra.urls
+
+
+async def test_options(hass: HomeAssistant) -> None:
+    entry = await _add(hass)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"source": "dashboard"})
+    assert result["errors"] == {"dashboard": "dashboard_required"}
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"source": "dashboard", "dashboard": "dom", "tv_screensaver_minutes": 5, "tv_idle_minutes": 0})
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options == {"source": "dashboard", "dashboard": "dom", "tv_screensaver_minutes": 5, "tv_idle_minutes": 0}

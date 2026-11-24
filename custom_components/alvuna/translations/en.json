@@ -9,5 +9,42 @@
     "abort": {
       "already_configured": "Alvuna is already set up."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Alvuna",
+        "description": "Alvuna builds the tablet and TV screens from your areas, floors and entities. Hide what should not show and pick a few things here; the rest follows Home Assistant.",
+        "data": {
+          "source": "Layout",
+          "dashboard": "Dashboard",
+          "hidden_areas": "Hidden areas",
+          "hidden_entities": "Hidden entities",
+          "weather": "Weather",
+          "tv_screensaver_minutes": "TV screensaver after",
+          "tv_idle_minutes": "TV app closes after"
+        },
+        "data_description": {
+          "source": "Automatic follows your areas. From a dashboard uses the Alvuna card's own settings written on that dashboard.",
+          "dashboard": "Its URL path, e.g. dashboard-home. Only for the dashboard layout.",
+          "hidden_areas": "Areas that get no room tile.",
+          "hidden_entities": "Entities left out everywhere.",
+          "weather": "Leave empty to use the first weather entity.",
+          "tv_screensaver_minutes": "Minutes without a key press. 0 turns it off.",
+          "tv_idle_minutes": "Minutes without a key press. 0 keeps it open."
+        }
+      }
+    },
+    "error": {
+      "dashboard_required": "Enter the dashboard's URL path."
+    }
+  },
+  "selector": {
+    "source": {
+      "options": {
+        "auto": "Automatic",
+        "dashboard": "From a dashboard"
+      }
+    }
   }
 }
