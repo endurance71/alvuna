@@ -325,9 +325,17 @@ window.addEventListener("keydown", (ev) => {
     ev.preventDefault();
     if (closeLayer()) return;
     if (!focus.isFirstLine()) { focus.toFirstLine(); return; }
-    if (WEBOS) window.close();
+    if (WEBOS) platformBack();
   }
 });
+// Back on the first row leaves the way the TV does it (webOS 23 and later go Home, older ones show the system's exit
+// prompt), as LG's app review requires; window.close() is meant only for an app's own exit popup. This is what
+// webOSTV.js webOS.platformBack() calls.
+function platformBack() {
+  if (window.webOS?.platformBack) window.webOS.platformBack();
+  else if (window.PalmSystem?.platformBack) window.PalmSystem.platformBack();
+  else window.close();
+}
 // The Magic Remote wheel moves between rows (the pointer itself never scrolls the page).
 let wheelAt = 0;
 window.addEventListener("wheel", (ev) => {

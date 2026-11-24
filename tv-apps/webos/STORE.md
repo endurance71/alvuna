@@ -154,16 +154,16 @@ without it the app may be rejected before QA. LG also asks for a UX scenario doc
 | Every selectable item shows a visible focus, no exception | white card with lime border | yes (focus ring/scale) |
 | Magic Remote pointer reaches all selectable UI | hover focuses, click selects | `pointermove` focuses, click = OK, wheel = rows |
 | Back closes the top layer / goes up a level | manual entry → previous screen | panel → close, row → first row |
-| Back on the first screen: Home (webOS 23–25), exit popup or Home per the Back guide (6.0+) | `webOS.platformBack()` / `PalmSystem.platformBack()`, `window.close()` only outside webOS | **calls `window.close()`** |
+| Back on the first screen: Home (webOS 23–25), exit popup or Home per the Back guide (6.0+) | `webOS.platformBack()` / `PalmSystem.platformBack()`, `window.close()` only outside webOS | the same (`platformBack()` in `main.js`) |
 | No black screen while loading | splash + spinner | its own loading screen |
 | Network loss handled | "No connection", retry every 15 s, follows the server to a new address | "Reconnecting" pill, reconnects |
 | Text and buttons big enough (20 px text, 75×75 px targets at 1920×1080, recommended) | 32 px text, 88 px buttons | check |
 | No credentials or tokens in the package | `build.sh` refuses them | served by Home Assistant, not packaged |
 
-- [ ] **TV app Back on the first screen.** It calls `window.close()` (`frontend/src/tv/main.js`, the `isBack` branch),
-  which LG reserves for a custom exit popup. Switch it to the platform's back (`PalmSystem.platformBack()`, which is
-  what webOSTV.js `webOS.platformBack()` calls) before submitting, so webOS 23–25 show Home and 6.x/22 show the system
-  exit prompt.
+- [x] **TV app Back on the first screen** uses the platform's back (`PalmSystem.platformBack()`, what webOSTV.js
+  `webOS.platformBack()` calls), not `window.close()`, which LG reserves for an app's own exit popup. webOS 23–25 go
+  Home, 6.x/22 show the system's exit prompt.
+- [ ] Press Back on the first row on the TV once the integration with this change is running on Home Assistant.
 - [ ] **TV app closes itself when idle** (`tv_idle_minutes`, `window.close()`). LG has no public rule against it, but QA
   may report the app "disappearing". Mention it in the reviewer notes or turn it off by default.
 - [ ] Re-test on the TV: every screen reachable and leavable with arrows, OK and Back only; again with the pointer only.
