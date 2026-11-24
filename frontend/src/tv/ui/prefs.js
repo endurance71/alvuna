@@ -31,7 +31,7 @@ export function applyPrefs() {
   const p = prefs();
   document.body.classList.toggle("frost", p.glass === "frost");
   document.body.classList.toggle("solid", p.glass === "solid");
-  document.body.classList.toggle("ring", p.ring);
+  document.body.classList.toggle("focus-ring", p.ring); // not "ring": .ring is the progress ring's class
   document.body.classList.toggle("no-anim", !p.anim);
 }
 // One step of a setting with STEPS: minutes from the value in effect (this TV's or Home Assistant's), clamped at the

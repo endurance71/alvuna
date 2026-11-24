@@ -11,15 +11,26 @@
 import { currentWallpaper } from "./wallpapers.js";
 import { animOn } from "./prefs.js";
 
-const SEL = "#home .tile:not(.on):not(.cam):not(.alert), #home .td-card, #home .instance, #edge .edge";
+const SEL = "#home .tile:not(.on):not(.cam), #home .td-card, #home .instance, #edge .edge";
 const W = 480, H = 270;
 let master = null, masterFor = "";
 
-// The blurred wallpaper once, at 480×270, as Apple's glass shows it: the colours behind come through, toned down and
-// under a white veil, so the tile reads as a lighter pane of frosted glass over the wallpaper (not a darker hole, and
-// not a neon slab either: full brightness and extra saturation made blue wallpapers glow). Done once per wallpaper.
-const GLASS = { saturate: 1.0, brightness: .75, veilTop: .20, veilBottom: .14, floor: 0 };
-function glaze(x) {
+// The wallpaper under glass, drawn once at 480×270 as Apple's glass shows it: the photo itself, only lightly blurred
+// (blur 5 here is ~20 px on screen), so the shapes behind (a ridge, the lights) still show through, under a thin white
+// veil that makes the tile a lighter pane. The pre-blurred frost copy made a flat, nearly opaque pane. A canvas blur
+// is slow on the TV, but it runs once per wallpaper on a 480×270 image.
+const GLASS = { blur: 5, saturate: 1.15, brightness: 1.0, lift: .75, veilTop: .12, veilBottom: .10, floor: 0 };
+function glaze(x, w) {
+  // The darkest parts of the wallpaper (a forest at the foot of a photo) are lifted to the wallpaper's own colour, so
+  // the glass over them is a dim tinted pane and not a black slab; brighter parts are left as they are ("lighten").
+  const tone = /^#([0-9a-f]{6})$/i.exec(w.tone || "");
+  if (tone) {
+    const n = parseInt(tone[1], 16), c = (v) => Math.round(v * GLASS.lift);
+    x.globalCompositeOperation = "lighten";
+    x.fillStyle = `rgb(${c(n >> 16)},${c((n >> 8) & 255)},${c(n & 255)})`;
+    x.fillRect(0, 0, W, H);
+    x.globalCompositeOperation = "source-over";
+  }
   const v = x.createLinearGradient(0, 0, 0, H);
   v.addColorStop(0, `rgba(255,255,255,${GLASS.veilTop})`); v.addColorStop(1, `rgba(255,255,255,${GLASS.veilBottom})`);
   x.fillStyle = v; x.fillRect(0, 0, W, H);
@@ -31,17 +42,22 @@ async function buildMaster(w) {
   c.width = W; c.height = H;
   const x = c.getContext("2d");
   const im = new Image();
-  if (w.photo) im.src = w.frostImg;
+  if (w.photo) im.src = w.img || w.frostImg;
   else {
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080"><foreignObject width="100%" height="100%">
       <div xmlns="http://www.w3.org/1999/xhtml" style="width:1920px;height:1080px;background:${w.bg.replace(/"/g, "'")}"></div></foreignObject></svg>`;
     im.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
   }
   await im.decode();
-  x.filter = `saturate(${GLASS.saturate}) brightness(${GLASS.brightness})`;
-  x.drawImage(im, 0, 0, W, H);
+  // Cropped like the wallpaper itself (center/cover): a photo that is not 16:9 would otherwise be squeezed, and the glass
+  // would show another part of it than the wallpaper around the tile. Drawn a little larger than the canvas so the blur
+  // does not darken the edges.
+  const iw = im.naturalWidth || W, ih = im.naturalHeight || H, k = Math.max(W / iw, H / ih), m = GLASS.blur * 2;
+  const dw = iw * k, dh = ih * k;
+  x.filter = `blur(${GLASS.blur}px) saturate(${GLASS.saturate}) brightness(${GLASS.brightness})`;
+  x.drawImage(im, (W - dw) / 2 - m, (H - dh) / 2 - m, dw + 2 * m, dh + 2 * m);
   x.filter = "none";
-  glaze(x);
+  glaze(x, w);
   return c;
 }
 

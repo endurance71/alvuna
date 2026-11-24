@@ -34,6 +34,8 @@ const shade = "linear-gradient(180deg, rgba(4,12,18,.30) 0%, rgba(4,12,18,.50) 4
 const photo = (id, tone, base = "#05090D") => ({ id: `foto-${id}`, tone, photo: true, base,
   // The blurred copy frosted glass shows (frost.js draws it with a lighter shade, so the photo shows through).
   frostImg: `${PHOTOS}/frost/${id}.webp?v=${PHOTO_V}`,
+  // The photo itself: frost.js blurs it lightly for glass that lets the shapes behind show through.
+  img: `${PHOTOS}/${id}.webp?v=${PHOTO_V}`,
   bg: `${shade}, url(${PHOTOS}/${id}.webp?v=${PHOTO_V}) center/cover no-repeat`,
   preview: `${shade}, url(${PHOTOS}/thumbs/${id}.webp?v=${PHOTO_V}) center/cover no-repeat` });
 WALLPAPERS.push(
