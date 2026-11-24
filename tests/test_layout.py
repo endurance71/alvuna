@@ -62,6 +62,20 @@ async def test_layout_from_areas(hass: HomeAssistant) -> None:
     assert layout["persons"] == ["person.ala"]
 
 
+async def test_area_sensor_choice(hass: HomeAssistant) -> None:
+    ids = await _home(hass)
+    areas, ents = ar.async_get(hass), er.async_get(hass)
+    _entity(hass, ents, "sensor.salon_wilg", ids["living"], "50", device_class="humidity")
+    # The area names a humidity sensor that no longer reports (renamed or removed) and an existing temperature one.
+    _entity(hass, ents, "sensor.stary", ids["living"], "40", device_class="humidity")
+    _entity(hass, ents, "sensor.salon_temp2", ids["living"], "22", device_class="temperature")
+    areas.async_update(ids["living"], humidity_entity_id="sensor.stary", temperature_entity_id="sensor.salon_temp2")
+    hass.states.async_remove("sensor.stary")
+    salon = build_layout(hass, {})["rooms"][0]
+    assert salon["temperature"] == "sensor.salon_temp2"
+    assert salon["humidity"] == "sensor.salon_wilg"
+
+
 async def test_hiding(hass: HomeAssistant) -> None:
     ids = await _home(hass)
     layout = build_layout(hass, {CONF_HIDDEN_AREAS: [ids["garage"]], CONF_HIDDEN_ENTITIES: ["light.lampka"]})

@@ -308,6 +308,14 @@ hd-icon.xl { font-size: 120px; }
 .fatal .logo { width: 130px; height: 130px; display: block; }
 .fatal h1 { margin: 16px 0 0; font-size: 56px; font-weight: 600; }
 .fatal p { margin: 0; font-size: 30px; color: var(--muted); }
+/* Pairing: the code is read off the screen from the sofa and typed nowhere, only compared, so it is large and spaced. */
+.pair .code { display: flex; gap: 14px; margin: 28px 0 24px; }
+.pair .code span { width: 92px; height: 120px; display: grid; place-items: center; border-radius: 22px; background: var(--glass);
+  border: 1.5px solid var(--glass-line); font-size: 76px; font-weight: 600; color: var(--accent, #B8F03C); }
+.pair p { max-width: 1100px; line-height: 1.4; }
+.pair p.small { margin-top: 26px; font-size: 24px; opacity: .7; }
+.pill.note { max-width: 900px; font-size: 30px; padding: 22px 32px; border-radius: 32px; align-items: flex-start; }
+.pill.note b { font-weight: 600; }
 
 /* --- header variants (?hero= / tv_hero) -------------------------------------------------------------- */
 /* glance: a lower header, then one row of large status pills. */

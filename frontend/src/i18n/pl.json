@@ -186,7 +186,6 @@
         "other": "zmiana {n} dni temu"
       }
     },
-    "config_rooms": "homedeck-card: zdefiniuj rooms",
     "card_description": "Pulpit domu na tablet",
     "close": "Zamknij",
     "settings": "Ustawienia",
@@ -241,7 +240,11 @@
         "many": "{n} dni",
         "other": "{n} dni"
       }
-    }
+    },
+    "loading_layout": "Wczytuję dom…",
+    "no_integration": "Dodaj integrację Alvuna (Ustawienia → Urządzenia i usługi) albo wpisz pokoje w tej karcie.",
+    "no_dashboard_card": "Na dashboardzie „{dashboard}” nie ma karty Alvuna z pokojami.",
+    "no_rooms": "Nie ma jeszcze pokoi: przypisz światła albo czujniki temperatury do obszarów w Home Assistancie."
   },
   "cleaning": {
     "vacuum_state": {
@@ -939,6 +942,13 @@
       "koral": "Koral",
       "zloto": "Złoto",
       "bialy": "Biel"
-    }
+    },
+    "pair_title": "Sparuj ten telewizor",
+    "pair_asking": "Pytam Home Assistanta o kod…",
+    "pair_steps": "W Home Assistancie otwórz Ustawienia → Urządzenia i usługi. W sekcji Wykryte dodaj Alvuna TV i sprawdź, czy pokazuje ten kod.",
+    "pair_busy": "Home Assistant nie odpowiada albo nie ma w nim jeszcze Alvuny. Próbuję dalej…",
+    "pair_login": "Żeby użyć własnego konta, otwórz {url}",
+    "camera_unknown": "Kamery {entity} nie ma w układzie Alvuny",
+    "no_layout": "Nie ma jeszcze układu: dodaj integrację Alvuna w Home Assistancie."
   }
 }

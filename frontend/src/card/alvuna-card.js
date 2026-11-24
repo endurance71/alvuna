@@ -246,6 +246,14 @@ const PAGE_TOP = "#165566";
 // under the deck (and the bottom overscroll) never shows a lighter band.
 const PAGE_BG = `linear-gradient(180deg, ${PAGE_TOP} 0%, #0F3B49 35%, #0B2633 70%, #081A24 100%) no-repeat #081A24`;
 const fold = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/ł/g, "l").replace(/Ł/g, "L").toLowerCase();
+// The first Alvuna card config in a Lovelace dashboard config (any depth), with rooms written out.
+const findDeckConfig = (v) => {
+  if (Array.isArray(v)) { for (const x of v) { const f = findDeckConfig(x); if (f) return f; } return null; }
+  if (!v || typeof v !== "object") return null;
+  if ((v.type === "custom:alvuna-card" || v.type === "custom:homedeck-card") && Array.isArray(v.rooms)) return v;
+  for (const x of Object.values(v)) { const f = findDeckConfig(x); if (f) return f; }
+  return null;
+};
 const ids = (list) => (list || []).map((x) => (typeof x === "string" ? x : x.entity));
 const fmtTime = (s) => {
   if (!isFinite(s) || s < 0) return "0:00";
@@ -1326,8 +1334,54 @@ ha-icon { transition: color .45s ease; }
 `;
 
 class HomedeckCard extends HTMLElement {
+  // Picked from the card list: an empty config means "the automatic layout from the Alvuna integration".
+  static getStubConfig() { return {}; }
+
+  // With `rooms` the card shows the config as written. Without it the layout comes from the integration
+  // (alvuna/layout/subscribe: built from areas, or read from the dashboard named in its options), and every key written
+  // here still overrides the matching key of that layout.
   setConfig(config) {
-    if (!Array.isArray(config.rooms) || !config.rooms.length) throw new Error(t("common.config_rooms"));
+    this._own = config || {};
+    this._layoutKey = null;
+    if (Array.isArray(config?.rooms) && config.rooms.length) this._apply(config);
+    else { this._config = null; if (this._hass) this._subscribeLayout(); }
+  }
+
+  _subscribeLayout() {
+    if (this._layoutSub || !this._hass?.connection) return;
+    this._waiting(t("common.loading_layout"));
+    this._layoutSub = this._hass.connection.subscribeMessage((ev) => this._layout(ev), { type: "alvuna/layout/subscribe" })
+      .catch(() => { this._layoutSub = null; this._waiting(t("common.no_integration")); });
+  }
+
+  async _layout(ev) {
+    let base = ev.config;
+    if (ev.source === "dashboard") {
+      try {
+        const cfg = await this._hass.connection.sendMessagePromise({ type: "lovelace/config", url_path: ev.dashboard });
+        base = findDeckConfig(cfg);
+      } catch (e) { base = null; }
+      if (!base) { this._waiting(t("common.no_dashboard_card", { dashboard: ev.dashboard })); return; }
+    }
+    if (!base) { this._waiting(t("common.no_integration")); return; }
+    const config = { ...base, ...this._own };
+    const key = JSON.stringify(config);
+    if (key === this._layoutKey) return;
+    this._layoutKey = key;
+    if (!config.rooms?.length) { this._waiting(t("common.no_rooms")); return; }
+    this._apply(config);
+  }
+
+  // Before the deck is drawn (no shadow root yet), a line of plain text in the card's own light DOM.
+  _waiting(text) {
+    if (this.shadowRoot) return;
+    this.style.cssText += ";display:block;padding:24px;font:16px/1.4 var(--primary-font-family, sans-serif);color:var(--secondary-text-color)";
+    this.textContent = text;
+  }
+
+  _apply(config) {
+    // Cameras may be written as plain entity ids, like every other list; the camera code reads objects.
+    if (Array.isArray(config.cameras)) config = { ...config, cameras: config.cameras.map((x) => (typeof x === "string" ? { entity: x } : x)) };
     this._config = config;
     LITE = liteFor(config);
     this.toggleAttribute("lite", LITE);
@@ -1361,7 +1415,7 @@ class HomedeckCard extends HTMLElement {
     const relocale = setLocale({ language: hass.locale?.language || hass.language, numberFormat: hass.locale?.number_format,
       timeFormat: hass.locale?.time_format, currency: hass.config?.currency });
     if (relocale) this._heatChartFor = null;
-    if (!this._config) return;
+    if (!this._config) { if (this._own && !this._own.rooms) this._subscribeLayout(); return; }
     this._camHold(hass);
     const todo = this._todoOpen && hass.states[this._todoOpen];
     if (todo && todo !== this._todoState) { this._todoState = todo; this._loadTodo(); }
@@ -1395,6 +1449,9 @@ class HomedeckCard extends HTMLElement {
     this._pageChrome(false);
     this._lockScroll(false);
     this._tvBind(false);
+    // The layout subscription ends with the card; set hass on the next page opens it again.
+    this._layoutSub?.then((unsub) => unsub?.()).catch(() => {});
+    this._layoutSub = null;
   }
 
   // While the deck is on screen, paint HA's own page background and the browser's theme colour with the deck's

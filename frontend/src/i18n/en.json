@@ -178,7 +178,6 @@
         "other": "changed {n} days ago"
       }
     },
-    "config_rooms": "homedeck-card: define rooms",
     "card_description": "Home dashboard for a wall tablet",
     "close": "Close",
     "settings": "Settings",
@@ -229,7 +228,11 @@
         "one": "{n} day",
         "other": "{n} days"
       }
-    }
+    },
+    "loading_layout": "Loading your home…",
+    "no_integration": "Add the Alvuna integration (Settings → Devices & services), or write rooms in this card.",
+    "no_dashboard_card": "No Alvuna card with rooms on the dashboard “{dashboard}”.",
+    "no_rooms": "No rooms yet: assign lights or temperature sensors to areas in Home Assistant."
   },
   "cleaning": {
     "vacuum_state": {
@@ -903,6 +906,13 @@
       "koral": "Coral",
       "zloto": "Gold",
       "bialy": "White"
-    }
+    },
+    "pair_title": "Pair this TV",
+    "pair_asking": "Asking Home Assistant for a code…",
+    "pair_steps": "In Home Assistant open Settings → Devices &amp; services. Under Discovered, add Alvuna TV and check that it shows this code.",
+    "pair_busy": "Home Assistant is not answering, or Alvuna is not set up there yet. Trying again…",
+    "pair_login": "To use your own account instead, open {url}",
+    "camera_unknown": "Camera {entity} is not in Alvuna’s layout",
+    "no_layout": "No layout yet: add the Alvuna integration in Home Assistant."
   }
 }

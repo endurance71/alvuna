@@ -3,7 +3,7 @@
 // card's config (a `custom:homedeck-card` on the Lovelace dashboard named in ?dashboard=).
 import "./ui/icons.js";
 import { connect, call, loadDeckConfig, onDashboardChange, loadForecast, cameraStream, loadHistory, subscribeNotifications, entityPlatforms,
-  userLocale } from "./ha.js";
+  userLocale, hasTokens, pair, subscribeLayout, subscribeTv } from "./ha.js";
 import { Home } from "./model/home.js";
 import { esc, time, longDate, fmtTime, wIcon } from "./model/format.js";
 import { setLocale, t, language } from "../shared/i18n.js";
@@ -31,7 +31,8 @@ const APP_ICONS = ["mdi:alert", "mdi:alert-circle", "mdi:alert-circle-outline", 
   "mdi:keyboard-return", "mdi:arrow-left", "mdi:home-thermometer-outline", "mdi:play-circle-outline", "mdi:history", "mdi:shield-off-outline", "mdi:bell-outline", "mdi:bell-ring-outline", "mdi:battery-low", "mdi:battery-alert-variant-outline", "mdi:package-up", "mdi:account-group-outline", "mdi:trash-can-outline", "mdi:check-circle-outline", "mdi:check", "mdi:eye-off-outline", "mdi:debug-step-over", "mdi:bell-check-outline"];
 const params = new URLSearchParams(location.search);
 const instances = loadInstances();
-const dashboard = params.get("dashboard") || "homedeck-test";
+// ?dashboard=<path> reads the Alvuna card written on that dashboard; without it the layout comes from the integration.
+let dashboard = params.get("dashboard") || "";
 const instance = currentInstance(instances, dashboard);
 
 const S = { states: {}, config: null, panel: null, camera: null, camUi: { stripHidden: false, live: false }, forecast: null,
@@ -433,8 +434,8 @@ async function refreshForecast(force) {
   schedule();
 }
 
-async function loadConfig() {
-  S.config = await loadDeckConfig(conn, dashboard);
+async function loadConfig(config) {
+  S.config = config || await loadDeckConfig(conn, dashboard);
   watched = home().watched();
   seen = {};
   for (const id of watched) seen[id] = S.states[id];
@@ -544,21 +545,66 @@ async function mountCamera(h) {
   setTimeout(() => { if (alive() && !started) { stopCamera(); v.remove(); stills(); } }, 12000);
 }
 
+// --- messages from Home Assistant (alvuna.notify, alvuna.show_camera) ----------------------------------
+function tvMessage(ev) {
+  if (ev.type === "notify") {
+    toastEl.innerHTML = `<div class="pill note">${icon("mdi:bell-ring-outline")}<span>${ev.title ? `<b>${esc(ev.title)}</b> ` : ""}${esc(ev.message)}</span></div>`;
+    clearTimeout(toast.t);
+    toast.t = setTimeout(() => { toastEl.innerHTML = ""; }, (ev.seconds || 10) * 1000);
+    wake();
+  } else if (ev.type === "camera") {
+    const i = home().cameras().findIndex((c) => c.entity === ev.entity_id);
+    if (i < 0) return toast(t("tv.camera_unknown", { entity: ev.entity_id }));
+    wake();
+    openCamera(i);
+    clearTimeout(tvMessage.cam);
+    tvMessage.cam = setTimeout(() => { if (S.camera === i) { closeLayer(); schedule(); } }, (ev.seconds || 60) * 1000);
+  }
+}
+
+// --- pairing --------------------------------------------------------------------------------------
+// A TV with no tokens shows a code; an admin approves it in Home Assistant (Discovered: Alvuna TV), then the app starts.
+async function pairScreen() {
+  const name = WEBOS ? "LG TV" : /Android/i.test(navigator.userAgent) ? "Google TV" : "TV";
+  const show = (code, note) => {
+    homeEl.innerHTML = `<div class="fatal pair">${LOGO}<h1>${t("tv.pair_title")}</h1>
+      ${code ? `<div class="code">${code.split("").map((c) => `<span>${esc(c)}</span>`).join("")}</div>` : ""}
+      <p>${note}</p><p class="small">${t("tv.pair_login", { url: `${location.origin}/alvuna/tv/?login=1` })}</p></div>`;
+  };
+  show("", t("tv.pair_asking"));
+  await pair({ name, onCode: (code) => show(code, t("tv.pair_steps")), onBusy: () => show("", t("tv.pair_busy")) });
+}
+
 // --- start ----------------------------------------------------------------------------------------
 (async () => {
   homeEl.innerHTML = `<div class="fatal">${LOGO}<h1>Alvuna</h1><p>${t("tv.connecting")}</p></div>`;
   try {
+    // ?login=1 (or HA's own sign-in coming back) uses a person's account instead of pairing the TV.
+    if (!hasTokens() && !params.has("login") && !params.has("auth_callback")) await pairScreen();
     conn = await connect({ onStates, onStatus: (s) => { S.status = s; render(); } });
     S.status = "online";
     // The user's own language and formats, before anything but the splash is drawn (render waits for the config).
     const loc = await userLocale(conn);
     setLocale(loc);
     document.documentElement.lang = loc.language || language();
-    await loadConfig();
+    if (dashboard) await loadConfig();
+    else {
+      // The integration's layout, kept current; without the integration the old default dashboard is the fallback.
+      let first;
+      const ready = new Promise((ok) => { first = ok; });
+      await subscribeLayout(conn, (ev) => {
+        if (ev.source === "dashboard") { dashboard = ev.dashboard; loadConfig().then(first, first); }
+        else if (ev.config) loadConfig(ev.config).then(first, first);
+        else first();
+      }).catch(() => { dashboard = "homedeck-test"; return loadConfig(); });
+      await Promise.race([ready, new Promise((ok) => setTimeout(ok, 8000))]);
+      if (!S.config) throw new Error(t("tv.no_layout"));
+    }
+    subscribeTv(conn, tvMessage).catch(() => {});
     refreshCamStills(home(), schedule);
     subscribeNotifications(conn, (all) => { S.notifs = all; schedule(); }).catch(() => {});
     entityPlatforms(conn).then((p) => { S.platforms = p; schedule(); });
-    onDashboardChange(conn, (ev) => { if ((ev.data?.url_path || null) === (dashboard || null)) loadConfig().catch(() => {}); });
+    onDashboardChange(conn, (ev) => { if (dashboard && (ev.data?.url_path || null) === dashboard) loadConfig().catch(() => {}); });
     refreshForecast();
     setInterval(() => refreshForecast(), 15 * 60000);
     setInterval(tick, 1000);

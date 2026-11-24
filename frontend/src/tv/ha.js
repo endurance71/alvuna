@@ -1,8 +1,8 @@
-// Connection to the Home Assistant that serves this page. The app lives in HA's own www folder
-// (/local/homedeck-tv/), so REST, camera stills, icons and fonts are all same-origin.
+// Connection to the Home Assistant that serves this page. The Alvuna integration serves the app (/alvuna/tv/), so REST,
+// camera stills, icons and fonts are all same-origin.
 //
-// Sign-in reads the frontend's own token store ("hassTokens"): on the TV, the shell's sign-in page put a long-lived
-// token there; in a browser that is already signed in to HA, the normal session (with its refresh token) is used.
+// Sign-in reads the frontend's own token store ("hassTokens"): a paired TV keeps the tokens pairing gave it there (they
+// refresh like any browser session); in a browser that is already signed in to HA, its normal session is used.
 import { getAuth, createConnection, subscribeEntities, callService as haCall, ERR_INVALID_AUTH } from "home-assistant-js-websocket";
 import { t } from "../shared/i18n.js";
 
@@ -12,6 +12,30 @@ const loadTokens = async () => {
 const saveTokens = (t) => {
   try { localStorage.setItem("hassTokens", JSON.stringify(t)); } catch (e) { /* storage blocked */ }
 };
+
+// True when this origin holds tokens: a paired TV, or a browser signed in to this Home Assistant.
+export const hasTokens = () => { try { return !!JSON.parse(localStorage.getItem("hassTokens"))?.access_token; } catch (e) { return false; } };
+
+// Pairing (see custom_components/alvuna/pairing.py): asks for a code, then polls until an admin approves it in Home
+// Assistant. onCode(code) shows it; resolves once the tokens are stored. A code that expires is replaced by a new one.
+export async function pair({ name, onCode, onBusy }) {
+  const wait = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  for (;;) {
+    const start = await fetch("/api/alvuna/pair", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }) }).catch(() => null);
+    if (!start || !start.ok) { onBusy(start?.status); await wait(start?.status === 429 ? 60000 : 10000); continue; }
+    const req = await start.json();
+    onCode(req.code);
+    for (;;) {
+      await wait(2000);
+      const res = await fetch(`/api/alvuna/pair/${req.request_id}`, { headers: { "X-Alvuna-Secret": req.secret }, cache: "no-store" })
+        .catch(() => null);
+      if (!res || res.status === 202) continue;
+      if (res.ok) { saveTokens((await res.json()).tokens); return; }
+      break; // expired or rejected: ask for a new code
+    }
+  }
+}
 
 export async function connect({ onStates, onStatus }) {
   // Without any token getAuth sends the browser to HA's login page and comes back here.
@@ -58,12 +82,23 @@ export async function userLocale(conn) {
 
 export const onDashboardChange = (conn, cb) => conn.subscribeEvents(cb, "lovelace_updated");
 
+// The layout from the integration (alvuna/layout/subscribe), now and after every change; rejects without the integration.
+export const subscribeLayout = (conn, cb) => conn.subscribeMessage(cb, { type: "alvuna/layout/subscribe" });
+
+// This TV's channel: notifications and cameras sent by the alvuna.notify / alvuna.show_camera actions.
+export const subscribeTv = (conn, cb) => conn.subscribeMessage(cb, { type: "alvuna/tv/subscribe" });
+
 // Hourly and daily forecast (one-shot, like the tablet card's _loadForecast), with twice-daily folded into days.
 // `ids`: the weather entity shown, then the others listed in `weather`: when the first gives only a few days (IMGW: 3),
 // the longest daily forecast of the others is used for the days.
 export async function loadForecast(conn, ids) {
   const [id, ...more] = [].concat(ids);
   const get = async (type, id) => {
+    // The integration keeps each forecast for a quarter of an hour for every screen; older setups ask HA directly.
+    try {
+      const res = await conn.sendMessagePromise({ type: "alvuna/forecast", entity_id: id, forecast_type: type });
+      return res?.forecast || [];
+    } catch (e) { /* no integration: below */ }
     try {
       const res = await conn.sendMessagePromise({ type: "call_service", domain: "weather", service: "get_forecasts",
         service_data: { type }, target: { entity_id: id }, return_response: true });

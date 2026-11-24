@@ -103,7 +103,8 @@ def build_layout(hass: HomeAssistant, options: dict[str, Any]) -> dict[str, Any]
         for key, attr, device_class in (("temperature", "temperature_entity_id", "temperature"),
                                         ("humidity", "humidity_entity_id", "humidity")):
             chosen = getattr(area, attr)
-            if chosen and chosen in hidden:
+            # The area's own choice, unless hidden or gone (areas keep the old id after an entity is renamed).
+            if chosen and (chosen in hidden or hass.states.get(chosen) is None):
                 chosen = None
             if found := chosen or _first(of(items, "sensor", {device_class})):
                 room[key] = found
@@ -123,7 +124,7 @@ def build_layout(hass: HomeAssistant, options: dict[str, Any]) -> dict[str, Any]
         layout["weather"] = weather
     if security := [s.entity_id for s in of(everywhere, "binary_sensor", SECURITY_CLASSES)]:
         layout["security"] = security
-    if cameras := [s.entity_id for s in of(everywhere, "camera")]:
+    if cameras := [{"entity": s.entity_id} for s in of(everywhere, "camera")]:
         layout["cameras"] = cameras
     if media:
         layout["media"] = media
