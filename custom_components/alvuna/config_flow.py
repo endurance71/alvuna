@@ -29,12 +29,15 @@ from .const import (
 )
 from .pairing import DATA_PAIRING, Pairing
 
+MAX_CODE_TRIES = 5  # wrong codes before the request is dropped and the TV asks for a new one
+
 
 class AlvunaConfigFlow(ConfigFlow, domain=DOMAIN):
     """Adds Alvuna once per Home Assistant."""
 
     VERSION = 1
     _request: dict[str, Any]
+    _tries = 0
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         await self.async_set_unique_id(DOMAIN)
@@ -51,23 +54,33 @@ class AlvunaConfigFlow(ConfigFlow, domain=DOMAIN):
         return await self.async_step_pair()
 
     async def async_step_pair(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """The admin types the code shown on the TV: proof that they see that screen, not just a click on a card."""
         pairing: Pairing | None = self.hass.data.get(DATA_PAIRING)
-        if pairing is None or pairing.get(self._request["request_id"]) is None:
+        request_id = self._request["request_id"]
+        if pairing is None or pairing.get(request_id) is None:
             return self.async_abort(reason="pairing_expired")
+        errors: dict[str, str] = {}
         if user_input is not None:
-            name = user_input["name"].strip() or self._request["name"]
-            user = await pairing.async_approve(self._request["request_id"], name, user_input.get("local_only", True))
-            if user is None:
-                return self.async_abort(reason="pairing_expired")
-            return self.async_create_entry(title=name, data={CONF_KIND: KIND_TV, CONF_USER_ID: user.id})
-        return self.async_show_form(
-            step_id="pair",
-            data_schema=vol.Schema({
-                vol.Required("name", default=self._request["name"]): selector.TextSelector(),
-                vol.Required("local_only", default=True): selector.BooleanSelector(),
-            }),
-            description_placeholders={"code": self._request["code"]},
-        )
+            typed = "".join(str(user_input.get("code", "")).split()).upper()
+            if typed != self._request["code"]:
+                self._tries += 1
+                if self._tries >= MAX_CODE_TRIES:
+                    pairing.async_forget(request_id)
+                    return self.async_abort(reason="too_many_tries")
+                errors["code"] = "wrong_code"
+            else:
+                name = user_input["name"].strip() or self._request["name"]
+                user = await pairing.async_approve(request_id, name, user_input.get("local_only", True))
+                if user is None:
+                    return self.async_abort(reason="pairing_expired")
+                return self.async_create_entry(title=name, data={CONF_KIND: KIND_TV, CONF_USER_ID: user.id})
+        schema = vol.Schema({
+            vol.Required("code"): selector.TextSelector(),
+            vol.Required("name", default=self._request["name"]): selector.TextSelector(),
+            vol.Required("local_only", default=True): selector.BooleanSelector(),
+        })
+        return self.async_show_form(step_id="pair", data_schema=self.add_suggested_values_to_schema(schema, user_input or {}),
+                                    errors=errors)
 
     @classmethod
     @callback

@@ -934,7 +934,7 @@
     },
     "pair_title": "Pair this TV",
     "pair_asking": "Asking Home Assistant for a code…",
-    "pair_steps": "In Home Assistant open Settings → Devices &amp; services. Under Discovered, add Alvuna TV and check that it shows this code.",
+    "pair_steps": "In Home Assistant open Settings → Devices &amp; services. Under Discovered, pick Alvuna TV and type this code.",
     "pair_busy": "Home Assistant is not answering, or Alvuna is not set up there yet. Trying again…",
     "pair_login": "To use your own account instead, open {url}",
     "camera_unknown": "Camera {entity} is not in Alvuna’s layout",

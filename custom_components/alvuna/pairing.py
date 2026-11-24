@@ -1,8 +1,8 @@
 """Pairing a TV without typing anything on it.
 
 1. The TV app, holding no token, asks POST /api/alvuna/pair and shows the six-character code it gets back.
-2. That starts a discovered config flow: Home Assistant shows "Discovered: Alvuna TV" to its admins, who check that the
-   code matches the screen and name the TV.
+2. That starts a discovered config flow: Home Assistant shows "Discovered: Alvuna TV" to its admins, who type the code
+   they see on the TV (five wrong tries drop the request) and name it.
 3. Approving creates a Home Assistant user for that TV alone (not an admin, local network only) and a refresh token.
 4. The TV polls GET /api/alvuna/pair/<id> with the secret it got in step 1, receives the tokens once and keeps them as
    the frontend does ("hassTokens"), so they refresh like any browser session. Removing the TV's entry deletes the user.
@@ -112,6 +112,11 @@ class Pairing:
         for cancel in self._timers:
             cancel()
         self._timers = []
+
+    @callback
+    def async_forget(self, request_id: str) -> None:
+        """Drop a request (too many wrong codes): the TV gets 404 and asks for a new code."""
+        self.requests.pop(request_id, None)
 
     @callback
     def get(self, request_id: str) -> Request | None:

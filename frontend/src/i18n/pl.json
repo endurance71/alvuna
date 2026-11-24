@@ -970,7 +970,7 @@
     },
     "pair_title": "Sparuj ten telewizor",
     "pair_asking": "Pytam Home Assistanta o kod…",
-    "pair_steps": "W Home Assistancie otwórz Ustawienia → Urządzenia i usługi. W sekcji Wykryte dodaj Alvuna TV i sprawdź, czy pokazuje ten kod.",
+    "pair_steps": "W Home Assistancie otwórz Ustawienia → Urządzenia i usługi. W sekcji Wykryte wybierz Alvuna TV i wpisz ten kod.",
     "pair_busy": "Home Assistant nie odpowiada albo nie ma w nim jeszcze Alvuny. Próbuję dalej…",
     "pair_login": "Żeby użyć własnego konta, otwórz {url}",
     "camera_unknown": "Kamery {entity} nie ma w układzie Alvuny",

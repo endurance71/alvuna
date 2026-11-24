@@ -7,12 +7,14 @@
       },
       "pair": {
         "title": "Parowanie telewizora",
-        "description": "Telewizor prosi o dostęp do Alvuny. Sparuj go tylko, jeśli na ekranie widać kod **{code}**. Dostanie własnego użytkownika Home Assistanta: bez uprawnień administratora.",
+        "description": "Telewizor prosi o dostęp do Alvuny. Wpisz kod, który widać na jego ekranie. Dostanie własnego użytkownika Home Assistanta, bez uprawnień administratora.",
         "data": {
+          "code": "Kod z telewizora",
           "name": "Nazwa telewizora",
           "local_only": "Tylko sieć lokalna"
         },
         "data_description": {
+          "code": "Sześć znaków, tak jak na ekranie telewizora.",
           "name": "Widoczna w Home Assistancie, np. TV w salonie.",
           "local_only": "Wyłącz dla telewizora w innym domu, który łączy się z tym Home Assistantem przez internet."
         }
@@ -20,9 +22,13 @@
     },
     "abort": {
       "already_configured": "Alvuna jest już skonfigurowana.",
-      "pairing_expired": "Prośba o parowanie wygasła. Otwórz Alvunę na telewizorze jeszcze raz, żeby dostać nowy kod."
+      "pairing_expired": "Prośba o parowanie wygasła. Otwórz Alvunę na telewizorze jeszcze raz, żeby dostać nowy kod.",
+      "too_many_tries": "Za dużo błędnych kodów. Otwórz Alvunę na telewizorze jeszcze raz, żeby dostać nowy."
     },
-    "flow_title": "{name}"
+    "flow_title": "{name}",
+    "error": {
+      "wrong_code": "To nie jest kod z telewizora."
+    }
   },
   "options": {
     "step": {

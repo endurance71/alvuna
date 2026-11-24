@@ -46,7 +46,9 @@ async def test_pair_approve_and_remove(hass: HomeAssistant, hass_client_no_auth,
 
     flow = _flow(hass, req["request_id"])
     assert flow["context"]["source"] == "integration_discovery"
-    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {"name": "TV w salonie"})
+    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {"code": "ZZZZZZ", "name": "TV w salonie"})
+    assert result["errors"] == {"code": "wrong_code"}
+    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {"code": req["code"].lower(), "name": "TV w salonie"})
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
     tv_entry = result["result"]
@@ -116,6 +118,20 @@ async def test_remote_tv(hass: HomeAssistant, hass_client_no_auth) -> None:
     client = await hass_client_no_auth()
     req = await (await client.post("/api/alvuna/pair", json={"name": "Dom 2"})).json()
     flow = _flow(hass, req["request_id"])
-    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {"name": "TV Słupsk", "local_only": False})
+    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {"code": req["code"], "name": "TV Słupsk", "local_only": False})
     user = await hass.auth.async_get_user(result["result"].data["user_id"])
     assert not user.local_only
+
+
+async def test_too_many_wrong_codes(hass: HomeAssistant, hass_client_no_auth) -> None:
+    await _setup(hass)
+    client = await hass_client_no_auth()
+    req = await (await client.post("/api/alvuna/pair", json={})).json()
+    flow = _flow(hass, req["request_id"])
+    for _ in range(4):
+        result = await hass.config_entries.flow.async_configure(flow["flow_id"], {"code": "AAAAAA", "name": "TV"})
+        assert result["errors"] == {"code": "wrong_code"}
+    result = await hass.config_entries.flow.async_configure(flow["flow_id"], {"code": "AAAAAA", "name": "TV"})
+    assert result["type"] is FlowResultType.ABORT and result["reason"] == "too_many_tries"
+    gone = await client.get(f"/api/alvuna/pair/{req['request_id']}", headers={"X-Alvuna-Secret": req["secret"]})
+    assert gone.status == HTTPStatus.NOT_FOUND
