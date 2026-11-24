@@ -57,6 +57,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """A removed TV loses its user, and with it every token it held."""
-    if entry.data.get(CONF_KIND) == KIND_TV and (user := await hass.auth.async_get_user(entry.data[CONF_USER_ID])):
-        await hass.auth.async_remove_user(user)
+    """A removed TV loses its user, and with it every token it held. Removing Alvuna itself forgets the panel's
+    changes too, so installing it again starts from the automatic layout."""
+    if entry.data.get(CONF_KIND) == KIND_TV:
+        if user := await hass.auth.async_get_user(entry.data[CONF_USER_ID]):
+            await hass.auth.async_remove_user(user)
+        return
+    await Overrides(hass).store.async_remove()

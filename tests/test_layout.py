@@ -214,3 +214,19 @@ async def test_editor_needs_admin(hass: HomeAssistant, hass_ws_client, hass_read
     user = await hass_ws_client(hass, hass_read_only_access_token)
     await user.send_json_auto_id({"type": "alvuna/editor/get"})
     assert not (await user.receive_json())["success"]
+
+
+async def test_removing_alvuna_forgets_the_panel_changes(hass: HomeAssistant, hass_ws_client, hass_storage) -> None:
+    assert await async_setup_component(hass, "http", {})
+    entry = MockConfigEntry(domain=DOMAIN, unique_id=DOMAIN)
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "alvuna/layout/hide", "item": "light.x"})
+    assert (await client.receive_json())["success"]
+    await hass.async_block_till_done()
+    assert "alvuna.layout" in hass_storage
+    assert await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done()
+    assert "alvuna.layout" not in hass_storage
