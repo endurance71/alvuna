@@ -648,14 +648,19 @@ async function mountCamera(h) {
     hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => {}));
   } else v.src = url;
   let started = false;
-  v.addEventListener("playing", () => {
-    if (!alive()) return;
+  const shown = () => {
+    if (!alive() || started) return;
     started = true;
     stage.classList.add("playing");
     S.camUi.live = true;
     const tag = camEl.querySelector(".live");
     if (tag) { tag.classList.add("on"); tag.lastChild.textContent = t("cameras.live"); }
-  }, { once: true });
+  };
+  // The video takes over from the still on its first frame actually on screen. "playing" comes too early on Android
+  // TV's WebView (the Chromecast reported it ~2 s before any picture, showing black meanwhile), so it is only the
+  // fallback where requestVideoFrameCallback is missing.
+  if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(shown);
+  else v.addEventListener("playing", shown, { once: true });
   stage.appendChild(v);
   setTimeout(() => { if (alive() && !started) { stopCamera(); v.remove(); stills(); } }, 12000);
 }
