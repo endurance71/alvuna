@@ -2,6 +2,7 @@ package app.alvuna.tv
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -77,7 +78,12 @@ class MainActivity : Activity() {
         web.setInitialScale((resources.displayMetrics.widthPixels * 100f / PAGE_WIDTH).roundToInt().coerceAtLeast(1))
         web.addJavascriptInterface(Bridge(), "AlvunaNative")
         web.webViewClient = Client()
-        web.webChromeClient = WebChromeClient()
+        web.webChromeClient = object : WebChromeClient() {
+            // Until a camera's first frame arrives, Android's WebView draws its own poster over a <video>: a grey
+            // screen with a huge play icon. Nothing instead, so the camera's still picture underneath shows (webOS
+            // and browsers show nothing either).
+            override fun getDefaultVideoPoster(): Bitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }
 
         window.decorView.setOnApplyWindowInsetsListener { v, insets ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) keyboardShown(insets.isVisible(WindowInsets.Type.ime()))
