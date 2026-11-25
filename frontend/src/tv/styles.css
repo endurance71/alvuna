@@ -539,8 +539,11 @@ body:not(.frost) .fzw { display: none; }
    option for the TV. Without frost or solid the tiles are the plain translucent glass (Przezroczyste). */
 body.solid #home .tile:not(.on):not(.cam):not(.alert), body.solid #home .td-card, body.solid #home .instance, body.solid #edge .edge {
   background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), var(--sheet-bg); border-color: rgba(255,255,255,.10); }
-/* Under an open panel the home screen is dimmed to 20%: its glass would cost every frame of the panel for nothing. */
-body.has-panel #home .fzw { visibility: hidden; }
+/* The glass stays under an open panel: hiding its canvases when a panel opened and showing them again when it closed
+   made the TV draw them all anew each time (on a Chromecast with Google TV 4K a frame of 100-180 ms at the start of the
+   room panel and of its way out; kept, 33-83 ms). Under the full-screen camera, which covers everything and plays
+   video, the glass is hidden. */
+body.has-camera #home .fzw { visibility: hidden; }
 body.frost #home .tile.sec.off { opacity: .7; }
 body.no-anim *, body.no-anim *::before, body.no-anim *::after { transition: none !important; animation: none !important; }
 

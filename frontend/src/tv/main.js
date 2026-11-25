@@ -90,6 +90,7 @@ function render() {
   patch(camEl, S.camera != null ? renderCamera(h, S.camera, S.camUi)
     : S.camClosing ? renderCamera(h, S.camClosing.i, S.camClosing.ui).replace('class="camera-full', 'class="camera-full closing') : "");
   document.body.classList.toggle("has-panel", !!S.panel || S.camera != null);
+  document.body.classList.toggle("has-camera", S.camera != null);
   if (S.camera != null) { focus.use("camera", camEl.firstElementChild); mountCamera(h); }
   else if (S.panel) focus.use(S.panel.scope, panelEl.querySelector(".panel"));
   else focus.use("home", homeEl);
