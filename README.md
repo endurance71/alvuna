@@ -40,7 +40,7 @@ From the sample home (made-up devices) that also runs on the [website](https://a
 
 ## TV
 
-Install the Alvuna app (LG webOS; Google TV is coming), or open `http://<your-home-assistant>:8123/alvuna/tv/` in the
+Install the Alvuna app (LG webOS; Android TV / Google TV in testing, see `tv-apps/androidtv`), or open `http://<your-home-assistant>:8123/alvuna/tv/` in the
 TV's browser. The app finds Home Assistant on the network and shows a code: in Home Assistant, **Settings → Devices &
 services → Discovered → Alvuna TV**, type the code and name the TV. Settings on the TV (gear in the summary panel): the
 look of the tiles, screensaver and OLED care, homes (switch, rename, add, remove) and signing out.

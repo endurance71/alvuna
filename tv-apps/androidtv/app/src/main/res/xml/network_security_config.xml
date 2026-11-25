@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home Assistant on a home network usually answers over plain http at an IP the user picks (192.168.x.y:8123), so
+     cleartext has to be allowed for any host. The app only talks to that server and alvuna.shipapp.pl (https). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

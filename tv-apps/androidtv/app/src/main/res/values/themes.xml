@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The window shows the shell's background colour until the page draws, so launching never flashes white. -->
+    <style name="Theme.Alvuna" parent="android:Theme.DeviceDefault.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@color/alvuna_bg</item>
+        <item name="android:colorBackground">@color/alvuna_bg</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>
