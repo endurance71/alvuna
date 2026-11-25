@@ -15,9 +15,18 @@ val copyShell by tasks.registering(Sync::class) {
 }
 tasks.named("preBuild") { dependsOn(copyShell) }
 
-// Release signing: keystore.properties (storeFile, storePassword, keyAlias, keyPassword) next to this file, never in git.
+// Release signing with the Google Play upload key: keystore.properties (storeFile, storePassword, keyAlias,
+// keyPassword) next to this file, or the environment (ALVUNA_UPLOAD_KEYSTORE, ALVUNA_UPLOAD_PASS, the alias "upload"),
+// so the password never has to be in the project folder. Never in git.
 val keystoreProps = rootProject.file("keystore.properties").takeIf { it.exists() }?.let { f ->
     Properties().apply { f.inputStream().use { load(it) } }
+} ?: System.getenv("ALVUNA_UPLOAD_KEYSTORE")?.let { path ->
+    Properties().apply {
+        setProperty("storeFile", path)
+        setProperty("storePassword", System.getenv("ALVUNA_UPLOAD_PASS"))
+        setProperty("keyAlias", "upload")
+        setProperty("keyPassword", System.getenv("ALVUNA_UPLOAD_PASS"))
+    }
 }
 
 android {

@@ -35,8 +35,10 @@ A debug build lets Chrome DevTools inspect the page: `adb forward tcp:9555 local
 the whole screen, the system keyboard included.
 
 Release (Google Play takes an App Bundle): create `keystore.properties` next to this file with `storeFile`,
-`storePassword`, `keyAlias`, `keyPassword` (never in git), then `./gradlew bundleRelease`
-(`app/build/outputs/bundle/release/app-release.aab`). Raise `versionCode` in `app/build.gradle.kts` for every upload.
+`storePassword`, `keyAlias`, `keyPassword` (never in git), or set `ALVUNA_UPLOAD_KEYSTORE` and `ALVUNA_UPLOAD_PASS`
+(alias `upload`), then `./gradlew bundleRelease` (`app/build/outputs/bundle/release/app-release.aab`). Raise
+`versionCode` in `app/build.gradle.kts` for every upload. Store texts, graphics (`store/`) and the submission log are
+in [PLAY.md](PLAY.md).
 
 ## Tested
 
