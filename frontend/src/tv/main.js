@@ -602,6 +602,20 @@ function stopCamera() {
   if (stage?._hls) { stage._hls.destroy(); stage._hls = null; }
 }
 
+// A newer picture for the camera's still, put in only once decoded: changing the shown image's src blanked it while
+// the new one decoded (a black frame on the Chromecast when opening a camera, and at each refresh of a camera without
+// a live stream). Resolves false when the picture did not load.
+async function stillSwap(stage, src, keep) {
+  const img = new Image();
+  img.className = "still";
+  img.alt = "";
+  img.src = src;
+  try { await img.decode(); } catch (e) { return false; }
+  const old = stage.querySelector("img.still");
+  if (keep() && old) old.replaceWith(img);
+  return true;
+}
+
 // The still shows at once; the live stream replaces it once it plays. If it does not start within 12 s, the stills
 // keep refreshing instead.
 async function mountCamera(h) {
@@ -610,22 +624,20 @@ async function mountCamera(h) {
   const id = stage.dataset.cam, mine = (stage._mount = (stage._mount || 0) + 1);
   stopCamera();
   stage.dataset.mounted = id;
+  // The stage element is kept from camera to camera (data-keep): the last one's live state must not hide this one's
+  // still (with animations off it showed black until the new stream's first frame).
+  stage.classList.remove("playing");
   // The tile's picture (same URL, already loaded) shows at once; the sharp full-size still replaces it when it
   // arrives (over Funnel ~3 s for the doorbell), and the live video when it plays.
-  stage.innerHTML = `<img class="still" src="${esc(stage.dataset.preview)}" alt="" decoding="async">`;
+  stage.innerHTML = `<img class="still" src="${esc(stage.dataset.preview)}" alt="">`;
   const alive = () => stage.isConnected && stage._mount === mine && stage.dataset.mounted === id;
-  const sharp = new Image();
-  sharp.decoding = "async";
-  sharp.onload = () => { const img = stage.querySelector("img.still"); if (alive() && img && !stage.classList.contains("playing")) img.src = sharp.src; };
-  sharp.src = stage.dataset.still;
+  stillSwap(stage, stage.dataset.still, () => alive() && !stage.classList.contains("playing"));
   const stills = () => {
-    const img = stage.querySelector("img.still");
     const next = () => {
-      if (!alive() || !img.isConnected) return;
-      const a = home().st(id)?.attributes || {}, pre = new Image();
-      pre.onload = () => { img.src = pre.src; setTimeout(next, 1500); };
-      pre.onerror = () => setTimeout(next, 4000);
-      pre.src = `/api/camera_proxy/${id}?token=${encodeURIComponent(a.access_token || "")}&width=1920&t=${Date.now()}`;
+      if (!alive()) return;
+      const a = home().st(id)?.attributes || {};
+      stillSwap(stage, `/api/camera_proxy/${id}?token=${encodeURIComponent(a.access_token || "")}&width=1920&t=${Date.now()}`, alive)
+        .then((ok) => setTimeout(next, ok ? 1500 : 4000));
     };
     next();
   };
