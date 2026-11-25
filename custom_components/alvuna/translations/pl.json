@@ -22,6 +22,7 @@
     },
     "abort": {
       "already_configured": "Alvuna jest już skonfigurowana.",
+      "add_tv": "Alvuna już działa w tym Home Assistancie. Telewizor dodaje się z samego telewizora:\n\n1. Na telewizorze otwórz aplikację Alvuna (LG, Google TV) albo w jego przeglądarce adres {url}.\n2. Telewizor pokaże sześcioznakowy kod i pojawi się tutaj w sekcji **Wykryte**. Wybierz go i wpisz kod.\n\nTelewizor w innym domu: w aplikacji Alvuna na tym telewizorze wybierz Ustawienia → Dodaj dom i wpisz adres tego Home Assistanta, a przy wpisywaniu kodu wyłącz „Tylko sieć lokalna”.",
       "pairing_expired": "Prośba o parowanie wygasła. Otwórz Alvunę na telewizorze jeszcze raz, żeby dostać nowy kod.",
       "too_many_tries": "Za dużo błędnych kodów. Otwórz Alvunę na telewizorze jeszcze raz, żeby dostać nowy."
     },

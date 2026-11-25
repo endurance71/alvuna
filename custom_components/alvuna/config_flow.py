@@ -9,6 +9,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import callback
 from homeassistant.helpers import selector
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 
 from .const import (
     CONF_KIND,
@@ -35,10 +36,21 @@ class AlvunaConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         await self.async_set_unique_id(DOMAIN)
-        self._abort_if_unique_id_configured()
+        if self.hass.config_entries.async_entry_for_domain_unique_id(DOMAIN, DOMAIN):
+            # Alvuna is set up already, and "Add" here is how people look for a way to add another TV: say how. A TV
+            # is added from the TV itself (it asks with a code and shows up under Discovered), not from this button.
+            return self.async_abort(reason="add_tv", description_placeholders={"url": self._tv_url()})
         if user_input is not None:
             return self.async_create_entry(title="Alvuna", data={})
         return self.async_show_form(step_id="user")
+
+    def _tv_url(self) -> str:
+        """The TV app's address on this Home Assistant, for a TV's browser."""
+        try:
+            base = get_url(self.hass, allow_ip=True, prefer_external=False)
+        except NoURLAvailableError:
+            base = "http://<home-assistant>:8123"
+        return f"{base.rstrip('/')}/alvuna/tv/"
 
     async def async_step_integration_discovery(self, discovery_info: dict[str, Any]) -> ConfigFlowResult:
         """A TV asked to be paired (pairing.py): show it under Discovered with its code."""

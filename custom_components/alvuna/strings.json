@@ -22,6 +22,7 @@
     },
     "abort": {
       "already_configured": "Alvuna is already set up.",
+      "add_tv": "Alvuna is already running in this Home Assistant. A TV is added from the TV itself:\n\n1. On the TV, open the Alvuna app (LG, Google TV), or open {url} in the TV's browser.\n2. The TV shows a six-character code and appears here under **Discovered**. Choose it and type the code.\n\nA TV in another home: in the Alvuna app on that TV, go to Settings → Add a home and enter this Home Assistant's address, then turn off \"Local network only\" when you type the code.",
       "pairing_expired": "The pairing request expired. Open Alvuna on the TV again for a new code.",
       "too_many_tries": "Too many wrong codes. Open Alvuna on the TV again for a new one."
     },

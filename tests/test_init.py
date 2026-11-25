@@ -19,10 +19,12 @@ async def _add(hass: HomeAssistant):
 
 
 async def test_only_once(hass: HomeAssistant) -> None:
+    """Adding Alvuna again explains how a TV is added (from the TV), with the TV app's address."""
     await _add(hass)
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
     assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "already_configured"
+    assert result["reason"] == "add_tv"
+    assert result["description_placeholders"]["url"].endswith("/alvuna/tv/")
 
 
 async def test_serves_tv_and_panel(hass: HomeAssistant, hass_client_no_auth) -> None:
