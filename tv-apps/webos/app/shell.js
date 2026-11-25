@@ -6,6 +6,9 @@
 // cannot read answers from another origin. Without the service (a desktop browser) the shell falls back to checking
 // homeassistant.local:8123 with an image, and to an address typed with the remote.
 //
+// The Android TV app (tv-apps/androidtv) runs this same page in a WebView: there window.AlvunaNative does what the
+// service does (same methods, same answers) and closes the app.
+//
 // ES5 on purpose: this page has to show something sensible on any webOS TV, even one too old for the TV app itself.
 (function () {
   "use strict";
@@ -18,7 +21,15 @@
   var DEMO = "https://alvuna.shipapp.pl/app/";
   var box = document.getElementById("box");
   var webos = !!window.PalmSystem || /Web0S|webOS/i.test(navigator.userAgent);
+  var android = !!window.AlvunaNative; // the Android TV app
   var bridges = []; // a PalmServiceBridge that is garbage-collected cancels its call
+  var calls = {}, seq = 0; // Android: answers come back to window.alvunaNative(id, json)
+  window.alvunaNative = function (id, json) {
+    var f = calls[id], m;
+    if (!f) return;
+    try { m = JSON.parse(json); } catch (e) { m = { returnValue: false, errorText: "bad response" }; }
+    f(m);
+  };
   var screen = null, focusIdx = 0, timer = 0, cancelled = false, kbVisible = false;
 
   // --- text ---------------------------------------------------------------------------------------
@@ -107,6 +118,12 @@
   // --- the service --------------------------------------------------------------------------------
   // onMsg gets each response; returns false when there is no service bridge (not on a TV).
   function luna(method, params, onMsg) {
+    if (android) {
+      var id = "c" + (++seq);
+      calls[id] = onMsg;
+      window.AlvunaNative.call(method, JSON.stringify(params || {}), id);
+      return true;
+    }
     if (!window.PalmServiceBridge) return false;
     var b = new window.PalmServiceBridge();
     bridges.push(b);
@@ -118,7 +135,11 @@
     b.call(SERVICE + method, JSON.stringify(params || {}));
     return true;
   }
-  function release() { bridges.forEach(function (b) { try { b.cancel(); } catch (e) { /* gone */ } }); bridges = []; }
+  function release() {
+    bridges.forEach(function (b) { try { b.cancel(); } catch (e) { /* gone */ } });
+    bridges = [];
+    if (android) { calls = {}; try { window.AlvunaNative.cancel(); } catch (e) { /* gone */ } }
+  }
 
   // cb({ url, ha, alvuna }); alvuna is null when it could not be checked (no service).
   function probe(url, cb) {
@@ -328,10 +349,12 @@
     location.href = server.url.replace(/\/+$/, "") + "/alvuna/tv/";
   }
 
-  // Back on the first screen: the platform's own behaviour (home or the exit prompt, depending on the webOS version).
+  // Back on the first screen: the platform's own behaviour (home or the exit prompt, depending on the webOS version;
+  // on Android TV the app closes, as Back does in any Android TV app).
   function exit() {
     stop();
-    if (window.webOS && window.webOS.platformBack) window.webOS.platformBack();
+    if (android) window.AlvunaNative.exit();
+    else if (window.webOS && window.webOS.platformBack) window.webOS.platformBack();
     else if (window.PalmSystem && window.PalmSystem.platformBack) window.PalmSystem.platformBack();
     else window.close();
   }

@@ -19,6 +19,9 @@ import { icon, preloadIcons } from "./ui/icons.js";
 import { loadInstances, saveInstances, currentInstance, withHere, normalizeAddress, addInstance, removeInstance, renameInstance, switchTo, reachable } from "./instances.js";
 
 const WEBOS = /Web0S|webOS/i.test(navigator.userAgent);
+// The Android TV app (tv-apps/androidtv) runs this page in a WebView and gives it window.AlvunaNative, which closes it.
+const ANDROID_TV = !!window.AlvunaNative;
+const TV_APP = WEBOS || ANDROID_TV; // inside a TV app, which Back on the first row and the idle timeout leave
 // Icons used by the screens themselves (kept in step with the code: grep -oh '"mdi:[a-z0-9-]*"' src).
 const APP_ICONS = ["mdi:alert", "mdi:alert-circle", "mdi:alert-circle-outline", "mdi:blinds", "mdi:blinds-open", "mdi:cctv",
   "mdi:chevron-left", "mdi:chevron-right", "mdi:close", "mdi:door", "mdi:fire", "mdi:home-outline", "mdi:home-switch-outline",
@@ -372,7 +375,7 @@ window.addEventListener("keydown", (ev) => {
     ev.preventDefault();
     if (closeLayer()) return;
     if (!focus.isFirstLine()) { focus.toFirstLine(); return; }
-    if (WEBOS) platformBack();
+    if (TV_APP) platformBack();
   }
 });
 window.addEventListener("keyup", (ev) => {
@@ -404,10 +407,14 @@ function openHold() {
 
 // Back on the first row leaves the way the TV does it (webOS 23 and later go Home, older ones show the system's exit
 // prompt), as LG's app review requires; window.close() is meant only for an app's own exit popup. This is what
-// webOSTV.js webOS.platformBack() calls.
+// webOSTV.js webOS.platformBack() calls. On Android TV the app closes, as Back does in any Android TV app.
 function platformBack() {
   if (window.webOS?.platformBack) window.webOS.platformBack();
   else if (window.PalmSystem?.platformBack) window.PalmSystem.platformBack();
+  else closeApp();
+}
+function closeApp() {
+  if (ANDROID_TV) window.AlvunaNative.exit();
   else window.close();
 }
 // The Magic Remote wheel moves between rows (the pointer itself never scrolls the page).
@@ -490,7 +497,7 @@ function tick() {
     saverEl.hidden = false;
     document.body.classList.add("saving");
   } else if (S.saver && now.getSeconds() === 0) drawSaver();
-  if (WEBOS && exitMs > 0 && idle > exitMs) window.close();
+  if (TV_APP && exitMs > 0 && idle > exitMs) closeApp();
   if (now.getSeconds() === 0) schedule();
   if (S.config && !S.saver && now.getSeconds() % 15 === 0) refreshCamStills(home(), schedule);
   for (const [id, p] of Object.entries(S.pending)) if (Date.now() - p.at > 6000) delete S.pending[id];
