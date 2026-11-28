@@ -3,7 +3,7 @@
 // builds from the home's areas and devices, adjusted in the Alvuna panel (alvuna/layout/subscribe); nobody writes it.
 import "./ui/icons.js";
 import { connect, call, loadForecast, cameraStream, loadHistory, subscribeNotifications, entityPlatforms,
-  userLocale, hasTokens, pair, subscribeLayout, subscribeTv, signOut, hideItem } from "./ha.js";
+  userLocale, hasTokens, pair, subscribeLayout, subscribeTv, signOut, hideItem, reportTv, logTv } from "./ha.js";
 import { Home } from "./model/home.js";
 import { esc, time, longDate, fmtTime, wIcon } from "./model/format.js";
 import { setLocale, t, language } from "../shared/i18n.js";
@@ -12,6 +12,7 @@ import { applyWallpaper, setWallpaper } from "./ui/wallpapers.js";
 import { applyAccent, setAccent } from "./ui/accents.js";
 import { applyPrefs, setPref, prefs, animOn, stepPref, minutesFor } from "./ui/prefs.js";
 import { alignFrost, refreshFrost } from "./ui/frost.js";
+import { currentSettings, applySettings, settingsRev } from "./ui/settings.js";
 import { renderPanel, renderCamera, attentionCount, attnKey } from "./ui/panels.js";
 import { patch } from "./ui/morph.js";
 import { Focus } from "./ui/focus.js";
@@ -473,6 +474,16 @@ function drawSaver() {
   saverEl.innerHTML = `<div class="saver-box" style="transform:${at}">${inner}</div>`;
 }
 
+function startSaver() {
+  S.saver = true;
+  S.saverFresh = true; // the first draw places the clock without a glide
+  drawSaver();
+  clearTimeout(wake.t);
+  saverEl.classList.remove("out");
+  saverEl.hidden = false;
+  document.body.classList.add("saving");
+}
+
 // --- clock, progress, idle (once a second) -----------------------------------------------------------
 function tick() {
   const now = new Date();
@@ -489,19 +500,13 @@ function tick() {
   // Halfway to the screensaver (at least half a minute in) the screen dims, a first step that saves the panel.
   document.body.classList.toggle("dimmed", !!(prefs().dim && S.config && !S.saver && saverMs > 0 && idle > Math.max(30000, saverMs / 2)));
   if (now.getSeconds() === 0 && now.getMinutes() % 3 === 0) oledShift(now);
-  if (!S.saver && S.config && saverMs > 0 && idle > saverMs) {
-    S.saver = true;
-    S.saverFresh = true; // the first draw places the clock without a glide
-    drawSaver();
-    clearTimeout(wake.t);
-    saverEl.classList.remove("out");
-    saverEl.hidden = false;
-    document.body.classList.add("saving");
-  } else if (S.saver && now.getSeconds() === 0) drawSaver();
+  if (!S.saver && S.config && saverMs > 0 && idle > saverMs) startSaver();
+  else if (S.saver && now.getSeconds() === 0) drawSaver();
   if (TV_APP && exitMs > 0 && idle > exitMs) closeApp();
   if (now.getSeconds() === 0) schedule();
   if (S.config && !S.saver && now.getSeconds() % 15 === 0) refreshCamStills(home(), schedule);
   for (const [id, p] of Object.entries(S.pending)) if (Date.now() - p.at > 6000) delete S.pending[id];
+  if (conn) reportIfChanged(now);
 }
 
 // --- data -----------------------------------------------------------------------------------------
@@ -702,8 +707,16 @@ async function addHome() {
   switchTo(instances.find((x) => x.url === url) || to, instances);
 }
 
-// --- messages from Home Assistant (alvuna.notify, alvuna.show_camera) ----------------------------------
+// --- messages from Home Assistant (alvuna.notify, alvuna.show_camera, the Alvuna panel's Televisions tab) ---------
 function tvMessage(ev) {
+  if (ev.type === "settings") {
+    if (applySettings(ev.settings, ev.rev)) refreshFrost();
+    oledShift(new Date());
+    render();
+    alignFrost();
+    return report();
+  }
+  if (ev.type === "command") return tvCommand(ev);
   if (ev.type === "notify") {
     toast("", (ev.seconds || 10) * 1000,
       `<div class="pill note">${icon("mdi:bell-ring-outline")}<span>${ev.title ? `<b>${esc(ev.title)}</b> ` : ""}${esc(ev.message)}</span></div>`);
@@ -717,6 +730,96 @@ function tvMessage(ev) {
     tvMessage.cam = setTimeout(() => { if (S.camera === i) { closeLayer(); schedule(); } }, (ev.seconds || 60) * 1000);
   }
 }
+
+// What the panel can ask: start again, go home, the screensaver, open a panel or a room, close the app.
+function tvCommand(ev) {
+  const closeAll = () => { while (closeLayer()); };
+  switch (ev.command) {
+    case "reload": return location.reload();
+    case "home": wake(); closeAll(); focus.toFirstLine(); break;
+    case "saver_on": closeAll(); if (!S.saver) startSaver(); break;
+    case "saver_off": wake(); break;
+    case "exit": if (TV_APP) closeApp(); return;
+    case "open": {
+      wake();
+      const target = String(ev.target || "");
+      let p = null;
+      if (target.startsWith("room:")) {
+        const i = home().rooms().findIndex((r) => r.area === target.slice(5));
+        if (i < 0) return toast(t("tv.remote.no_room"));
+        p = { type: "room", room: i };
+      } else if (target === "summary") p = { type: "summary", side: "left" };
+      else if (["weather", "climate", "settings"].includes(target)) p = { type: target };
+      if (!p) return;
+      closeAll();
+      openPanel(p);
+      break;
+    }
+    default: return;
+  }
+  render();
+  report();
+}
+
+// --- reports for the Televisions tab ----------------------------------------------------------------
+// What is on screen, sent when it changes (checked each second), and once a minute so "last key press" stays true.
+const STARTED = Date.now();
+const PLATFORM = WEBOS ? "webos" : ANDROID_TV ? "androidtv" : "browser";
+function screenNow() {
+  const h = home();
+  if (S.saver) return { view: "saver" };
+  if (S.camera != null) return { view: "camera", detail: `camera:${h.cameras()[S.camera]?.name || ""}` };
+  if (S.panel) {
+    const p = S.panel;
+    const name = p.type === "room" ? h.rooms()[p.room]?.name : p.type === "media" ? h.mediaItems()[p.media]?.name : p.name;
+    return { view: "panel", detail: `${p.type}:${name || ""}`.slice(0, 120) };
+  }
+  return { view: "home" };
+}
+function report() {
+  if (!conn || !S.config) return;
+  const status = { ...screenNow(), dimmed: document.body.classList.contains("dimmed"), platform: PLATFORM,
+    idle: Math.round((Date.now() - S.lastInput) / 1000), uptime: Math.round((Date.now() - STARTED) / 1000),
+    ua: navigator.userAgent.slice(0, 400), screen: `${screen.width}x${screen.height}`, home: instance?.name || "",
+    homes: instances.length, language: language() };
+  report.key = reportKey();
+  report.at = Date.now();
+  reportTv(conn, { status, settings: currentSettings(), rev: settingsRev() }).then((res) => {
+    // Home Assistant still starting (Alvuna's commands not there yet): try again shortly.
+    if (!res) { clearTimeout(report.retry); report.retry = setTimeout(report, 10000); return; }
+    if (res.paired && res.channel === false) openChannel();
+  });
+}
+
+// This TV's channel. After a restart of Home Assistant the library's own resubscription can come before Alvuna is
+// loaded and fail; the next report then says the channel is closed (see report above) and it is opened again.
+let channel = null;
+function openChannel() {
+  const old = channel;
+  channel = subscribeTv(conn, tvMessage).catch(() => null);
+  old?.then((unsub) => unsub?.().catch?.(() => {})).catch(() => {});
+}
+// Cheap enough for every second on a weak TV: what is open (not its name) and the settings.
+const reportKey = () => JSON.stringify([S.saver, S.camera, S.panel?.scope, document.body.classList.contains("dimmed"), currentSettings()]);
+function reportIfChanged() {
+  if (S.status !== "online") return;
+  if (Date.now() - (report.at || 0) > 60000 || reportKey() !== report.key) report();
+}
+
+// Errors on this TV go to the Televisions tab, a few at a time: debugging on a TV is otherwise hard.
+const errors = [];
+function logError(message, source) {
+  if (errors.length >= 20) return;
+  errors.push({ level: "error", message: String(message || "").slice(0, 1000), source: String(source || "").slice(0, 200), at: Date.now() });
+  clearTimeout(logError.t);
+  logError.t = setTimeout(flushErrors, 3000);
+}
+function flushErrors() {
+  if (!conn || S.status !== "online" || !errors.length) return;
+  logTv(conn, errors.splice(0, errors.length));
+}
+window.addEventListener("error", (e) => logError(e.message || e.error?.message, e.filename ? `${e.filename.split("/").pop()}:${e.lineno}` : ""));
+window.addEventListener("unhandledrejection", (e) => logError(e.reason?.message || e.reason, "promise"));
 
 // --- pairing --------------------------------------------------------------------------------------
 // A TV with no tokens shows a code; an admin approves it in Home Assistant (Discovered: Alvuna TV), then the app starts.
@@ -737,7 +840,7 @@ async function pairScreen() {
   try {
     // ?login=1 (or HA's own sign-in coming back) uses a person's account instead of pairing the TV.
     if (!hasTokens() && !params.has("login") && !params.has("auth_callback")) await pairScreen();
-    conn = await connect({ onStates, onStatus: (s) => { S.status = s; render(); } });
+    conn = await connect({ onStates, onStatus: (s) => { S.status = s; render(); if (s === "online") { report(); flushErrors(); } } });
     S.status = "online";
     // The user's own language and formats, before anything but the splash is drawn (render waits for the config).
     const loc = await userLocale(conn);
@@ -756,7 +859,9 @@ async function pairScreen() {
     }).catch(() => first());
     await Promise.race([ready, new Promise((ok) => setTimeout(ok, 8000))]);
     if (!S.config) throw new Error(t("tv.no_layout"));
-    subscribeTv(conn, tvMessage).catch(() => {});
+    openChannel();
+    report();
+    flushErrors();
     refreshCamStills(home(), schedule);
     subscribeNotifications(conn, (all) => { S.notifs = all; schedule(); }).catch(() => {});
     entityPlatforms(conn).then((p) => { S.platforms = p; schedule(); });

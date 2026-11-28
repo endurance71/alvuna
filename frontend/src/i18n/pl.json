@@ -993,6 +993,9 @@
       "cancel": "Anuluj",
       "hidden": "Ukryte. Przywrócisz je w panelu Alvuna w Home Assistancie.",
       "failed": "Nie udało się ukryć"
+    },
+    "remote": {
+      "no_room": "Tego pokoju nie ma na tym telewizorze."
     }
   }
 }

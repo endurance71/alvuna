@@ -1,11 +1,14 @@
-// The Alvuna panel in Home Assistant's sidebar (administrators only): the layout Alvuna builds by itself, where the
-// household hides items, renames them, changes their order and adds entities to the lists. Every change is saved on
-// its own (600 ms after the last edit) through alvuna/editor/save, which updates every open card and TV.
+// The Alvuna panel in Home Assistant's sidebar (administrators only), in two tabs:
+//   Screen (/alvuna)   the layout Alvuna builds by itself, where the household hides items, renames them, changes their
+//                      order and adds entities to the lists. Every change is saved on its own (600 ms after the last
+//                      edit) through alvuna/editor/save, which updates every open card and TV.
+//   TVs (/alvuna/tvs)  each paired TV: what it shows, commands and its settings (tvs.js, alvuna/tvs/subscribe).
 // A plain custom element with shadow DOM; Home Assistant sets hass, narrow, route and panel on it.
 import {
   ADDABLE, addItem, candidates, cleanOverrides, idsInUse, listItems, move, normalize, removeItem, rooms, setHidden, setName,
 } from "./model.js";
-import { setLanguage, t } from "./strings.js";
+import { setLanguage, t, currentLanguage } from "./strings.js";
+import { tvsTab, TVS_STYLE, setTvLocale } from "./tvs.js";
 
 const SAVE_DELAY = 600;
 const MAX_RESULTS = 150;
@@ -59,6 +62,12 @@ class AlvunaPanel extends HTMLElement {
     this._saveError = "";
     this._timer = null;
     this._built = false;
+    this._tvs = null; // alvuna/tvs/subscribe's last update, or "unavailable"
+    this._tvUnsub = null;
+    this._open = new Set(); // "settings|<entry>", "log|<entry>": open sections of the TVs tab
+    this._drafts = {}; // entry -> message being typed
+    this._flash = {}; // entry -> { text, error }: the last command's outcome
+    this._ticker = null;
     this.attachShadow({ mode: "open" });
     // HA loads its components lazily: once its switch and state icon exist, they replace the stand-ins.
     for (const tag of ["ha-switch", "ha-state-icon"]) {
@@ -76,11 +85,13 @@ class AlvunaPanel extends HTMLElement {
     const first = !this._hass;
     this._hass = hass;
     const langChanged = setLanguage(hass?.locale?.language || hass?.language);
+    const tvLangChanged = setTvLocale({ language: hass?.locale?.language || hass?.language });
     this._syncMenu();
     if (first) {
       this._render();
       this._load();
-    } else if (langChanged) {
+      this._subscribeTvs();
+    } else if (langChanged || tvLangChanged) {
       this._render();
       this._renderStatus();
     }
@@ -95,7 +106,13 @@ class AlvunaPanel extends HTMLElement {
 
   get narrow() { return this._narrow; }
 
-  set route(value) { this._route = value; }
+  set route(value) {
+    const before = this._tab;
+    this._route = value;
+    if (this._built && this._tab !== before) { this._render(); this.scrollTop = 0; }
+  }
+
+  get _tab() { return /^\/tvs/.test(this._route?.path || "") ? "tvs" : "layout"; }
   get route() { return this._route; }
   set panel(value) { this._panel = value; }
   get panel() { return this._panel; }
@@ -104,12 +121,92 @@ class AlvunaPanel extends HTMLElement {
     window.addEventListener("beforeunload", this._onBeforeUnload);
     if (!this._built) this._render();
     if (this._hass && this._state === "error") this._load();
+    if (this._hass && !this._tvUnsub) this._subscribeTvs();
+    // "5 min ago" stays true.
+    this._ticker = setInterval(() => { if (this._tab === "tvs") this._render(); }, 30000);
   }
 
   disconnectedCallback() {
     window.removeEventListener("beforeunload", this._onBeforeUnload);
     // Leaving the panel never loses an edit: whatever waits for the debounce goes now.
     if (this._version !== this._savedVersion) this._flush();
+    clearInterval(this._ticker);
+    const unsub = this._tvUnsub;
+    this._tvUnsub = null;
+    if (typeof unsub?.then === "function") unsub.then((u) => u?.()).catch(() => {});
+  }
+
+  // ---- TVs ----
+
+  _subscribeTvs() {
+    if (!this._hass?.connection) return;
+    this._tvUnsub = this._hass.connection.subscribeMessage((data) => {
+      this._tvs = data;
+      this._render();
+    }, { type: "alvuna/tvs/subscribe" });
+    this._tvUnsub.catch(() => {
+      this._tvUnsub = null;
+      this._tvs = "unavailable";
+      this._render();
+    });
+  }
+
+  _tv(id) { return this._tvs?.tvs?.find((x) => x.entry_id === id); }
+
+  _flashFor(id, text, error = false) {
+    this._flash[id] = { text, error };
+    clearTimeout(this._flash[`${id}:t`]);
+    this._flash[`${id}:t`] = setTimeout(() => { delete this._flash[id]; this._render(); }, error ? 6000 : 2500);
+    this._render();
+  }
+
+  async _tvCommand(id, command, extra = {}) {
+    try {
+      await this._hass.callWS({ type: "alvuna/tvs/command", entry_id: id, command, ...extra });
+      this._flashFor(id, t("tvs.sent"));
+      return true;
+    } catch (err) {
+      this._flashFor(id, t("tvs.failed", { msg: err?.message || String(err || "") }), true);
+      return false;
+    }
+  }
+
+  // Shown at once; the TV's next report (or the server's copy) confirms it.
+  async _tvSettings(id, change) {
+    const sent = this._hass.callWS({ type: "alvuna/tvs/settings", entry_id: id, settings: change });
+    const tv = this._tv(id);
+    if (tv) { tv.settings = { ...(tv.settings || {}), ...change }; tv.pending = true; this._render(); }
+    try {
+      await sent;
+    } catch (err) {
+      this._flashFor(id, t("tvs.failed", { msg: err?.message || String(err || "") }), true);
+    }
+  }
+
+  _tvsContent() {
+    const visible = (id) => !this._ov.hidden.includes(id);
+    const roomList = this._data ? rooms(this._data, this._ov).filter((r) => visible(r.id))
+      .map((r) => ({ area: r.id.replace(/^area:/, ""), name: this._ov.names[r.id] || r.auto_name })) : [];
+    const cameras = this._data ? listItems(this._data, this._ov, "cameras", this._nameOf).filter((c) => visible(c.id) && !c.missing)
+      .map((c) => ({ id: c.id, name: this._ov.names[c.id] || c.auto_name })) : [];
+    return tvsTab({
+      data: this._tvs, lang: this._hass?.locale?.language || currentLanguage(), rooms: roomList, cameras,
+      hasClimate: !!this._data?.found?.climate, open: this._open, drafts: this._drafts, flash: this._flash,
+      svg, P, switch: (focus, on, label, attrs) => this._tvSwitch(focus, on, label, attrs),
+    });
+  }
+
+  _tvSwitch(focus, on, label, attrs) {
+    const common = `data-action="tv-pref" data-focus="${esc(focus)}" data-on="${on ? 1 : 0}" aria-label="${esc(label)}" title="${esc(label)}" ${attrs}`;
+    if (customElements.get("ha-switch")) return `<ha-switch ${common}></ha-switch>`;
+    return `<input type="checkbox" role="switch" class="switch" ${common} ${on ? "checked" : ""}>`;
+  }
+
+  _tabs() {
+    const n = Array.isArray(this._tvs?.tvs) ? this._tvs.tvs.length : null;
+    const tab = (key, label, count) => `<button class="tab" role="tab" data-action="tab" data-key="${key}" data-focus="tab|${key}"
+      aria-selected="${this._tab === key}">${esc(label)}${count != null ? `<span class="count">${count}</span>` : ""}</button>`;
+    return `<div class="tabs" role="tablist">${tab("layout", t("tabs.layout"))}${tab("tvs", t("tabs.tvs"), n)}</div>`;
   }
 
   // ---- Data ----
@@ -189,11 +286,14 @@ class AlvunaPanel extends HTMLElement {
         <div class="status" role="status" aria-live="polite"></div>
       </header>
       <main class="content"></main>`;
+    this.shadowRoot.querySelector("style").textContent += TVS_STYLE;
     const root = this.shadowRoot;
     root.addEventListener("click", (e) => this._onClick(e));
     root.addEventListener("input", (e) => this._onInput(e));
     root.addEventListener("keydown", (e) => this._onKey(e));
     root.addEventListener("focusout", (e) => this._onFocusOut(e));
+    root.addEventListener("change", (e) => this._onChange(e));
+    root.addEventListener("submit", (e) => this._onSubmit(e));
     root.addEventListener("focusin", (e) => {
       if (e.target.dataset?.action === "rename") e.target.dataset.before = e.target.value;
     });
@@ -230,6 +330,9 @@ class AlvunaPanel extends HTMLElement {
     const sel = active && "selectionStart" in active && active.selectionStart != null ? [active.selectionStart, active.selectionEnd] : null;
     const html = this._content();
     const main = root.querySelector(".content");
+    // A list being picked from would close under the user's mouse: the update waits until it is left.
+    if (html !== this._lastHtml && active?.tagName === "SELECT" && !focusKey) { this._deferred = true; return; }
+    this._deferred = false;
     if (html !== this._lastHtml) {
       main.innerHTML = html;
       this._lastHtml = html;
@@ -244,7 +347,8 @@ class AlvunaPanel extends HTMLElement {
     // A row moved to the top or bottom: its other arrow takes the focus.
     if (!el && /^move-(up|down)\|/.test(key)) el = find(key.replace(/^move-(up|down)/, (m, d) => `move-${d === "up" ? "down" : "up"}`));
     if (!el || el === this.shadowRoot.activeElement) return;
-    el.focus({ preventScroll: true });
+    // HA's own controls (ha-switch) throw on focus() until they have rendered, just after innerHTML made them.
+    try { el.focus({ preventScroll: true }); } catch { requestAnimationFrame(() => { try { el.focus({ preventScroll: true }); } catch { /* gone */ } }); }
     if (sel && typeof el.setSelectionRange === "function") {
       try { el.setSelectionRange(sel[0], sel[1]); } catch { /* not a text field */ }
     }
@@ -259,6 +363,12 @@ class AlvunaPanel extends HTMLElement {
         this._change((ov) => setHidden(ov, id, !sw.checked), { focus: `visible|${id}` });
       });
     }
+    for (const sw of main.querySelectorAll("[data-action=tv-pref]")) {
+      sw.checked = sw.dataset.on === "1";
+      sw.addEventListener("change", () => {
+        this._tvSettings(sw.dataset.tvId, { [sw.dataset.tvKey]: !!sw.checked });
+      });
+    }
     for (const icon of main.querySelectorAll("ha-state-icon[data-entity]")) {
       icon.hass = this._hass;
       icon.stateObj = this._hass?.states?.[icon.dataset.entity];
@@ -266,6 +376,10 @@ class AlvunaPanel extends HTMLElement {
   }
 
   _content() {
+    return this._tabs() + (this._tab === "tvs" ? this._tvsContent() : this._layoutContent());
+  }
+
+  _layoutContent() {
     if (this._state === "loading") return `<div class="state"><span class="dot"></span>${esc(t("loading"))}</div>`;
     if (this._state === "not_set_up") {
       return `<div class="state card">
@@ -538,6 +652,26 @@ class AlvunaPanel extends HTMLElement {
       case "retry-load":
         this._load();
         break;
+      case "tab": {
+        if (key === this._tab) break;
+        const base = `/${this._panel?.url_path || "alvuna"}`;
+        history.pushState(null, "", key === "tvs" ? `${base}/tvs` : base);
+        window.dispatchEvent(new CustomEvent("location-changed", { detail: { replace: false } }));
+        break;
+      }
+      case "tv-cmd":
+        this._tvCommand(id, el.dataset.command);
+        break;
+      case "tv-set":
+        this._tvSettings(id, { [key]: el.dataset.value });
+        break;
+      case "tv-toggle-open":
+        if (this._open.has(key)) this._open.delete(key); else this._open.add(key);
+        this._render(el.dataset.focus);
+        break;
+      case "tv-clear-log":
+        this._hass.callWS({ type: "alvuna/tvs/clear_log", entry_id: id }).catch(() => {});
+        break;
       case "retry-save":
         this._flush();
         break;
@@ -552,6 +686,10 @@ class AlvunaPanel extends HTMLElement {
       // No re-render while typing: the row only learns whether it now has its own name.
       this._change((ov) => setName(ov, id, el.value, auto), { render: false });
       el.closest(".row")?.classList.toggle("renamed", !!this._ov.names[id]);
+    } else if (el.dataset?.action === "tv-draft") {
+      this._drafts[el.dataset.id] = el.value;
+      const send = el.closest("form")?.querySelector("button[type=submit]");
+      if (send) send.disabled = !el.value.trim();
     } else if (el.dataset?.action === "search" && this._picker) {
       this._picker.query = el.value;
       this._render();
@@ -577,8 +715,38 @@ class AlvunaPanel extends HTMLElement {
     }
   }
 
+  _onChange(e) {
+    const el = e.target, { action, id, key } = el.dataset || {};
+    if (action === "tv-open" && el.value) {
+      const target = el.value;
+      el.value = "";
+      this._tvCommand(id, "open", { target });
+    } else if (action === "tv-camera" && el.value) {
+      const entity = el.value;
+      el.value = "";
+      this._tvCommand(id, "camera", { entity_id: entity });
+    } else if (action === "tv-minutes") {
+      this._tvSettings(id, { [key]: el.value === "" ? null : Number(el.value) });
+    }
+    if (this._deferred) setTimeout(() => this._render(), 0);
+  }
+
+  async _onSubmit(e) {
+    const form = e.target;
+    if (form.dataset?.action !== "tv-notify") return;
+    e.preventDefault();
+    const id = form.dataset.id, message = (this._drafts[id] || "").trim();
+    if (!message) return;
+    if (await this._tvCommand(id, "notify", { message })) {
+      this._drafts[id] = "";
+      this._lastHtml = null;
+      this._render(`tv-draft|${id}`);
+    }
+  }
+
   _onFocusOut(e) {
     const el = e.target;
+    if (el.tagName === "SELECT" && this._deferred) setTimeout(() => this._render(), 0);
     if (el.dataset?.action === "rename" && !el.value.trim()) el.value = el.dataset.auto;
   }
 }
