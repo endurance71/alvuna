@@ -11,9 +11,41 @@ import { STEPS } from "../tv/ui/prefs.js";
 import { ROWS } from "../tv/ui/rows.js";
 import tvCss from "../tv/styles.css";
 
-// The TV's own tile styles, for the layout editor's tiles (drawn by the TV's code, see previewTiles in the panel):
-// its :root variables go on the preview's box; its fonts must be declared in the document (not in a shadow root).
-export const TV_TILE_CSS = tvCss.replace(/:root\s*\{/, ".tvp {");
+// The TV's own tile styles, for the layout editor's tiles (drawn by the TV's code, see previewTiles in the panel),
+// scoped to the preview (.tvp): the TV's classes (.name, .sub, .row, .card…) are the panel's too. Its :root variables
+// go on .tvp itself, html/body rules are dropped, and its fonts are declared in the document (not in a shadow root).
+function splitTop(list) {
+  const out = [];
+  let depth = 0, cur = "";
+  for (const ch of list) {
+    if (ch === "(") depth++;
+    else if (ch === ")") depth--;
+    if (ch === "," && !depth) { out.push(cur); cur = ""; } else cur += ch;
+  }
+  out.push(cur);
+  return out.map((s) => s.trim()).filter(Boolean);
+}
+function scopeCss(css, scope) {
+  let out = "", i = 0;
+  while (i < css.length) {
+    const open = css.indexOf("{", i);
+    if (open < 0) break;
+    const head = css.slice(i, open).trim();
+    let depth = 1, j = open + 1;
+    while (j < css.length && depth) { if (css[j] === "{") depth++; else if (css[j] === "}") depth--; j++; }
+    const body = css.slice(open + 1, j - 1);
+    if (/^@(media|supports|container)/.test(head)) out += `${head}{${scopeCss(body, scope)}}`;
+    else if (head.startsWith("@font-face")) { /* declared in the document */ }
+    else if (head.startsWith("@")) out += `${head}{${body}}`;
+    else {
+      const sels = splitTop(head).map((s) => (s === ":root" ? scope : /^(html|body)\b/.test(s) ? null : `${scope} ${s}`)).filter(Boolean);
+      if (sels.length) out += `${sels.join(",")}{${body}}`;
+    }
+    i = j;
+  }
+  return out;
+}
+export const TV_TILE_CSS = scopeCss(tvCss.replace(/\/\*[\s\S]*?\*\//g, ""), ".tvp");
 let fontsAdded = false;
 export function addTvFonts() {
   if (fontsAdded) return;
@@ -313,7 +345,7 @@ function layoutEditor(tv, ctx) {
       // The tile as the TV draws it, from the home's live states, at the TV's proportions; the controls under it.
       if (live) {
         return `<div class="tvl-tile live ${hid ? "off" : ""}" ${common}>
-          <div class="tvp-box" style="${accentVars}"><div class="tvp">${live}</div></div>
+          <div class="tvp-box"><div class="tvp" style="${accentVars}">${live}</div></div>
           <div class="tvl-tile-bar">
             <span class="tvl-grip small" data-grip aria-hidden="true">${icon("mdi:drag")}</span>
             ${hid ? `<span class="tvl-hidden">${esc(t("tvs.layout.row_hidden"))}</span>` : ""}
