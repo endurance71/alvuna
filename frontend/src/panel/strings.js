@@ -75,6 +75,8 @@ const STRINGS = {
       log: "Dziennik błędów", log_empty: "Bez błędów od uruchomienia Home Assistanta.", clear: "Wyczyść",
       show: "Pokaż", hide: "Ukryj",
       pick: "Wybierz telewizor",
+      preview: "Podgląd ekranu", preview_note: "Na żywo, tak jak na telewizorze (z opóźnieniem do sekundy).",
+      preview_off: "Podgląd pojawi się, gdy Alvuna będzie otwarta na tym telewizorze.",
       sections: { control: "Sterowanie", layout: "Układ ekranu", settings: "Ustawienia", log: "Dziennik błędów" },
       layout: {
         hint: "Tak jak na ekranie tego telewizora: rzędy od góry, kafelki od lewej. Przeciągnij kafelek albo rząd, żeby zmienić kolejność (na telefonie za uchwyt ⋮⋮); oko ukrywa. Dotyczy tylko tego telewizora; to, co ukryjesz w zakładce Ekran, znika ze wszystkich.",
@@ -163,6 +165,8 @@ const STRINGS = {
       log: "Error log", log_empty: "No errors since Home Assistant started.", clear: "Clear",
       show: "Show", hide: "Hide",
       pick: "Pick a TV",
+      preview: "Screen preview", preview_note: "Live, as on the TV (up to a second behind).",
+      preview_off: "The preview shows up while Alvuna is open on this TV.",
       sections: { control: "Control", layout: "Screen layout", settings: "Settings", log: "Error log" },
       layout: {
         hint: "As on this TV's screen: rows from the top, tiles from the left. Drag a tile or a row to change the order (on a phone by its ⋮⋮ grip); the eye hides. Only for this TV; what you hide on the Screen tab is gone from every TV.",

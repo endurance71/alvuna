@@ -92,6 +92,9 @@ export async function connect({ onStates, onStatus }) {
 
 export const call = (conn, domain, service, data = {}, target) => haCall(conn, domain, service, data, target);
 
+// The states over a connection made elsewhere (the panel's, for its preview of a TV).
+export const watchStates = (conn, onStates) => subscribeEntities(conn, onStates);
+
 
 // The signed-in user's language and number/time formats (what HA's own frontend shows them), with the server's language
 // as the fallback, and the server's currency: what setLocale takes.

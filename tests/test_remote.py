@@ -77,10 +77,13 @@ async def test_report_settings_and_commands(hass: HomeAssistant, hass_client_no_
 
     # Once applied, what the TV reports is its settings (changed with the remote since).
     await ws.send_json_auto_id({"type": "alvuna/tv/report", "rev": 1, "settings": {"accent": "turkus", "glass": "solid"},
-                                "status": {"view": "panel", "detail": "room:Salon"}})
+                                "status": {"view": "panel", "detail": "room:Salon", "panel": {"type": "room", "room": 2},
+                                           "focus": {"line": "lights", "f": "light:light.salon"}}})
     assert (await ws.receive_json())["result"] == {"paired": True, "channel": True}
     tv = (await _tvs(admin))["tvs"][0]
     assert not tv["pending"] and tv["settings"] == {"accent": "turkus", "glass": "solid"}
+    # What the panel's preview needs to show the same screen.
+    assert tv["status"]["panel"] == {"type": "room", "room": 2} and tv["status"]["focus"]["f"] == "light:light.salon"
 
     # Commands reach the TV.
     await admin.send_json_auto_id({"type": "alvuna/tvs/command", "entry_id": tv_entry.entry_id, "command": "open",
