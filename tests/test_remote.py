@@ -98,6 +98,16 @@ async def test_report_settings_and_commands(hass: HomeAssistant, hass_client_no_
                                    "target": "nowhere"})
     assert not (await admin.receive_json())["success"]
 
+    # The preview as a remote: a key, an item pressed.
+    await admin.send_json_auto_id({"type": "alvuna/tvs/command", "entry_id": tv_entry.entry_id, "command": "key", "key": "left"})
+    assert (await admin.receive_json())["success"]
+    assert (await ws.receive_json())["event"] == {"type": "command", "command": "key", "key": "left"}
+    await admin.send_json_auto_id({"type": "alvuna/tvs/command", "entry_id": tv_entry.entry_id, "command": "press", "item": "room:2"})
+    assert (await admin.receive_json())["success"]
+    assert (await ws.receive_json())["event"] == {"type": "command", "command": "press", "item": "room:2"}
+    await admin.send_json_auto_id({"type": "alvuna/tvs/command", "entry_id": tv_entry.entry_id, "command": "key"})
+    assert not (await admin.receive_json())["success"]
+
     # Errors the TV logs.
     await ws.send_json_auto_id({"type": "alvuna/tv/log", "entries": [{"level": "error", "message": "x is undefined"},
                                                                      {"level": "nonsense", "message": "dropped"}]})

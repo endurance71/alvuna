@@ -347,7 +347,7 @@ const isBack = (ev) => ev.keyCode === 461 || ev.key === "GoBack" || ev.key === "
   || (ev.key === "Backspace" && !/INPUT|TEXTAREA/.test(ev.target.tagName));
 
 window.addEventListener("keydown", (ev) => {
-  if (MIRROR) return;
+  if (MIRROR) { mirrorKey(ev); return; }
   const woke = wake();
   if (woke) { ev.preventDefault(); return; }
   // Typing an address: the keys belong to the field (and the TV's keyboard); Enter connects, Back leaves the field.
@@ -360,13 +360,8 @@ window.addEventListener("keydown", (ev) => {
   const dir = KEYS[ev.key];
   if (dir) {
     ev.preventDefault();
-    const moved = focus.move(dir);
-    if (moved) alignFrost();
     document.body.classList.add("keys");
-    // ← past the first tile slides the summary out from the left; → past the summary's rows slides it back.
-    if (!moved && dir === "left" && !S.panel && S.camera == null) return void openPanel({ type: "summary", side: "left" });
-    if (!moved && dir === "right" && S.panel?.side === "left") return void closeLayer();
-    if (S.camera != null) cameraFollowFocus();
+    remoteDir(dir);
     return;
   }
   // OK: a short press acts on release; held for 0.65 s it opens the item's menu (hide it from Alvuna's screens).
@@ -379,11 +374,25 @@ window.addEventListener("keydown", (ev) => {
   }
   if (isBack(ev)) {
     ev.preventDefault();
-    if (closeLayer()) return;
-    if (!focus.isFirstLine()) { focus.toFirstLine(); return; }
-    if (TV_APP) platformBack();
+    if (!remoteBack() && TV_APP) platformBack();
   }
 });
+
+// An arrow and Back, from the remote or from the panel's preview (tvCommand "key").
+function remoteDir(dir) {
+  const moved = focus.move(dir);
+  if (moved) alignFrost();
+  // ← past the first tile slides the summary out from the left; → past the summary's rows slides it back.
+  if (!moved && dir === "left" && !S.panel && S.camera == null) return void openPanel({ type: "summary", side: "left" });
+  if (!moved && dir === "right" && S.panel?.side === "left") return void closeLayer();
+  if (S.camera != null) cameraFollowFocus();
+}
+// False when there is nothing to step back from (the remote then leaves the app; the panel does not).
+function remoteBack() {
+  if (closeLayer()) return true;
+  if (!focus.isFirstLine()) { focus.toFirstLine(); return true; }
+  return false;
+}
 window.addEventListener("keyup", (ev) => {
   if (MIRROR) return;
   if (!(ev.key === "Enter" || ev.keyCode === 13) || document.activeElement?.tagName === "INPUT") return;
@@ -427,7 +436,13 @@ function closeApp() {
 // The Magic Remote wheel moves between rows (the pointer itself never scrolls the page).
 let wheelAt = 0;
 window.addEventListener("wheel", (ev) => {
-  if (MIRROR) return;
+  if (MIRROR) {
+    ev.preventDefault();
+    if (Date.now() - wheelAt < 220 || Math.abs(ev.deltaY) < 4) return;
+    wheelAt = Date.now();
+    MIRROR.key(ev.deltaY > 0 ? "down" : "up");
+    return;
+  }
   ev.preventDefault();
   if (wake() || Date.now() - wheelAt < 220 || Math.abs(ev.deltaY) < 4) return;
   wheelAt = Date.now();
@@ -436,7 +451,7 @@ window.addEventListener("wheel", (ev) => {
 // The Magic Remote pointer: hovering focuses, a click is OK.
 window.addEventListener("pointermove", (ev) => { if (MIRROR) return; wake(); document.body.classList.remove("keys"); focus.pointAt(ev.target); }, { passive: true });
 window.addEventListener("click", (ev) => {
-  if (MIRROR) return;
+  if (MIRROR) { mirrorClick(ev); return; }
   if (wake()) return;
   const item = ev.target.closest?.("[data-f]");
   if (item) { focus.pointAt(item); act(item); return; }
@@ -757,6 +772,24 @@ function tvCommand(ev) {
     case "saver_on": closeAll(); if (!S.saver) startSaver(); break;
     case "saver_off": wake(); break;
     case "exit": if (TV_APP) closeApp(); return;
+    // The panel's preview as a remote: a key, or a click on an item (it is focused and pressed, like OK).
+    case "key": {
+      if (wake()) break;
+      if (["up", "down", "left", "right"].includes(ev.key)) remoteDir(ev.key);
+      else if (ev.key === "ok") focus.activate();
+      else if (ev.key === "back") remoteBack();
+      break;
+    }
+    case "press": {
+      if (wake()) break;
+      const el = [...document.querySelectorAll("[data-f]")].find((x) => x.dataset.f === ev.item && !x.closest(".closing"));
+      if (!el) break;
+      // An item behind an open panel or camera: the click closes that layer, as a click beside a panel does.
+      if (!focus.root?.contains(el)) { closeLayer(); break; }
+      focus.pointAt(el);
+      act(el);
+      break;
+    }
     case "open": {
       wake();
       const target = String(ev.target || "");
@@ -868,6 +901,22 @@ async function pairScreen() {
 }
 
 // --- the panel's preview of a TV ----------------------------------------------------------------------
+// The preview is also a remote: a click on an item presses it on the TV, keys are the remote's; the screen changes
+// when the TV reports back (well under a second).
+function mirrorClick(ev) {
+  ev.preventDefault();
+  const item = ev.target.closest?.("[data-f]");
+  if (S.saver) return MIRROR.key("ok");
+  if (item) return MIRROR.press(item.dataset.f);
+  if (S.panel && ev.target.closest?.(".panel-wrap") && !ev.target.closest(".panel")) MIRROR.key("back");
+}
+function mirrorKey(ev) {
+  const k = KEYS[ev.key] || (ev.key === "Enter" ? "ok" : isBack(ev) ? "back" : null);
+  if (!k) return;
+  ev.preventDefault();
+  MIRROR.key(k);
+}
+
 // What that TV reported: its settings, then what it shows (saver, camera, panel) and the item it has focused.
 function mirrorTv(tv) {
   if (!tv || !S.config) return;

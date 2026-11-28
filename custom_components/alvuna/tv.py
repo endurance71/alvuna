@@ -124,7 +124,9 @@ LOG_ENTRY = vol.Schema(
     extra=vol.REMOVE_EXTRA,
 )
 # What the panel can ask of a TV that is on.
-COMMANDS = ["reload", "home", "saver_on", "saver_off", "open", "notify", "camera", "exit"]
+COMMANDS = ["reload", "home", "saver_on", "saver_off", "open", "notify", "camera", "exit", "key", "press"]
+# The panel's preview as a remote: the remote's keys, and an item pressed by its focus key (data-f).
+KEYS = ["up", "down", "left", "right", "ok", "back"]
 OPEN_TARGET = vol.Any(vol.In(["summary", "weather", "climate", "settings"]), vol.Match(r"^room:[^\s]{1,255}$"))
 
 
@@ -356,6 +358,8 @@ def _tv_entry(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
         vol.Optional("title"): vol.All(cv.string, vol.Length(max=120)),
         vol.Optional("seconds"): vol.All(vol.Coerce(int), vol.Range(min=2, max=3600)),
         vol.Optional(ATTR_ENTITY_ID): cv.entity_domain("camera"),
+        vol.Optional("key"): vol.In(KEYS),
+        vol.Optional("item"): _text(200),
     }
 )
 @callback
@@ -377,6 +381,12 @@ def ws_command(hass: HomeAssistant, connection: websocket_api.ActiveConnection, 
             connection.send_error(msg["id"], "invalid_format", "entity_id required")
             return
         event = {"type": "camera", "entity_id": msg[ATTR_ENTITY_ID], "seconds": msg.get("seconds", 60)}
+    elif command in ("key", "press"):
+        field = "key" if command == "key" else "item"
+        if not msg.get(field):
+            connection.send_error(msg["id"], "invalid_format", f"{field} required")
+            return
+        event = {"type": "command", "command": command, field: msg[field]}
     elif command == "open":
         if "target" not in msg:
             connection.send_error(msg["id"], "invalid_format", "target required")

@@ -583,3 +583,6 @@ body.frost #home .tile.alert { position: relative; isolation: isolate; backgroun
 .p-input.f { transform: scale(1.03); border-color: rgba(var(--lime-rgb),.7); background: rgba(0,0,0,.35); }
 .p-input:focus-within { border-color: var(--lime); }
 .p-note { margin: 16px 6px 4px; font-size: 24px; color: var(--muted); line-height: 1.4; }
+
+/* The Alvuna panel's preview (main.js MIRROR): its items can be clicked to press them on the TV. */
+body.mirror [data-f] { cursor: pointer; }

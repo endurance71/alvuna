@@ -202,8 +202,26 @@ function preview(tv) {
   const id = esc(tv.entry_id);
   return `<div class="tv-mirror">
     <div class="tv-mirror-head"><h3>${esc(t("tvs.preview"))}</h3>${tv.connected ? `<span class="tv-mirror-note">${esc(t("tvs.preview_note"))}</span>` : ""}</div>
-    ${tv.connected ? `<div class="tv-mirror-slot" data-id="${id}"></div>`
+    ${tv.connected ? `<div class="tv-mirror-slot" data-id="${id}"></div>${remote(tv)}`
       : `<div class="tv-mirror-off"><span>${icon("mdi:television-off")}</span><p>${esc(t("tvs.preview_off"))}</p></div>`}
+  </div>`;
+}
+
+// A remote under the preview, for a touch screen (with a mouse, the preview itself is clicked; with a keyboard, its keys).
+function remote(tv) {
+  const id = esc(tv.entry_id);
+  const k = (key, ic, label, cls = "") => `<button class="rc-btn ${cls}" data-action="tv-key" data-id="${id}" data-key="${key}"
+    data-focus="rc|${key}" title="${esc(label)}" aria-label="${esc(label)}">${icon(ic)}</button>`;
+  return `<div class="rc" role="group" aria-label="${esc(t("tvs.remote.label"))}">
+    ${k("back", "mdi:arrow-left", t("tvs.remote.back"), "rc-back")}
+    <div class="rc-pad">
+      ${k("up", "mdi:chevron-up", t("tvs.remote.up"), "rc-up")}
+      ${k("left", "mdi:chevron-left", t("tvs.remote.left"), "rc-left")}
+      <button class="rc-btn rc-ok" data-action="tv-key" data-id="${id}" data-key="ok" data-focus="rc|ok" aria-label="${esc(t("tvs.remote.ok"))}">OK</button>
+      ${k("right", "mdi:chevron-right", t("tvs.remote.right"), "rc-right")}
+      ${k("down", "mdi:chevron-down", t("tvs.remote.down"), "rc-down")}
+    </div>
+    <span class="rc-hint">${esc(t("tvs.remote.hint"))}</span>
   </div>`;
 }
 
@@ -428,6 +446,16 @@ section.tv { margin-top: 8px; }
 .tv-mirror-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
 .tv-mirror-note { font-size: 13px; color: var(--alv-sub); }
 .tv-mirror-slot { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--alv-radius); background: #000; }
+.rc { display: flex; align-items: center; gap: 18px; margin-top: 12px; flex-wrap: wrap; }
+.rc-pad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 4px; }
+.rc-btn { border: 1px solid var(--alv-div); background: var(--alv-card); color: var(--primary-text-color); border-radius: 12px; cursor: pointer;
+  display: grid; place-items: center; padding: 0; --mdc-icon-size: 24px; font: inherit; font-weight: 600; }
+.rc-btn:hover { background: var(--alv-tint); border-color: transparent; }
+.rc-btn:active { transform: scale(.94); }
+.rc-up { grid-area: 1 / 2; } .rc-left { grid-area: 2 / 1; } .rc-ok { grid-area: 2 / 2; border-radius: 50%; background: var(--alv-tint); color: var(--alv-accent); }
+.rc-right { grid-area: 2 / 3; } .rc-down { grid-area: 3 / 2; }
+.rc-back { width: 44px; height: 44px; border-radius: 50%; }
+.rc-hint { font-size: 13px; color: var(--alv-sub); max-width: 420px; line-height: 1.45; }
 .tv-mirror-off { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--alv-radius); background: var(--alv-wash); border: 1px dashed var(--alv-div);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--alv-sub); text-align: center; padding: 16px; }
 .tv-mirror-off span { --mdc-icon-size: 40px; opacity: .6; }
