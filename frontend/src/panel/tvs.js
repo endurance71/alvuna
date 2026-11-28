@@ -516,9 +516,13 @@ section.tv { margin-top: 8px; }
 .tvl-tile.dragging { box-shadow: 0 14px 30px rgba(0, 0, 0, .45), inset 0 0 0 2px rgba(255, 255, 255, .6); background: rgba(255, 255, 255, .22); }
 .tvl-row.dragging { background: rgba(255, 255, 255, .08); box-shadow: 0 14px 30px rgba(0, 0, 0, .4); border-radius: 12px; }
 .sorting { scroll-behavior: auto; }
-/* A tile drawn by the TV's code, at 42% of its size on the TV (320 × 210 px there). */
+/* A tile drawn by the TV's code, at 42% of its size on the TV (320 × 210 px there), larger as the editor widens. */
+.tvl-screen { container-type: inline-size; }
 .tvl-tile.live { width: auto; padding: 0; background: transparent; box-shadow: none; backdrop-filter: none; gap: 4px; border-radius: 0; }
 .tvp-box { zoom: .42; }
+@container (min-width: 1000px) { .tvp-box { zoom: .5; } }
+@container (min-width: 1300px) { .tvp-box { zoom: .56; } }
+@container (min-width: 1700px) { .tvp-box { zoom: .64; } }
 .tvp { color: #fff; font: 400 24px/1.3 Figtree, system-ui, sans-serif; -webkit-font-smoothing: antialiased; pointer-events: none; }
 .tvp .tile { transition: none; }
 .tvl-tile.live.off .tvp { opacity: .32; filter: grayscale(.6); }
