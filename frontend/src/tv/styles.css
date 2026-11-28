@@ -113,7 +113,7 @@ body:not(.dimmed)::after { transition-duration: .5s; }
    going from no transform to one (or changing z-index) rebuilds the element's layer and forces a layout on the TV.
    Focus animates only transform and opacity (the GPU plays those); colours switch at once, since a colour transition
    repaints on the TV's CPU every frame and made panel moves drop to ~50 fps. */
-.tile.f, .instance.f { transform: scale(1.08); }
+.tile.f, .instance.f { transform: scale(1.1); }
 .tile::after, .instance::after, .p-row::after, .btn::after, .sensors > .sensor::after { content: ""; position: absolute; inset: -1.5px; border-radius: inherit;
   box-shadow: 0 24px 48px rgba(0,0,0,.45); opacity: 0; transition: opacity .3s var(--ease); pointer-events: none; }
 .f::after { opacity: 1; }
@@ -586,3 +586,23 @@ body.frost #home .tile.alert { position: relative; isolation: isolate; backgroun
 
 /* The Alvuna panel's preview (main.js MIRROR): its items can be clicked to press them on the TV. */
 body.mirror [data-f] { cursor: pointer; }
+
+/* Focus, the Apple TV way (tvOS): the focused item pops up on a spring (a quick start, a slight overshoot that settles
+   at once, ~0.5 s) while its shadow drops and spreads under it, as if it lifted off the screen; the item it leaves
+   goes back without any bounce (~0.4 s). Both are springs drawn as linear() curves (damping 0.7 / response 0.34 s in,
+   critically damped / 0.26 s out), so the GPU still only plays transform and opacity. A TV without linear() keeps
+   the plain curve above. */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --focus-in: linear(0, 0.0411, 0.1412, 0.2721, 0.4128, 0.5492, 0.6723, 0.7773, 0.8626, 0.9285, 0.9768, 1.0099, 1.0307, 1.0418,
+      1.0458, 1.0449, 1.0409, 1.0352, 1.0287, 1.0223, 1.0165, 1.0114, 1.0073, 1.004, 1.0016, 0.9999, 0.9988, 0.9982, 0.9979, 0.9979,
+      0.9981, 0.9983, 1);
+    --focus-out: linear(0, 0.0788, 0.2359, 0.4028, 0.5507, 0.6709, 0.7636, 0.8327, 0.8831, 0.919, 0.9444, 0.9621, 0.9743, 0.9826,
+      0.9883, 0.9922, 0.9948, 0.9965, 0.9977, 0.9985, 1);
+  }
+  .tile, .instance, .p-row, .sensors > .sensor, .scard, .cthumb, .btn { transition: transform .38s var(--focus-out); }
+  .tile.f, .instance.f, .p-row.f, .sensors > .sensor.f, .scard.f, .cthumb.f, .btn.f { transition: transform .53s var(--focus-in); }
+  .tile::after, .instance::after, .p-row::after, .btn::after, .sensors > .sensor::after {
+    transform: translateY(-14px) scale(.92); transition: opacity .25s var(--ease), transform .38s var(--focus-out); will-change: opacity, transform; }
+  .f::after { transform: none; transition: opacity .2s var(--ease), transform .53s var(--focus-in); }
+}
