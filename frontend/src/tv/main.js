@@ -39,7 +39,7 @@ let instance = currentInstance(instances);
 
 const S = { states: {}, config: null, panel: null, camera: null, camUi: { stripHidden: false, live: false }, forecast: null,
   status: "connecting", toast: "", pending: {}, saver: false, lastInput: Date.now(), hist: {}, notifs: {}, platforms: {},
-  panelStack: [], hidden: loadHidden() };
+  panelStack: [], hidden: loadHidden(), lastKey: Date.now() };
 
 // Items hidden from "Wymaga uwagi" on this TV, kept across restarts.
 function loadHidden() { try { return JSON.parse(localStorage.getItem("homedeck-hidden")) || {}; } catch (e) { return {}; } }
@@ -449,6 +449,10 @@ function oledShift(now) {
   document.body.style.setProperty("--sy", `${y}px`);
 }
 
+// A key, the pointer or the wheel: the remote itself (for the panel's "last key press"; wake() also runs for commands).
+const touched = () => { S.lastKey = Date.now(); };
+["keydown", "pointermove", "wheel", "click"].forEach((ev) => window.addEventListener(ev, touched, { capture: true, passive: true }));
+
 function wake() {
   S.lastInput = Date.now();
   document.body.classList.remove("dimmed");
@@ -779,7 +783,7 @@ function screenNow() {
 function report() {
   if (!conn || !S.config) return;
   const status = { ...screenNow(), dimmed: document.body.classList.contains("dimmed"), platform: PLATFORM,
-    idle: Math.round((Date.now() - S.lastInput) / 1000), uptime: Math.round((Date.now() - STARTED) / 1000),
+    idle: Math.round((Date.now() - S.lastKey) / 1000), uptime: Math.round((Date.now() - STARTED) / 1000),
     ua: navigator.userAgent.slice(0, 400), screen: `${screen.width}x${screen.height}`, home: instance?.name || "",
     homes: instances.length, language: language() };
   report.key = reportKey();
