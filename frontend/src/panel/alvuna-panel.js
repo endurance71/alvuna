@@ -79,6 +79,9 @@ class AlvunaPanel extends HTMLElement {
     this._mirrorHost = {
       get connection() { return panel._hass?.connection; },
       listen(id, cb) { panel._mirror = { id, cb }; cb(panel._tv(id)); },
+      // The preview as a remote (its clicks and keys).
+      press(item) { if (panel._mirror) panel._tvCommand(panel._mirror.id, "press", { item }, { quiet: true }); },
+      key(key) { if (panel._mirror) panel._tvCommand(panel._mirror.id, "key", { key }, { quiet: true }); },
     };
     this.attachShadow({ mode: "open" });
     // HA loads its components lazily: once its switch and state icon exist, they replace the stand-ins.
@@ -205,10 +208,10 @@ class AlvunaPanel extends HTMLElement {
     this._render();
   }
 
-  async _tvCommand(id, command, extra = {}) {
+  async _tvCommand(id, command, extra = {}, { quiet = false } = {}) {
     try {
       await this._hass.callWS({ type: "alvuna/tvs/command", entry_id: id, command, ...extra });
-      this._flashFor(id, t("tvs.sent"));
+      if (!quiet) this._flashFor(id, t("tvs.sent"));
       return true;
     } catch (err) {
       this._flashFor(id, t("tvs.failed", { msg: err?.message || String(err || "") }), true);
@@ -424,7 +427,7 @@ class AlvunaPanel extends HTMLElement {
       frame = document.createElement("iframe");
       frame.dataset.id = id;
       frame.title = t("tvs.preview");
-      frame.tabIndex = -1;
+      frame.tabIndex = 0;
       frame.src = `/alvuna/tv/?mirror=${encodeURIComponent(id)}`;
       layer.replaceChildren(frame);
     }
@@ -758,6 +761,9 @@ class AlvunaPanel extends HTMLElement {
       case "tv-cmd":
         this._tvCommand(id, el.dataset.command);
         break;
+      case "tv-key":
+        this._tvCommand(id, "key", { key }, { quiet: true });
+        break;
       case "tv-set":
         this._tvSettings(id, { [key]: el.dataset.value });
         break;
@@ -916,7 +922,8 @@ button { font: inherit; color: inherit; }
 .content { position: relative; }
 .mirror-layer { position: absolute; z-index: 1; border-radius: var(--ha-card-border-radius, 12px); overflow: hidden; background: #000;
   box-shadow: 0 0 0 1px var(--alv-div); }
-.mirror-layer iframe { display: block; width: 100%; height: 100%; border: 0; pointer-events: none; }
+.mirror-layer iframe { display: block; width: 100%; height: 100%; border: 0; }
+.mirror-layer:focus-within { box-shadow: 0 0 0 2px var(--alv-accent); }
 .intro { margin: 0 4px 8px; max-width: 680px; }
 .intro p { margin: 0; font-size: 16px; line-height: 1.5; }
 .intro .intro-save { margin-top: 8px; font-size: 14px; color: var(--alv-sub); }

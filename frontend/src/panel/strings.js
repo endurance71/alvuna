@@ -75,7 +75,9 @@ const STRINGS = {
       log: "Dziennik błędów", log_empty: "Bez błędów od uruchomienia Home Assistanta.", clear: "Wyczyść",
       show: "Pokaż", hide: "Ukryj",
       pick: "Wybierz telewizor",
-      preview: "Podgląd ekranu", preview_note: "Na żywo, tak jak na telewizorze (z opóźnieniem do sekundy).",
+      preview: "Podgląd ekranu", preview_note: "Na żywo. Kliknij w podglądzie, żeby nacisnąć to na telewizorze.",
+      remote: { label: "Pilot", back: "Wstecz", up: "W górę", down: "W dół", left: "W lewo", right: "W prawo", ok: "OK",
+        hint: "Kliknięcie w podglądzie naciska ten element na telewizorze. Po kliknięciu w podgląd działają też strzałki, Enter (OK) i Esc (Wstecz)." },
       preview_off: "Podgląd pojawi się, gdy Alvuna będzie otwarta na tym telewizorze.",
       sections: { control: "Sterowanie", layout: "Układ ekranu", settings: "Ustawienia", log: "Dziennik błędów" },
       layout: {
@@ -165,7 +167,9 @@ const STRINGS = {
       log: "Error log", log_empty: "No errors since Home Assistant started.", clear: "Clear",
       show: "Show", hide: "Hide",
       pick: "Pick a TV",
-      preview: "Screen preview", preview_note: "Live, as on the TV (up to a second behind).",
+      preview: "Screen preview", preview_note: "Live. Click in the preview to press that on the TV.",
+      remote: { label: "Remote", back: "Back", up: "Up", down: "Down", left: "Left", right: "Right", ok: "OK",
+        hint: "A click in the preview presses that item on the TV. Once you click into the preview, the arrows, Enter (OK) and Esc (Back) work too." },
       preview_off: "The preview shows up while Alvuna is open on this TV.",
       sections: { control: "Control", layout: "Screen layout", settings: "Settings", log: "Error log" },
       layout: {
