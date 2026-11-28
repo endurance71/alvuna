@@ -6,6 +6,18 @@
 <title>Alvuna</title>
 <link rel="stylesheet" href="__CSS__">
 <script>
+  // ?mirror=<TV>: the Alvuna panel's preview of that TV (main.js). It keeps that TV's settings in memory only, so the
+  // admin's browser storage (shared with Home Assistant's own frontend on this origin) is never written.
+  if (/[?&]mirror=/.test(location.search)) {
+    var mem = {};
+    try {
+      Object.defineProperty(window, "localStorage", { configurable: true, value: {
+        getItem: function (k) { return Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null; },
+        setItem: function (k, v) { mem[k] = String(v); }, removeItem: function (k) { delete mem[k]; },
+        clear: function () { mem = {}; }, key: function (i) { return Object.keys(mem)[i] || null; },
+        get length() { return Object.keys(mem).length; } } });
+    } catch (e) { /* the TV app then falls back to its defaults */ }
+  }
   // Drawn for 1920×1080: any other window (a browser on the Mac) is scaled to fit, the TV gets it 1:1.
   (function fit() {
     var z = Math.min(innerWidth / 1920, innerHeight / 1080);

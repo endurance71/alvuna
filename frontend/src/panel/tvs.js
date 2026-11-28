@@ -196,7 +196,22 @@ function tvCard(tv, ctx) {
   </section>`;
 }
 
+// The TV's screen, live: the TV app itself in a frame (?mirror=<entry>), placed over this slot by the panel (it is
+// kept out of the re-rendered HTML, which would reload it).
+function preview(tv) {
+  const id = esc(tv.entry_id);
+  return `<div class="tv-mirror">
+    <div class="tv-mirror-head"><h3>${esc(t("tvs.preview"))}</h3>${tv.connected ? `<span class="tv-mirror-note">${esc(t("tvs.preview_note"))}</span>` : ""}</div>
+    ${tv.connected ? `<div class="tv-mirror-slot" data-id="${id}"></div>`
+      : `<div class="tv-mirror-off"><span>${icon("mdi:television-off")}</span><p>${esc(t("tvs.preview_off"))}</p></div>`}
+  </div>`;
+}
+
 function actions(tv, ctx) {
+  return `<div class="tv-control">${preview(tv)}${commands(tv, ctx)}</div>`;
+}
+
+function commands(tv, ctx) {
   const id = esc(tv.entry_id), off = tv.connected ? "" : "disabled";
   const st = tv.status || {};
   const btn = (command, ic, label, extra = "") => `<button class="tv-act" data-action="tv-cmd" data-id="${id}" data-command="${command}"
@@ -407,6 +422,19 @@ section.tv { margin-top: 8px; }
 .tv-pick-name { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tv-pick-state { font-size: 13px; color: var(--alv-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tabs.sub { margin: 20px 0 0; }
+.tv-control { display: grid; gap: 4px 24px; }
+.tv-mirror { margin-top: 12px; }
+.tv-mirror-head { display: flex; align-items: baseline; gap: 12px; margin: 0 2px 8px; flex-wrap: wrap; }
+.tv-mirror-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.tv-mirror-note { font-size: 13px; color: var(--alv-sub); }
+.tv-mirror-slot { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--alv-radius); background: #000; }
+.tv-mirror-off { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--alv-radius); background: var(--alv-wash); border: 1px dashed var(--alv-div);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--alv-sub); text-align: center; padding: 16px; }
+.tv-mirror-off span { --mdc-icon-size: 40px; opacity: .6; }
+.tv-mirror-off p { margin: 0; font-size: 14px; max-width: 360px; }
+@media (min-width: 1300px) {
+  .tv-control { grid-template-columns: minmax(0, 1.7fr) minmax(340px, 1fr); align-items: start; }
+}
 .pending-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warning-color, #ffa600); display: inline-block; align-self: center; }
 .tv-flash-row { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-height: 30px; margin: 6px 0 4px; }
 .tv-head { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 16px; }

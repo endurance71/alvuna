@@ -72,6 +72,14 @@ class AlvunaPanel extends HTMLElement {
     this._drafts = {}; // entry -> message being typed
     this._flash = {}; // entry -> { text, error }: the last command's outcome
     this._ticker = null;
+    this._mirror = null; // { id, cb }: the preview frame's TV and its listener
+    // The preview frame (the TV app, ?mirror=) reads the connection and its TV from here: same origin, so a frame of
+    // this page can; one panel at a time.
+    const panel = this;
+    this._mirrorHost = {
+      get connection() { return panel._hass?.connection; },
+      listen(id, cb) { panel._mirror = { id, cb }; cb(panel._tv(id)); },
+    };
     this.attachShadow({ mode: "open" });
     // HA loads its components lazily: once its switch and state icon exist, they replace the stand-ins.
     for (const tag of ["ha-switch", "ha-state-icon"]) {
@@ -172,6 +180,7 @@ class AlvunaPanel extends HTMLElement {
     this._layoutUnsub.catch(() => { this._layoutUnsub = null; });
     this._tvUnsub = this._hass.connection.subscribeMessage((data) => {
       this._tvs = data;
+      if (this._mirror) { try { this._mirror.cb(this._tv(this._mirror.id)); } catch { /* the frame is going */ } }
       this._render();
     }, { type: "alvuna/tvs/subscribe" });
     this._tvUnsub.catch(() => {
@@ -322,7 +331,7 @@ class AlvunaPanel extends HTMLElement {
         <h1 class="title">Alvuna</h1>
         <div class="status" role="status" aria-live="polite"></div>
       </header>
-      <main class="content"></main>`;
+      <main class="content"><div class="content-body"></div><div class="mirror-layer" hidden></div></main>`;
     this.shadowRoot.querySelector("style").textContent += TVS_STYLE + TV_TILE_CSS;
     addTvFonts();
     const root = this.shadowRoot;
@@ -379,9 +388,9 @@ class AlvunaPanel extends HTMLElement {
     const key = focusKey || active?.dataset?.focus;
     const sel = active && "selectionStart" in active && active.selectionStart != null ? [active.selectionStart, active.selectionEnd] : null;
     const html = this._content();
-    const main = root.querySelector(".content");
+    const main = root.querySelector(".content-body");
     // The TVs tab takes the whole width (rows of tiles, cards side by side); the Screen tab's lists stay a column.
-    main.classList.toggle("wide", this._tab === "tvs");
+    root.querySelector(".content").classList.toggle("wide", this._tab === "tvs");
     // A list being picked from would close under the user's mouse: the update waits until it is left.
     if (html !== this._lastHtml && ((active?.tagName === "SELECT" && !focusKey) || this._dragging)) { this._deferred = true; return; }
     this._deferred = false;
@@ -394,6 +403,38 @@ class AlvunaPanel extends HTMLElement {
       this._hydrate(main);
     }
     if (key) this._refocus(main, key, focusKey ? null : sel);
+    this._placeMirror();
+  }
+
+  // The preview frame lives outside the re-rendered HTML (re-creating it would reload the TV app): it is laid over
+  // its slot, made when the slot appears and dropped when it goes.
+  _placeMirror() {
+    const root = this.shadowRoot, content = root.querySelector(".content"), layer = root.querySelector(".mirror-layer");
+    const slot = root.querySelector(".tv-mirror-slot"), id = slot?.dataset.id;
+    if (!layer) return;
+    if (!id) {
+      if (layer.firstChild) layer.replaceChildren();
+      layer.hidden = true;
+      this._mirror = null;
+      return;
+    }
+    window.__alvunaMirror = this._mirrorHost;
+    let frame = layer.querySelector("iframe");
+    if (!frame || frame.dataset.id !== id) {
+      frame = document.createElement("iframe");
+      frame.dataset.id = id;
+      frame.title = t("tvs.preview");
+      frame.tabIndex = -1;
+      frame.src = `/alvuna/tv/?mirror=${encodeURIComponent(id)}`;
+      layer.replaceChildren(frame);
+    }
+    layer.hidden = false;
+    const c = content.getBoundingClientRect(), r = slot.getBoundingClientRect();
+    Object.assign(layer.style, { top: `${r.top - c.top}px`, left: `${r.left - c.left}px`, width: `${r.width}px`, height: `${r.height}px` });
+    if (!this._mirrorResize) {
+      this._mirrorResize = new ResizeObserver(() => this._placeMirror());
+      this._mirrorResize.observe(root.querySelector(".content-body"));
+    }
   }
 
   _refocus(main, key, sel) {
@@ -872,6 +913,10 @@ button { font: inherit; color: inherit; }
 
 .content { max-width: 880px; margin: 0 auto; padding: 28px 16px calc(72px + var(--safe-area-inset-bottom, 0px)); }
 .content.wide { max-width: none; padding-left: 32px; padding-right: 32px; }
+.content { position: relative; }
+.mirror-layer { position: absolute; z-index: 1; border-radius: var(--ha-card-border-radius, 12px); overflow: hidden; background: #000;
+  box-shadow: 0 0 0 1px var(--alv-div); }
+.mirror-layer iframe { display: block; width: 100%; height: 100%; border: 0; pointer-events: none; }
 .intro { margin: 0 4px 8px; max-width: 680px; }
 .intro p { margin: 0; font-size: 16px; line-height: 1.5; }
 .intro .intro-save { margin-top: 8px; font-size: 14px; color: var(--alv-sub); }

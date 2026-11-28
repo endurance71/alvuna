@@ -111,6 +111,10 @@ STATUS_SCHEMA = vol.Schema(
         vol.Optional("home"): _text(80),
         vol.Optional("homes"): vol.All(vol.Coerce(int), vol.Range(min=0, max=99)),
         vol.Optional("language"): _text(16),
+        # For the panel's preview: the open panel's arguments, the camera shown and the focused item.
+        vol.Optional("panel"): vol.Schema({cv.string: vol.Any(None, int, _text(200))}),
+        vol.Optional("camera"): _text(255),
+        vol.Optional("focus"): vol.Schema({vol.Required("line"): _text(80), vol.Required("f"): _text(200)}),
     },
     extra=vol.REMOVE_EXTRA,
 )

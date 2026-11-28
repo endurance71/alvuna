@@ -3,7 +3,7 @@
 // builds from the home's areas and devices, adjusted in the Alvuna panel (alvuna/layout/subscribe); nobody writes it.
 import "./ui/icons.js";
 import { connect, call, loadForecast, cameraStream, loadHistory, subscribeNotifications, entityPlatforms,
-  userLocale, hasTokens, pair, subscribeLayout, subscribeTv, signOut, hideItem, reportTv, logTv } from "./ha.js";
+  userLocale, hasTokens, pair, subscribeLayout, subscribeTv, signOut, hideItem, reportTv, logTv, watchStates } from "./ha.js";
 import { Home } from "./model/home.js";
 import { esc, time, longDate, fmtTime, wIcon } from "./model/format.js";
 import { setLocale, t, language } from "../shared/i18n.js";
@@ -34,6 +34,9 @@ const APP_ICONS = ["mdi:alert", "mdi:alert-circle", "mdi:alert-circle-outline", 
   "mdi:gauge", "mdi:eye-outline", "mdi:sun-wireless-outline", "mdi:umbrella-outline", "mdi:navigation", "mdi:wifi-off",
   "mdi:keyboard-return", "mdi:arrow-left", "mdi:home-thermometer-outline", "mdi:play-circle-outline", "mdi:history", "mdi:shield-off-outline", "mdi:bell-outline", "mdi:bell-ring-outline", "mdi:battery-low", "mdi:battery-alert-variant-outline", "mdi:package-up", "mdi:account-group-outline", "mdi:trash-can-outline", "mdi:check-circle-outline", "mdi:check", "mdi:eye-off-outline", "mdi:debug-step-over", "mdi:bell-check-outline", "mdi:monitor-star", "mdi:brightness-6", "mdi:cursor-move", "mdi:exit-run", "mdi:blur", "mdi:animation-outline", "mdi:check-bold", "mdi:border-radius", "mdi:home-plus-outline", "mdi:logout", "mdi:home-remove-outline", "mdi:home-switch-outline", "mdi:home-outline", "mdi:arrow-right", "mdi:web", "mdi:dots-horizontal-circle-outline", "mdi:close", "mdi:pencil-outline"];
 const params = new URLSearchParams(location.search);
+// The Alvuna panel's preview of a TV (?mirror=<its entry>, in a frame of the panel): the same app on the panel's
+// connection, with that TV's settings, showing what that TV reports it shows. It only displays: no keys, no reports.
+const MIRROR = params.get("mirror") && window.parent !== window ? window.parent.__alvunaMirror || null : null;
 let instances = loadInstances();
 let instance = currentInstance(instances);
 
@@ -344,6 +347,7 @@ const isBack = (ev) => ev.keyCode === 461 || ev.key === "GoBack" || ev.key === "
   || (ev.key === "Backspace" && !/INPUT|TEXTAREA/.test(ev.target.tagName));
 
 window.addEventListener("keydown", (ev) => {
+  if (MIRROR) return;
   const woke = wake();
   if (woke) { ev.preventDefault(); return; }
   // Typing an address: the keys belong to the field (and the TV's keyboard); Enter connects, Back leaves the field.
@@ -381,6 +385,7 @@ window.addEventListener("keydown", (ev) => {
   }
 });
 window.addEventListener("keyup", (ev) => {
+  if (MIRROR) return;
   if (!(ev.key === "Enter" || ev.keyCode === 13) || document.activeElement?.tagName === "INPUT") return;
   ev.preventDefault();
   if (hold.t) { clearTimeout(hold.t); hold.t = 0; if (!hold.fired) focus.activate(); }
@@ -422,14 +427,16 @@ function closeApp() {
 // The Magic Remote wheel moves between rows (the pointer itself never scrolls the page).
 let wheelAt = 0;
 window.addEventListener("wheel", (ev) => {
+  if (MIRROR) return;
   ev.preventDefault();
   if (wake() || Date.now() - wheelAt < 220 || Math.abs(ev.deltaY) < 4) return;
   wheelAt = Date.now();
   focus.move(ev.deltaY > 0 ? "down" : "up");
 }, { passive: false });
 // The Magic Remote pointer: hovering focuses, a click is OK.
-window.addEventListener("pointermove", (ev) => { wake(); document.body.classList.remove("keys"); focus.pointAt(ev.target); }, { passive: true });
+window.addEventListener("pointermove", (ev) => { if (MIRROR) return; wake(); document.body.classList.remove("keys"); focus.pointAt(ev.target); }, { passive: true });
 window.addEventListener("click", (ev) => {
+  if (MIRROR) return;
   if (wake()) return;
   const item = ev.target.closest?.("[data-f]");
   if (item) { focus.pointAt(item); act(item); return; }
@@ -499,6 +506,12 @@ function tick() {
       const m = items[el.dataset.progress];
       if (m?.duration) el.style.width = `${Math.min(100, (h.mediaPosition(m) / m.duration) * 100).toFixed(1)}%`;
     }
+  }
+  if (MIRROR) {
+    if (now.getSeconds() === 0) schedule();
+    if (S.config && !S.saver && now.getSeconds() % 15 === 0) refreshCamStills(home(), schedule);
+    if (S.saver && now.getSeconds() === 0) drawSaver();
+    return;
   }
   const idle = Date.now() - S.lastInput, saverMs = minutes("saver"), exitMs = minutes("exit");
   // Halfway to the screensaver (at least half a minute in) the screen dims, a first step that saves the panel.
@@ -769,20 +782,31 @@ function tvCommand(ev) {
 // What is on screen, sent when it changes (checked each second), and once a minute so "last key press" stays true.
 const STARTED = Date.now();
 const PLATFORM = WEBOS ? "webos" : ANDROID_TV ? "androidtv" : "browser";
+// The panel and its arguments, as plain values the panel's preview can open again (openPanel).
+const PANEL_KEYS = ["type", "side", "room", "media", "entity", "entity2", "kind", "name", "icon", "dev", "id", "key", "item"];
+const panelArgs = (p) => Object.fromEntries(PANEL_KEYS.filter((k) => p[k] != null && p[k] !== "").map((k) => [k, typeof p[k] === "number" ? p[k] : String(p[k]).slice(0, 200)]));
+function focusNow() {
+  const s = focus.state();
+  return s?.line ? { line: String(s.line).slice(0, 80), f: String(s.items?.[s.line] || "").slice(0, 200) } : null;
+}
 function screenNow() {
   const h = home();
   if (S.saver) return { view: "saver" };
-  if (S.camera != null) return { view: "camera", detail: `camera:${h.cameras()[S.camera]?.name || ""}` };
+  if (S.camera != null) {
+    const c = h.cameras()[S.camera];
+    return { view: "camera", detail: `camera:${c?.name || ""}`, camera: c?.entity || "" };
+  }
   if (S.panel) {
     const p = S.panel;
     const name = p.type === "room" ? h.rooms()[p.room]?.name : p.type === "media" ? h.mediaItems()[p.media]?.name : p.name;
-    return { view: "panel", detail: `${p.type}:${name || ""}`.slice(0, 120) };
+    return { view: "panel", detail: `${p.type}:${name || ""}`.slice(0, 120), panel: panelArgs(p) };
   }
   return { view: "home" };
 }
 function report() {
-  if (!conn || !S.config) return;
-  const status = { ...screenNow(), dimmed: document.body.classList.contains("dimmed"), platform: PLATFORM,
+  if (!conn || !S.config || MIRROR) return;
+  const f = focusNow();
+  const status = { ...screenNow(), ...(f && { focus: f }), dimmed: document.body.classList.contains("dimmed"), platform: PLATFORM,
     idle: Math.round((Date.now() - S.lastKey) / 1000), uptime: Math.round((Date.now() - STARTED) / 1000),
     ua: navigator.userAgent.slice(0, 400), screen: `${screen.width}x${screen.height}`, home: instance?.name || "",
     homes: instances.length, language: language() };
@@ -809,7 +833,7 @@ function openChannel() {
   old?.then((unsub) => unsub?.().catch?.(() => {})).catch(() => {});
 }
 // Cheap enough for every second on a weak TV: what is open (not its name) and the settings.
-const reportKey = () => JSON.stringify([S.saver, S.camera, S.panel?.scope, document.body.classList.contains("dimmed"), currentSettings()]);
+const reportKey = () => JSON.stringify([S.saver, S.camera, S.panel?.scope, focusNow(), document.body.classList.contains("dimmed"), currentSettings()]);
 function reportIfChanged() {
   if (S.status !== "online") return;
   if (Date.now() - (report.at || 0) > 60000 || reportKey() !== report.key) report();
@@ -818,7 +842,7 @@ function reportIfChanged() {
 // Errors on this TV go to the Televisions tab, a few at a time: debugging on a TV is otherwise hard.
 const errors = [];
 function logError(message, source) {
-  if (errors.length >= 20) return;
+  if (errors.length >= 20 || MIRROR) return;
   errors.push({ level: "error", message: String(message || "").slice(0, 1000), source: String(source || "").slice(0, 200), at: Date.now() });
   clearTimeout(logError.t);
   logError.t = setTimeout(flushErrors, 3000);
@@ -843,9 +867,68 @@ async function pairScreen() {
   await pair({ name, onCode: (code) => show(code, t("tv.pair_steps")), onBusy: () => show("", t("tv.pair_busy")) });
 }
 
+// --- the panel's preview of a TV ----------------------------------------------------------------------
+// What that TV reported: its settings, then what it shows (saver, camera, panel) and the item it has focused.
+function mirrorTv(tv) {
+  if (!tv || !S.config) return;
+  if (applySettings(tv.settings || {})) refreshFrost();
+  const st = tv.status || {}, closeAll = () => { while (closeLayer()); };
+  if (st.view === "saver") { if (!S.saver) { closeAll(); startSaver(); } } else if (S.saver) wake();
+  document.body.classList.toggle("dimmed", !!st.dimmed && st.view !== "saver");
+  if (st.view === "camera") {
+    const i = home().cameras().findIndex((c) => c.entity === st.camera);
+    if (i >= 0 && S.camera !== i) { closeAll(); openCamera(i); }
+  } else if (S.camera != null) closeLayer();
+  if (st.view === "panel" && st.panel?.type) {
+    const want = JSON.stringify(st.panel), have = S.panel ? JSON.stringify(panelArgs(S.panel)) : "";
+    if (want !== have) { closeAll(); openPanel({ ...st.panel }); }
+  } else if (st.view !== "camera" && S.panel) closeAll();
+  render();
+  alignFrost();
+  // The focused item, once the screen above is drawn.
+  requestAnimationFrame(() => {
+    const s = focus.state();
+    if (!s || !st.focus?.line) return;
+    if (s.line === st.focus.line && s.items[s.line] === st.focus.f) return;
+    s.pointer = false;
+    s.line = st.focus.line;
+    s.items[s.line] = st.focus.f;
+    focus.apply();
+    alignFrost();
+  });
+}
+
+async function startMirror() {
+  conn = MIRROR.connection;
+  // The subscriptions live on the panel's connection: they end with this frame.
+  const unsubs = [watchStates(conn, onStates)];
+  addEventListener("pagehide", () => { for (const u of unsubs) Promise.resolve(u).then((f) => f?.()).catch(() => {}); });
+  S.status = "online";
+  const loc = await userLocale(conn);
+  setLocale(loc);
+  document.documentElement.lang = loc.language || language();
+  let first;
+  const ready = new Promise((ok) => { first = ok; });
+  unsubs.push(subscribeLayout(conn, (ev) => { if (ev.config) loadConfig(ev.config).then(first, first); else first(); }).catch(() => first()));
+  await Promise.race([ready, new Promise((ok) => setTimeout(ok, 8000))]);
+  if (!S.config) throw new Error(t("tv.no_layout"));
+  MIRROR.listen(params.get("mirror"), mirrorTv);
+  refreshCamStills(home(), schedule);
+  unsubs.push(subscribeNotifications(conn, (all) => { S.notifs = all; schedule(); }).catch(() => {}));
+  entityPlatforms(conn).then((p) => { S.platforms = p; schedule(); });
+  refreshForecast();
+  setInterval(() => refreshForecast(), 15 * 60000);
+  setInterval(tick, 1000);
+}
+
 // --- start ----------------------------------------------------------------------------------------
 (async () => {
   homeEl.innerHTML = `<div class="fatal">${LOGO}<h1>Alvuna</h1><p>${t("tv.connecting")}</p></div>`;
+  if (MIRROR) {
+    document.body.classList.add("mirror");
+    try { await startMirror(); } catch (e) { fatal(e?.message || String(e)); }
+    return;
+  }
   try {
     // ?login=1 (or HA's own sign-in coming back) uses a person's account instead of pairing the TV.
     if (!hasTokens() && !params.has("login") && !params.has("auth_callback")) await pairScreen();
