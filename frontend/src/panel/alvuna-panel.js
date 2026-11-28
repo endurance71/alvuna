@@ -9,6 +9,7 @@ import {
 } from "./model.js";
 import { setLanguage, t, currentLanguage } from "./strings.js";
 import { tvsTab, TVS_STYLE, setTvLocale, nextLayout } from "./tvs.js";
+import { sortable } from "./sortable.js";
 
 const SAVE_DELAY = 600;
 const MAX_RESULTS = 150;
@@ -301,6 +302,18 @@ class AlvunaPanel extends HTMLElement {
     root.addEventListener("keydown", (e) => this._onKey(e));
     root.addEventListener("focusout", (e) => this._onFocusOut(e));
     root.addEventListener("change", (e) => this._onChange(e));
+    // The layout editor's drag to reorder; nothing re-renders under a drag.
+    sortable(root, {
+      onStart: () => { this._dragging = true; },
+      onDrop: (list, ids, cancelled) => {
+        this._dragging = false;
+        const tv = this._tv(list.dataset.id);
+        if (cancelled || !tv) { this._lastHtml = null; this._render(); return; }
+        const op = list.dataset.sortList === "y" ? { kind: "row-order", ids } : { kind: "tile-order", row: list.dataset.row, ids };
+        this._lastHtml = null;
+        this._tvSettings(tv.entry_id, { layout: nextLayout(tv.settings?.layout, tv.catalog || [], op) });
+      },
+    });
     root.addEventListener("submit", (e) => this._onSubmit(e));
     root.addEventListener("focusin", (e) => {
       if (e.target.dataset?.action === "rename") e.target.dataset.before = e.target.value;
@@ -339,7 +352,7 @@ class AlvunaPanel extends HTMLElement {
     const html = this._content();
     const main = root.querySelector(".content");
     // A list being picked from would close under the user's mouse: the update waits until it is left.
-    if (html !== this._lastHtml && active?.tagName === "SELECT" && !focusKey) { this._deferred = true; return; }
+    if (html !== this._lastHtml && ((active?.tagName === "SELECT" && !focusKey) || this._dragging)) { this._deferred = true; return; }
     this._deferred = false;
     if (html !== this._lastHtml) {
       main.innerHTML = html;
@@ -718,6 +731,16 @@ class AlvunaPanel extends HTMLElement {
 
   _onKey(e) {
     const el = e.target;
+    // The layout editor without a mouse: a focused tile moves with left/right, a row's grip with up/down.
+    if (el.dataset?.action === "tv-layout-key" && /^Arrow/.test(e.key)) {
+      const tv = this._tv(el.dataset.id), tile = el.dataset.tile;
+      const step = tile ? { ArrowLeft: -1, ArrowRight: 1 }[e.key] : { ArrowUp: -1, ArrowDown: 1 }[e.key];
+      if (!tv || !step) return;
+      e.preventDefault();
+      const op = tile ? { kind: "tile-move", row: el.dataset.row, id: tile, step } : { kind: "row-move", row: el.dataset.row, step };
+      this._tvSettings(tv.entry_id, { layout: nextLayout(tv.settings?.layout, tv.catalog || [], op) });
+      return;
+    }
     if (e.key === "Escape" && this._picker && el.closest?.(".picker")) {
       e.preventDefault();
       const key = this._picker.key;
