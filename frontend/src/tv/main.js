@@ -524,6 +524,7 @@ function tick() {
   }
   if (MIRROR) {
     if (now.getSeconds() === 0) schedule();
+    if (S.config && now.getSeconds() % 30 === 0 && forecastEmpty()) refreshForecast();
     if (S.config && !S.saver && now.getSeconds() % 15 === 0) refreshCamStills(home(), schedule);
     if (S.saver && now.getSeconds() === 0) drawSaver();
     return;
@@ -540,6 +541,7 @@ function tick() {
   if (now.getSeconds() === 0) schedule();
   if (S.config && !S.saver && now.getSeconds() % 15 === 0) refreshCamStills(home(), schedule);
   for (const [id, p] of Object.entries(S.pending)) if (Date.now() - p.at > 6000) delete S.pending[id];
+  if (conn && S.config && now.getSeconds() % 30 === 0 && forecastEmpty()) refreshForecast();
   if (conn) reportIfChanged(now);
 }
 
@@ -581,11 +583,20 @@ async function refreshHistory(p) {
   schedule();
 }
 
+// Every 15 min (5 min at least when a panel asks). A forecast that is missing or came back empty (at start the states
+// may not be in yet, so the weather entity is not known; or Home Assistant answered nothing) is asked again every 30 s
+// (tick) instead of leaving the weather without hours and days for a quarter of an hour.
+const forecastEmpty = () => !S.forecast || (!S.forecast.hourly?.length && !S.forecast.daily?.length);
 async function refreshForecast(force) {
   const id = home().weatherId();
-  if (!id || (!force && S.forecast && Date.now() - S.forecast.at < 15 * 60000)) return;
-  if (S.forecast && Date.now() - S.forecast.at < 5 * 60000) return;
-  S.forecast = await loadForecast(conn, [id, ...[].concat(S.config?.weather || []).filter((x) => x !== id && S.states[x])]);
+  if (!id || refreshForecast.busy) return;
+  const age = S.forecast ? Date.now() - S.forecast.at : Infinity, empty = forecastEmpty();
+  if (!force && !empty && age < 15 * 60000) return;
+  if (age < (empty ? 30000 : 5 * 60000)) return;
+  refreshForecast.busy = true;
+  try {
+    S.forecast = await loadForecast(conn, [id, ...[].concat(S.config?.weather || []).filter((x) => x !== id && S.states[x])]);
+  } finally { refreshForecast.busy = false; }
   schedule();
 }
 
@@ -846,12 +857,15 @@ function screenNow() {
   }
   return { view: "home" };
 }
+// The picture the app draws on, in device pixels: Android TV's WebView reports its screen in CSS pixels (960×540 at
+// ratio 2 on a TCL whose interface runs at 1920×1080), webOS 1:1.
+const screenSize = () => `${Math.round(screen.width * (devicePixelRatio || 1))}x${Math.round(screen.height * (devicePixelRatio || 1))}`;
 function report() {
   if (!conn || !S.config || MIRROR) return;
   const f = focusNow();
   const status = { ...screenNow(), ...(f && { focus: f }), dimmed: document.body.classList.contains("dimmed"), platform: PLATFORM,
     idle: Math.round((Date.now() - S.lastKey) / 1000), uptime: Math.round((Date.now() - STARTED) / 1000),
-    ua: navigator.userAgent.slice(0, 400), screen: `${screen.width}x${screen.height}`, home: instance?.name || "",
+    ua: navigator.userAgent.slice(0, 400), screen: screenSize(), home: instance?.name || "",
     homes: instances.length, language: language() };
   report.key = reportKey();
   report.at = Date.now();
