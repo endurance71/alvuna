@@ -64,7 +64,8 @@ class AlvunaPanel extends HTMLElement {
     this._built = false;
     this._tvs = null; // alvuna/tvs/subscribe's last update, or "unavailable"
     this._tvUnsub = null;
-    this._open = new Set(); // "settings|<entry>", "log|<entry>": open sections of the TVs tab
+    this._tvSel = null; // the TV picked on the TVs tab (entry id); the first connected one until then
+    this._tvSection = "control"; // control | settings | log
     this._drafts = {}; // entry -> message being typed
     this._flash = {}; // entry -> { text, error }: the last command's outcome
     this._ticker = null;
@@ -154,6 +155,12 @@ class AlvunaPanel extends HTMLElement {
 
   _tv(id) { return this._tvs?.tvs?.find((x) => x.entry_id === id); }
 
+  _selectedTv() {
+    const list = this._tvs?.tvs || [];
+    if (this._tvSel && list.some((x) => x.entry_id === this._tvSel)) return this._tvSel;
+    return (list.find((x) => x.connected) || list[0])?.entry_id || null;
+  }
+
   _flashFor(id, text, error = false) {
     this._flash[id] = { text, error };
     clearTimeout(this._flash[`${id}:t`]);
@@ -192,7 +199,7 @@ class AlvunaPanel extends HTMLElement {
       .map((c) => ({ id: c.id, name: this._ov.names[c.id] || c.auto_name })) : [];
     return tvsTab({
       data: this._tvs, lang: this._hass?.locale?.language || currentLanguage(), rooms: roomList, cameras,
-      hasClimate: !!this._data?.found?.climate, open: this._open, drafts: this._drafts, flash: this._flash,
+      hasClimate: !!this._data?.found?.climate, selected: this._selectedTv(), section: this._tvSection, drafts: this._drafts, flash: this._flash,
       svg, P, switch: (focus, on, label, attrs) => this._tvSwitch(focus, on, label, attrs),
     });
   }
@@ -666,9 +673,13 @@ class AlvunaPanel extends HTMLElement {
       case "tv-set":
         this._tvSettings(id, { [key]: el.dataset.value });
         break;
-      case "tv-toggle-open":
-        if (this._open.has(key)) this._open.delete(key); else this._open.add(key);
-        this._render(el.dataset.focus);
+      case "tv-pick":
+        this._tvSel = id;
+        this._render(`tv-pick|${id}`);
+        break;
+      case "tv-section":
+        this._tvSection = key;
+        this._render(`tv-section|${key}`);
         break;
       case "tv-clear-log":
         this._hass.callWS({ type: "alvuna/tvs/clear_log", entry_id: id }).catch(() => {});
