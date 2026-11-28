@@ -8,7 +8,8 @@ import { ROWS } from "./rows.js";
 
 // The rows in their default order. This TV's own layout (ctx.layout, set in the Alvuna panel's TVs tab, see
 // ui/layout.js) may reorder rows and their tiles and hide either; an open or wet sensor still comes first and is never hidden.
-function buildRows(h, ctx) {
+// Also used by the panel's layout editor, which shows these same tiles.
+export function buildRows(h, ctx) {
   return { working: workingRow(h), scenes: scenesRow(h), rooms: roomsRow(h), media: mediaRow(h), climate: climateRow(h, ctx),
     security: securityRow(h) };
 }

@@ -18,8 +18,9 @@ mkdirSync(`${WWW}tv`, { recursive: true });
 cpSync("static/fonts", `${WWW}static/fonts`, { recursive: true });
 
 // The Alvuna panel in the sidebar (administrators only), registered by frontend.py through panel_custom.
+// It shows a TV's tiles with the TV's own code and styles (src/tv/styles.css, imported as text).
 await build({ entryPoints: ["src/panel/alvuna-panel.js"], outfile: `${WWW}static/alvuna-panel.js`, bundle: true, minify: true,
-  format: "esm", target: "es2022", external, logLevel: "warning" });
+  format: "esm", target: "es2022", external, loader: { ".css": "text" }, logLevel: "warning" });
 
 // hls.js (plays HA's fMP4 HLS through MSE; the TV's own player cannot) is loaded only when a camera opens.
 const hlsVer = require("hls.js/package.json").version;

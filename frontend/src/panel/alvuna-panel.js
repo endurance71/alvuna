@@ -8,7 +8,9 @@ import {
   ADDABLE, addItem, candidates, cleanOverrides, idsInUse, listItems, move, normalize, removeItem, rooms, setHidden, setName,
 } from "./model.js";
 import { setLanguage, t, currentLanguage } from "./strings.js";
-import { tvsTab, TVS_STYLE, setTvLocale, nextLayout } from "./tvs.js";
+import { tvsTab, TVS_STYLE, setTvLocale, nextLayout, TV_TILE_CSS, addTvFonts } from "./tvs.js";
+import { Home } from "../tv/model/home.js";
+import { buildRows } from "../tv/ui/home.js";
 import { sortable } from "./sortable.js";
 
 const SAVE_DELAY = 600;
@@ -93,6 +95,9 @@ class AlvunaPanel extends HTMLElement {
       this._render();
       this._load();
       this._subscribeTvs();
+    } else if (this._tab === "tvs" && this._tvSection === "layout" && !langChanged && !tvLangChanged) {
+      // The tiles show live states: redrawn at most every 2 s (and never under a drag).
+      if (!this._liveTimer) this._liveTimer = setTimeout(() => { this._liveTimer = null; this._render(); }, 2000);
     } else if (langChanged || tvLangChanged) {
       this._render();
       this._renderStatus();
@@ -137,12 +142,34 @@ class AlvunaPanel extends HTMLElement {
     const unsub = this._tvUnsub;
     this._tvUnsub = null;
     if (typeof unsub?.then === "function") unsub.then((u) => u?.()).catch(() => {});
+    const lunsub = this._layoutUnsub;
+    this._layoutUnsub = null;
+    if (typeof lunsub?.then === "function") lunsub.then((u) => u?.()).catch(() => {});
+  }
+
+  // Each tile as the TV draws it (its id → HTML), from the shared layout and the home's states right now.
+  _previewTiles() {
+    if (!this._layoutConfig || !this._hass?.states) return null;
+    try {
+      const rows = buildRows(new Home(this._hass.states, this._layoutConfig), {});
+      const out = new Map();
+      for (const r of Object.values(rows)) for (const it of r?.items || []) out.set(it.id, it.html);
+      return out;
+    } catch (err) {
+      return null;
+    }
   }
 
   // ---- TVs ----
 
   _subscribeTvs() {
     if (!this._hass?.connection) return;
+    // The home's layout as the TVs get it, for drawing their tiles in the layout editor.
+    this._layoutUnsub = this._hass.connection.subscribeMessage((ev) => {
+      this._layoutConfig = ev.config || null;
+      if (this._tab === "tvs") this._render();
+    }, { type: "alvuna/layout/subscribe" });
+    this._layoutUnsub.catch(() => { this._layoutUnsub = null; });
     this._tvUnsub = this._hass.connection.subscribeMessage((data) => {
       this._tvs = data;
       this._render();
@@ -200,6 +227,7 @@ class AlvunaPanel extends HTMLElement {
       .map((c) => ({ id: c.id, name: this._ov.names[c.id] || c.auto_name })) : [];
     return tvsTab({
       data: this._tvs, lang: this._hass?.locale?.language || currentLanguage(), rooms: roomList, cameras,
+      preview: this._tvSection === "layout" ? this._previewTiles() : null,
       hasClimate: !!this._data?.found?.climate, selected: this._selectedTv(), section: this._tvSection, drafts: this._drafts, flash: this._flash,
       svg, P, switch: (focus, on, label, attrs) => this._tvSwitch(focus, on, label, attrs),
     });
@@ -295,7 +323,8 @@ class AlvunaPanel extends HTMLElement {
         <div class="status" role="status" aria-live="polite"></div>
       </header>
       <main class="content"></main>`;
-    this.shadowRoot.querySelector("style").textContent += TVS_STYLE;
+    this.shadowRoot.querySelector("style").textContent += TVS_STYLE + TV_TILE_CSS;
+    addTvFonts();
     const root = this.shadowRoot;
     root.addEventListener("click", (e) => this._onClick(e));
     root.addEventListener("input", (e) => this._onInput(e));
@@ -355,7 +384,10 @@ class AlvunaPanel extends HTMLElement {
     if (html !== this._lastHtml && ((active?.tagName === "SELECT" && !focusKey) || this._dragging)) { this._deferred = true; return; }
     this._deferred = false;
     if (html !== this._lastHtml) {
+      // Long rows keep where they were scrolled to.
+      const scrolls = new Map([...main.querySelectorAll("[data-scroll-key]")].map((el) => [el.dataset.scrollKey, el.scrollLeft]));
       main.innerHTML = html;
+      for (const el of main.querySelectorAll("[data-scroll-key]")) if (scrolls.get(el.dataset.scrollKey)) el.scrollLeft = scrolls.get(el.dataset.scrollKey);
       this._lastHtml = html;
       this._hydrate(main);
     }
