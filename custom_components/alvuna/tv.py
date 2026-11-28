@@ -62,6 +62,25 @@ def _text(n: int) -> vol.All:
 
 
 _MINUTES = vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0, max=1440)))
+# The rows of the TV's home screen (frontend/src/tv/ui/home.js ROWS) and a tile's id in them.
+ROWS = ["working", "scenes", "rooms", "media", "climate", "security"]
+_TILE = _text(255)
+# This TV's own layout: rows in its order, rows and tiles it hides, tiles in its order per row.
+LAYOUT_SCHEMA = vol.Schema(
+    {
+        vol.Optional("rows"): vol.All([vol.In(ROWS)], vol.Length(max=len(ROWS))),
+        vol.Optional("hidden_rows"): vol.All([vol.In(ROWS)], vol.Length(max=len(ROWS))),
+        vol.Optional("hidden"): vol.All([_TILE], vol.Length(max=500)),
+        vol.Optional("order"): {vol.In(ROWS): vol.All([_TILE], vol.Length(max=500))},
+    }
+)
+# What the TV can show, as it reports it for the panel's layout editor.
+CATALOG_SCHEMA = vol.All(
+    [vol.Schema({vol.Required("key"): vol.In(ROWS), vol.Required("title"): _text(80),
+                 vol.Required("items"): vol.All([vol.Schema({vol.Required("id"): _TILE, vol.Optional("name", default=""): _text(80),
+                                                             vol.Optional("icon", default=""): _text(80)})], vol.Length(max=300))})],
+    vol.Length(max=len(ROWS)),
+)
 # A TV's settings (frontend/src/tv/ui/prefs.js, wallpapers.js, accents.js). Wallpaper and accent are ids the TV knows;
 # one it does not know leaves its own.
 SETTINGS_SCHEMA = vol.Schema(
@@ -75,6 +94,7 @@ SETTINGS_SCHEMA = vol.Schema(
         vol.Optional("shift"): cv.boolean,
         vol.Optional("saver"): _MINUTES,  # None: Alvuna's option in Home Assistant
         vol.Optional("exit"): _MINUTES,
+        vol.Optional("layout"): LAYOUT_SCHEMA,
     }
 )
 # What a TV says about itself. Unknown keys (from a newer TV app) are dropped.
@@ -203,6 +223,7 @@ def ws_subscribe_tv(hass: HomeAssistant, connection: websocket_api.ActiveConnect
         vol.Optional("status", default=dict): dict,
         vol.Optional("settings"): dict,
         vol.Optional("rev", default=0): vol.All(vol.Coerce(int), vol.Range(min=0)),
+        vol.Optional("catalog"): list,
     }
 )
 @callback
@@ -215,6 +236,7 @@ def ws_report(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
     try:
         status = STATUS_SCHEMA(msg["status"])
         settings = SETTINGS_SCHEMA(msg["settings"]) if "settings" in msg else None
+        catalog = CATALOG_SCHEMA(msg["catalog"]) if "catalog" in msg else None
     except vol.Invalid as err:
         connection.send_error(msg["id"], "invalid_format", str(err))
         return
@@ -222,6 +244,8 @@ def ws_report(hass: HomeAssistant, connection: websocket_api.ActiveConnection, m
     tv = remote.tv(entry_id)
     tv["status"] = status
     tv["last_seen"] = dt_util.utcnow().isoformat()
+    if catalog is not None:
+        tv["catalog"] = catalog
     if settings is not None:
         if msg["rev"] >= tv["rev"]:
             # Up to date with the panel: what the TV has is what it chose since, with its remote.
@@ -280,6 +304,7 @@ def _tvs_payload(hass: HomeAssistant) -> dict[str, Any]:
             "last_seen": tv["last_seen"],
             "status": tv["status"],
             "settings": tv["settings"],
+            "catalog": tv.get("catalog", []),
             "pending": tv["rev"] > tv["applied"],
             "log": list(remote.logs.get(entry.entry_id, ())),
         })

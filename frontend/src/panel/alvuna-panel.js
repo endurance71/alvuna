@@ -8,7 +8,7 @@ import {
   ADDABLE, addItem, candidates, cleanOverrides, idsInUse, listItems, move, normalize, removeItem, rooms, setHidden, setName,
 } from "./model.js";
 import { setLanguage, t, currentLanguage } from "./strings.js";
-import { tvsTab, TVS_STYLE, setTvLocale } from "./tvs.js";
+import { tvsTab, TVS_STYLE, setTvLocale, nextLayout } from "./tvs.js";
 
 const SAVE_DELAY = 600;
 const MAX_RESULTS = 150;
@@ -673,6 +673,14 @@ class AlvunaPanel extends HTMLElement {
       case "tv-set":
         this._tvSettings(id, { [key]: el.dataset.value });
         break;
+      case "tv-layout": {
+        const tv = this._tv(id);
+        if (!tv) break;
+        const d = el.dataset;
+        const layout = nextLayout(tv.settings?.layout, tv.catalog || [], { kind: d.op, row: d.row, id: d.tile, step: Number(d.step || 0) });
+        this._tvSettings(id, { layout });
+        break;
+      }
       case "tv-pick":
         this._tvSel = id;
         this._render(`tv-pick|${id}`);

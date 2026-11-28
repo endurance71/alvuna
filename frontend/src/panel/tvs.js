@@ -8,6 +8,7 @@ import { t as tvT, setLocale } from "../shared/i18n.js";
 import { WALLPAPERS } from "../tv/ui/wallpapers.js";
 import { ACCENTS } from "../tv/ui/accents.js";
 import { STEPS } from "../tv/ui/prefs.js";
+import { ROWS } from "../tv/ui/rows.js";
 
 export { setLocale as setTvLocale };
 
@@ -97,16 +98,17 @@ function picker(tvs, selected, ctx) {
 }
 
 function tvDetail(tv, ctx) {
-  const section = ["control", "settings", "log"].includes(ctx.section) ? ctx.section : "control";
+  const section = ["control", "layout", "settings", "log"].includes(ctx.section) ? ctx.section : "control";
   const n = (tv.log || []).length;
   const tab = (key, label, extra = "") => `<button class="tab" role="tab" data-action="tv-section" data-key="${key}" data-focus="tv-section|${key}"
     aria-selected="${section === key}">${esc(label)}${extra}</button>`;
   const tabs = `<div class="tabs sub" role="tablist">
     ${tab("control", t("tvs.sections.control"))}
+    ${tab("layout", t("tvs.sections.layout"))}
     ${tab("settings", t("tvs.sections.settings"), tv.pending ? ` <span class="pending-dot" title="${esc(t("tvs.pending"))}"></span>` : "")}
     ${tab("log", t("tvs.sections.log"), n ? `<span class="count">${n}</span>` : "")}
   </div>`;
-  const body = section === "settings" ? settings(tv, ctx) : section === "log" ? log(tv, ctx) : actions(tv, ctx);
+  const body = section === "settings" ? settings(tv, ctx) : section === "log" ? log(tv, ctx) : section === "layout" ? layoutEditor(tv, ctx) : actions(tv, ctx);
   return `${tvCard(tv, ctx)}${tabs}${body}`;
 }
 
@@ -237,6 +239,77 @@ function settings(tv, ctx) {
   </div>`;
 }
 
+// --- this TV's layout: its home screen as rows of tiles, in its order ---------------------------------------
+// Rows in the TV's order, then the rest in the default one; tiles likewise (the TV does the same, home.js renderHome).
+const rowOrder = (L) => [...(L.rows || []).filter((k) => ROWS.includes(k)), ...ROWS.filter((k) => !(L.rows || []).includes(k))];
+function tileOrder(L, row) {
+  const want = L.order?.[row.key] || [], ids = row.items.map((x) => x.id);
+  const pos = (id) => { const i = want.indexOf(id); return i < 0 ? want.length + ids.indexOf(id) : i; };
+  return row.items.slice().sort((a, b) => pos(a.id) - pos(b.id));
+}
+
+// One step of an edit, on a copy: the panel sends the whole layout.
+export function nextLayout(layout, catalog, op) {
+  const L = JSON.parse(JSON.stringify(layout || {}));
+  const toggle = (list, id) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
+  const swap = (list, i, j) => { if (j < 0 || j >= list.length) return list; const out = list.slice(); [out[i], out[j]] = [out[j], out[i]]; return out; };
+  if (op.kind === "row-move") {
+    const rows = rowOrder(L), i = rows.indexOf(op.row);
+    L.rows = swap(rows, i, i + op.step);
+  } else if (op.kind === "row-hide") L.hidden_rows = toggle(L.hidden_rows || [], op.row);
+  else if (op.kind === "tile-hide") L.hidden = toggle(L.hidden || [], op.id);
+  else if (op.kind === "tile-move") {
+    const row = catalog.find((r) => r.key === op.row);
+    if (!row) return L;
+    const ids = tileOrder(L, row).map((x) => x.id), i = ids.indexOf(op.id);
+    L.order = { ...(L.order || {}), [op.row]: swap(ids, i, i + op.step) };
+  } else if (op.kind === "reset") return {};
+  return L;
+}
+
+function layoutEditor(tv, ctx) {
+  const id = esc(tv.entry_id), catalog = tv.catalog || [];
+  if (!catalog.length) return `<div class="tv-flash-row"></div><div class="state card"><p>${esc(t("tvs.layout.no_catalog"))}</p></div>`;
+  const L = tv.settings?.layout || {}, hiddenRows = new Set(L.hidden_rows || []), hidden = new Set(L.hidden || []);
+  const wp = WALLPAPERS.find((w) => w.id === tv.settings?.wallpaper) || WALLPAPERS[0];
+  const rows = rowOrder(L).map((k) => catalog.find((r) => r.key === k)).filter(Boolean);
+  const btn = (attrs, ic, label, disabled = false) => `<button class="tvl-btn" ${attrs} title="${esc(label)}" aria-label="${esc(label)}" ${disabled ? "disabled" : ""}>${icon(ic)}</button>`;
+  const body = rows.map((row, ri) => {
+    const off = hiddenRows.has(row.key), tiles = tileOrder(L, row);
+    const rattrs = (op, extra = "") => `data-action="tv-layout" data-id="${id}" data-op="${op}" data-row="${row.key}" ${extra}`;
+    const head = `<div class="tvl-row-head">
+      <h4>${esc(row.title)}</h4>${off ? `<span class="badge muted">${esc(t("tvs.layout.row_hidden"))}</span>` : ""}
+      <span class="spacer"></span>
+      ${btn(`${rattrs("row-move", 'data-step="-1"')} data-focus="tvl|${row.key}|up"`, "mdi:chevron-up", t("tvs.layout.row_up", { name: row.title }), ri === 0)}
+      ${btn(`${rattrs("row-move", 'data-step="1"')} data-focus="tvl|${row.key}|down"`, "mdi:chevron-down", t("tvs.layout.row_down", { name: row.title }), ri === rows.length - 1)}
+      ${btn(`${rattrs("row-hide")} data-focus="tvl|${row.key}|hide"`, off ? "mdi:eye-off-outline" : "mdi:eye-outline",
+        t(off ? "tvs.layout.row_show" : "tvs.layout.row_hide", { name: row.title }))}
+    </div>`;
+    const track = tiles.map((it, ti) => {
+      const hid = hidden.has(it.id), attrs = (op, extra = "") => `data-action="tv-layout" data-id="${id}" data-op="${op}" data-row="${row.key}" data-tile="${esc(it.id)}" ${extra}`;
+      return `<div class="tvl-tile ${hid ? "off" : ""}">
+        <div class="tvl-tile-ic">${icon(it.icon || "mdi:checkbox-blank-outline")}</div>
+        <div class="tvl-tile-name">${esc(it.name || it.id)}</div>
+        <div class="tvl-tile-ctl">
+          ${btn(`${attrs("tile-move", 'data-step="-1"')} data-focus="tvl|${esc(it.id)}|left"`, "mdi:chevron-left", t("tvs.layout.tile_left", { name: it.name }), ti === 0)}
+          ${btn(`${attrs("tile-hide")} data-focus="tvl|${esc(it.id)}|hide"`, hid ? "mdi:eye-off-outline" : "mdi:eye-outline", t(hid ? "tvs.layout.tile_show" : "tvs.layout.tile_hide", { name: it.name }))}
+          ${btn(`${attrs("tile-move", 'data-step="1"')} data-focus="tvl|${esc(it.id)}|right"`, "mdi:chevron-right", t("tvs.layout.tile_right", { name: it.name }), ti === tiles.length - 1)}
+        </div>
+      </div>`;
+    }).join("");
+    const note = row.key === "working" ? t("tvs.layout.working_note") : row.key === "security" ? t("tvs.layout.security_note")
+      : !tiles.length ? t("tvs.layout.empty") : "";
+    return `<section class="tvl-row ${off ? "off" : ""}">${head}
+      ${track ? `<div class="tvl-track">${track}</div>` : ""}
+      ${note ? `<p class="tvl-note">${esc(note)}</p>` : ""}</section>`;
+  }).join("");
+  const changed = Object.keys(L).some((k) => (Array.isArray(L[k]) ? L[k].length : Object.keys(L[k] || {}).length));
+  return `<div class="tv-flash-row">${tv.pending ? `<span class="badge warn">${esc(t("tvs.pending"))}</span>` : ""}
+      ${changed ? `<button class="text-button" data-action="tv-layout" data-id="${id}" data-op="reset" data-focus="tvl-reset">${esc(t("tvs.layout.reset"))}</button>` : ""}</div>
+    <div class="tvl-screen" style="background:${esc(wp.base || "#0b2633")};background:${esc(wp.bg)}">${body}</div>
+    <p class="note">${esc(t("tvs.layout.hint"))}</p>`;
+}
+
 function log(tv, ctx) {
   const id = esc(tv.entry_id), lines = tv.log || [];
   const head = `<div class="tv-flash-row">${lines.length ? `<button class="text-button" data-action="tv-clear-log" data-id="${id}"
@@ -344,7 +417,32 @@ section.tv { margin-top: 8px; }
 .tv-log-time { color: var(--alv-sub); font-variant-numeric: tabular-nums; }
 .tv-log-msg { overflow-wrap: anywhere; }
 
+.tvl-screen { border-radius: var(--alv-radius); padding: 18px 0 8px; color: #fff; background-size: cover; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.tvl-row { padding: 0 0 14px; }
+.tvl-row-head { display: flex; align-items: center; gap: 6px; padding: 0 14px 8px 20px; }
+.tvl-row-head h4 { margin: 0; font-size: 16px; font-weight: 600; color: rgba(255, 255, 255, .92); }
+.tvl-row-head .spacer { flex: 1; }
+.tvl-row.off .tvl-row-head h4, .tvl-row.off .tvl-track { opacity: .38; }
+.tvl-row .badge.muted { background: rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .8); }
+.tvl-track { display: flex; gap: 10px; overflow-x: auto; padding: 2px 20px 6px; scrollbar-width: thin; }
+.tvl-tile { flex: none; width: 140px; border-radius: 14px; padding: 12px 10px 8px; display: flex; flex-direction: column; gap: 8px;
+  background: rgba(255, 255, 255, .12); backdrop-filter: blur(6px); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); }
+.tvl-tile.off { background: rgba(0, 0, 0, .25); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); }
+.tvl-tile.off .tvl-tile-ic, .tvl-tile.off .tvl-tile-name { opacity: .4; }
+.tvl-tile-ic { --mdc-icon-size: 24px; color: rgba(255, 255, 255, .95); }
+.tvl-tile-name { font-size: 14px; font-weight: 500; line-height: 1.25; min-height: 2.5em; overflow: hidden; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.tvl-tile-ctl { display: flex; justify-content: space-between; margin: 0 -4px; }
+.tvl-btn { width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: rgba(255, 255, 255, .85); cursor: pointer;
+  display: grid; place-items: center; --mdc-icon-size: 20px; padding: 0; }
+.tvl-btn:hover:not(:disabled) { background: rgba(255, 255, 255, .16); color: #fff; }
+.tvl-btn:disabled { opacity: .25; cursor: default; }
+.tvl-btn:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.tvl-note { margin: 2px 20px 0; font-size: 12px; color: rgba(255, 255, 255, .62); }
+
 @media (max-width: 600px) {
+  .tvl-tile { width: 124px; }
   .tv-head { grid-template-columns: 40px minmax(0, 1fr); }
   .tv-head .tv-link { grid-column: 2; }
   .tv-select { min-width: 0; flex: 1 1 160px; }

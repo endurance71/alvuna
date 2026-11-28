@@ -7,12 +7,12 @@ import { connect, call, loadForecast, cameraStream, loadHistory, subscribeNotifi
 import { Home } from "./model/home.js";
 import { esc, time, longDate, fmtTime, wIcon } from "./model/format.js";
 import { setLocale, t, language } from "../shared/i18n.js";
-import { renderHome, refreshCamStills } from "./ui/home.js";
+import { renderHome, refreshCamStills, homeCatalog } from "./ui/home.js";
 import { applyWallpaper, setWallpaper } from "./ui/wallpapers.js";
 import { applyAccent, setAccent } from "./ui/accents.js";
 import { applyPrefs, setPref, prefs, animOn, stepPref, minutesFor } from "./ui/prefs.js";
 import { alignFrost, refreshFrost } from "./ui/frost.js";
-import { currentSettings, applySettings, settingsRev } from "./ui/settings.js";
+import { currentSettings, applySettings, settingsRev, tvLayout } from "./ui/settings.js";
 import { renderPanel, renderCamera, attentionCount, attnKey } from "./ui/panels.js";
 import { patch } from "./ui/morph.js";
 import { Focus } from "./ui/focus.js";
@@ -59,7 +59,7 @@ applyPrefs();
 refreshFrost().then(() => alignFrost());
 const edgeEl = $("#edge"), homeEl = $("#home"), panelEl = $("#panel"), camEl = $("#camera"), saverEl = $("#saver"), statusEl = $("#status"), toastEl = $("#toast");
 
-const ctx = () => ({ instances, instance, logoutArmed: !!S.logoutArmed, addAddr: S.addAddr || "", forecast: S.forecast, pending: S.pending, hist: S.hist, notifs: S.notifs, platforms: S.platforms, playIdx: S.playIdx, hidden: S.hidden, hero: params.get("hero") || S.config?.tv_hero || "today" });
+const ctx = () => ({ layout: tvLayout(), instances, instance, logoutArmed: !!S.logoutArmed, addAddr: S.addAddr || "", forecast: S.forecast, pending: S.pending, hist: S.hist, notifs: S.notifs, platforms: S.platforms, playIdx: S.playIdx, hidden: S.hidden, hero: params.get("hero") || S.config?.tv_hero || "today" });
 const home = () => new Home(S.states, S.config);
 
 // --- render ---------------------------------------------------------------------------------------
@@ -788,7 +788,12 @@ function report() {
     homes: instances.length, language: language() };
   report.key = reportKey();
   report.at = Date.now();
-  reportTv(conn, { status, settings: currentSettings(), rev: settingsRev() }).then((res) => {
+  // Its rows and tiles, for the panel's layout editor: when they change, and once per connection.
+  const catalog = homeCatalog(home(), ctx()), catalogKey = JSON.stringify(catalog);
+  const sendCatalog = catalogKey !== report.catalogKey;
+  report.catalogKey = catalogKey;
+  reportTv(conn, { status, settings: currentSettings(), rev: settingsRev(), ...(sendCatalog && { catalog }) }).then((res) => {
+    if (!res && sendCatalog) report.catalogKey = null;
     // Home Assistant still starting (Alvuna's commands not there yet): try again shortly.
     if (!res) { clearTimeout(report.retry); report.retry = setTimeout(report, 10000); return; }
     if (res.paired && res.channel === false) openChannel();
@@ -844,7 +849,7 @@ async function pairScreen() {
   try {
     // ?login=1 (or HA's own sign-in coming back) uses a person's account instead of pairing the TV.
     if (!hasTokens() && !params.has("login") && !params.has("auth_callback")) await pairScreen();
-    conn = await connect({ onStates, onStatus: (s) => { S.status = s; render(); if (s === "online") { report(); flushErrors(); } } });
+    conn = await connect({ onStates, onStatus: (s) => { S.status = s; render(); if (s === "online") { report.catalogKey = null; report(); flushErrors(); } } });
     S.status = "online";
     // The user's own language and formats, before anything but the splash is drawn (render waits for the config).
     const loc = await userLocale(conn);
