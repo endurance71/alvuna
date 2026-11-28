@@ -9,6 +9,19 @@ import { WALLPAPERS } from "../tv/ui/wallpapers.js";
 import { ACCENTS } from "../tv/ui/accents.js";
 import { STEPS } from "../tv/ui/prefs.js";
 import { ROWS } from "../tv/ui/rows.js";
+import tvCss from "../tv/styles.css";
+
+// The TV's own tile styles, for the layout editor's tiles (drawn by the TV's code, see previewTiles in the panel):
+// its :root variables go on the preview's box; its fonts must be declared in the document (not in a shadow root).
+export const TV_TILE_CSS = tvCss.replace(/:root\s*\{/, ".tvp {");
+let fontsAdded = false;
+export function addTvFonts() {
+  if (fontsAdded) return;
+  fontsAdded = true;
+  const style = document.createElement("style");
+  style.textContent = (tvCss.match(/@font-face\s*\{[^}]*\}/g) || []).join("\n");
+  document.head.appendChild(style);
+}
 
 export { setLocale as setTvLocale };
 
@@ -274,6 +287,9 @@ function layoutEditor(tv, ctx) {
   if (!catalog.length) return `<div class="tv-flash-row"></div><div class="state card"><p>${esc(t("tvs.layout.no_catalog"))}</p></div>`;
   const L = tv.settings?.layout || {}, hiddenRows = new Set(L.hidden_rows || []), hidden = new Set(L.hidden || []);
   const wp = WALLPAPERS.find((w) => w.id === tv.settings?.wallpaper) || WALLPAPERS[0];
+  // The TV's accent colour on the tiles drawn like on the TV.
+  const ac = ACCENTS.find((a) => a.id === tv.settings?.accent) || ACCENTS[0];
+  const accentVars = `--lime:${ac.c};--lime-rgb:${ac.rgb};--lime-ink:${ac.ink};--lime-deep:${ac.deep};--lime-deeper:${ac.deeper}`;
   const rows = rowOrder(L).map((k) => catalog.find((r) => r.key === k)).filter(Boolean);
   const btn = (attrs, ic, label, disabled = false) => `<button class="tvl-btn" ${attrs} title="${esc(label)}" aria-label="${esc(label)}" ${disabled ? "disabled" : ""}>${icon(ic)}</button>`;
   const body = rows.map((row, ri) => {
@@ -291,8 +307,21 @@ function layoutEditor(tv, ctx) {
     const track = tiles.map((it, ti) => {
       const hid = hidden.has(it.id), attrs = (op, extra = "") => `data-action="tv-layout" data-id="${id}" data-op="${op}" data-row="${row.key}" data-tile="${esc(it.id)}" ${extra}`;
       // The whole tile drags with a mouse, the grip with a finger; focused, left/right move it.
-      return `<div class="tvl-tile ${hid ? "off" : ""}" data-sort-item="${esc(it.id)}" tabindex="0" data-action="tv-layout-key" data-id="${id}"
-        data-row="${row.key}" data-tile="${esc(it.id)}" data-focus="tvl|${esc(it.id)}" aria-label="${esc(t("tvs.layout.drag_tile", { name: it.name || it.id }))}">
+      const live = ctx.preview?.get(it.id);
+      const common = `data-sort-item="${esc(it.id)}" tabindex="0" data-action="tv-layout-key" data-id="${id}" data-row="${row.key}"
+        data-tile="${esc(it.id)}" data-focus="tvl|${esc(it.id)}" aria-label="${esc(t("tvs.layout.drag_tile", { name: it.name || it.id }))}"`;
+      // The tile as the TV draws it, from the home's live states, at the TV's proportions; the controls under it.
+      if (live) {
+        return `<div class="tvl-tile live ${hid ? "off" : ""}" ${common}>
+          <div class="tvp-box" style="${accentVars}"><div class="tvp">${live}</div></div>
+          <div class="tvl-tile-bar">
+            <span class="tvl-grip small" data-grip aria-hidden="true">${icon("mdi:drag")}</span>
+            ${hid ? `<span class="tvl-hidden">${esc(t("tvs.layout.row_hidden"))}</span>` : ""}
+            ${btn(`${attrs("tile-hide")} data-focus="tvl|${esc(it.id)}|hide"`, hid ? "mdi:eye-off-outline" : "mdi:eye-outline", t(hid ? "tvs.layout.tile_show" : "tvs.layout.tile_hide", { name: it.name }))}
+          </div>
+        </div>`;
+      }
+      return `<div class="tvl-tile ${hid ? "off" : ""}" ${common}>
         <div class="tvl-tile-top">
           <div class="tvl-tile-ic">${icon(it.icon || "mdi:checkbox-blank-outline")}</div>
           <span class="tvl-grip small" data-grip aria-hidden="true">${icon("mdi:drag")}</span>
@@ -307,7 +336,7 @@ function layoutEditor(tv, ctx) {
     const note = row.key === "working" ? t("tvs.layout.working_note") : row.key === "security" ? t("tvs.layout.security_note")
       : !tiles.length ? t("tvs.layout.empty") : "";
     return `<section class="tvl-row ${off ? "off" : ""}" data-sort-item="${row.key}" data-sort-handle=".tvl-row-head">${head}
-      ${track ? `<div class="tvl-track" data-sort-list="x" data-id="${id}" data-row="${row.key}">${track}</div>` : ""}
+      ${track ? `<div class="tvl-track" data-sort-list="x" data-id="${id}" data-row="${row.key}" data-scroll-key="tvl|${row.key}">${track}</div>` : ""}
       ${note ? `<p class="tvl-note">${esc(note)}</p>` : ""}</section>`;
   }).join("");
   const changed = Object.keys(L).some((k) => (Array.isArray(L[k]) ? L[k].length : Object.keys(L[k] || {}).length));
@@ -455,6 +484,18 @@ section.tv { margin-top: 8px; }
 .tvl-tile.dragging { box-shadow: 0 14px 30px rgba(0, 0, 0, .45), inset 0 0 0 2px rgba(255, 255, 255, .6); background: rgba(255, 255, 255, .22); }
 .tvl-row.dragging { background: rgba(255, 255, 255, .08); box-shadow: 0 14px 30px rgba(0, 0, 0, .4); border-radius: 12px; }
 .sorting { scroll-behavior: auto; }
+/* A tile drawn by the TV's code, at 42% of its size on the TV (320 × 210 px there). */
+.tvl-tile.live { width: auto; padding: 0; background: transparent; box-shadow: none; backdrop-filter: none; gap: 4px; border-radius: 0; }
+.tvp-box { zoom: .42; }
+.tvp { color: #fff; font: 400 24px/1.3 Figtree, system-ui, sans-serif; -webkit-font-smoothing: antialiased; pointer-events: none; }
+.tvp .tile { transition: none; }
+.tvl-tile.live.off .tvp { opacity: .32; filter: grayscale(.6); }
+.tvl-tile.live.dragging { box-shadow: none; background: transparent; }
+.tvl-tile.live.dragging .tvp .tile { box-shadow: 0 24px 50px rgba(0, 0, 0, .5); outline: 4px solid rgba(255, 255, 255, .7); }
+.tvl-tile.live:focus-visible { outline: none; }
+.tvl-tile.live:focus-visible .tvp .tile { outline: 5px solid #fff; outline-offset: 4px; }
+.tvl-tile-bar { display: flex; align-items: center; gap: 2px; min-height: 30px; }
+.tvl-tile-bar .tvl-grip.small { margin: 0; }
 .tvl-btn { width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: rgba(255, 255, 255, .85); cursor: pointer;
   display: grid; place-items: center; --mdc-icon-size: 20px; padding: 0; }
 .tvl-btn:hover:not(:disabled) { background: rgba(255, 255, 255, .16); color: #fff; }
