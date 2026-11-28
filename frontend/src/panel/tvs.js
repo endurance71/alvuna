@@ -263,7 +263,9 @@ export function nextLayout(layout, catalog, op) {
     if (!row) return L;
     const ids = tileOrder(L, row).map((x) => x.id), i = ids.indexOf(op.id);
     L.order = { ...(L.order || {}), [op.row]: swap(ids, i, i + op.step) };
-  } else if (op.kind === "reset") return {};
+  } else if (op.kind === "row-order") L.rows = op.ids.filter((k) => ROWS.includes(k));
+  else if (op.kind === "tile-order") L.order = { ...(L.order || {}), [op.row]: op.ids };
+  else if (op.kind === "reset") return {};
   return L;
 }
 
@@ -277,36 +279,41 @@ function layoutEditor(tv, ctx) {
   const body = rows.map((row, ri) => {
     const off = hiddenRows.has(row.key), tiles = tileOrder(L, row);
     const rattrs = (op, extra = "") => `data-action="tv-layout" data-id="${id}" data-op="${op}" data-row="${row.key}" ${extra}`;
+    // The grip drags the row (a finger, or the keyboard: up/down); a mouse can take the row by its whole header.
     const head = `<div class="tvl-row-head">
+      <button class="tvl-grip" data-grip data-action="tv-layout-key" data-id="${id}" data-row="${row.key}" data-focus="tvl|${row.key}|grip"
+        title="${esc(t("tvs.layout.drag_row", { name: row.title }))}" aria-label="${esc(t("tvs.layout.drag_row", { name: row.title }))}">${icon("mdi:drag")}</button>
       <h4>${esc(row.title)}</h4>${off ? `<span class="badge muted">${esc(t("tvs.layout.row_hidden"))}</span>` : ""}
       <span class="spacer"></span>
-      ${btn(`${rattrs("row-move", 'data-step="-1"')} data-focus="tvl|${row.key}|up"`, "mdi:chevron-up", t("tvs.layout.row_up", { name: row.title }), ri === 0)}
-      ${btn(`${rattrs("row-move", 'data-step="1"')} data-focus="tvl|${row.key}|down"`, "mdi:chevron-down", t("tvs.layout.row_down", { name: row.title }), ri === rows.length - 1)}
       ${btn(`${rattrs("row-hide")} data-focus="tvl|${row.key}|hide"`, off ? "mdi:eye-off-outline" : "mdi:eye-outline",
         t(off ? "tvs.layout.row_show" : "tvs.layout.row_hide", { name: row.title }))}
     </div>`;
     const track = tiles.map((it, ti) => {
       const hid = hidden.has(it.id), attrs = (op, extra = "") => `data-action="tv-layout" data-id="${id}" data-op="${op}" data-row="${row.key}" data-tile="${esc(it.id)}" ${extra}`;
-      return `<div class="tvl-tile ${hid ? "off" : ""}">
-        <div class="tvl-tile-ic">${icon(it.icon || "mdi:checkbox-blank-outline")}</div>
+      // The whole tile drags with a mouse, the grip with a finger; focused, left/right move it.
+      return `<div class="tvl-tile ${hid ? "off" : ""}" data-sort-item="${esc(it.id)}" tabindex="0" data-action="tv-layout-key" data-id="${id}"
+        data-row="${row.key}" data-tile="${esc(it.id)}" data-focus="tvl|${esc(it.id)}" aria-label="${esc(t("tvs.layout.drag_tile", { name: it.name || it.id }))}">
+        <div class="tvl-tile-top">
+          <div class="tvl-tile-ic">${icon(it.icon || "mdi:checkbox-blank-outline")}</div>
+          <span class="tvl-grip small" data-grip aria-hidden="true">${icon("mdi:drag")}</span>
+        </div>
         <div class="tvl-tile-name">${esc(it.name || it.id)}</div>
         <div class="tvl-tile-ctl">
-          ${btn(`${attrs("tile-move", 'data-step="-1"')} data-focus="tvl|${esc(it.id)}|left"`, "mdi:chevron-left", t("tvs.layout.tile_left", { name: it.name }), ti === 0)}
           ${btn(`${attrs("tile-hide")} data-focus="tvl|${esc(it.id)}|hide"`, hid ? "mdi:eye-off-outline" : "mdi:eye-outline", t(hid ? "tvs.layout.tile_show" : "tvs.layout.tile_hide", { name: it.name }))}
-          ${btn(`${attrs("tile-move", 'data-step="1"')} data-focus="tvl|${esc(it.id)}|right"`, "mdi:chevron-right", t("tvs.layout.tile_right", { name: it.name }), ti === tiles.length - 1)}
+          ${hid ? `<span class="tvl-hidden">${esc(t("tvs.layout.row_hidden"))}</span>` : ""}
         </div>
       </div>`;
     }).join("");
     const note = row.key === "working" ? t("tvs.layout.working_note") : row.key === "security" ? t("tvs.layout.security_note")
       : !tiles.length ? t("tvs.layout.empty") : "";
-    return `<section class="tvl-row ${off ? "off" : ""}">${head}
-      ${track ? `<div class="tvl-track">${track}</div>` : ""}
+    return `<section class="tvl-row ${off ? "off" : ""}" data-sort-item="${row.key}" data-sort-handle=".tvl-row-head">${head}
+      ${track ? `<div class="tvl-track" data-sort-list="x" data-id="${id}" data-row="${row.key}">${track}</div>` : ""}
       ${note ? `<p class="tvl-note">${esc(note)}</p>` : ""}</section>`;
   }).join("");
   const changed = Object.keys(L).some((k) => (Array.isArray(L[k]) ? L[k].length : Object.keys(L[k] || {}).length));
   return `<div class="tv-flash-row">${tv.pending ? `<span class="badge warn">${esc(t("tvs.pending"))}</span>` : ""}
       ${changed ? `<button class="text-button" data-action="tv-layout" data-id="${id}" data-op="reset" data-focus="tvl-reset">${esc(t("tvs.layout.reset"))}</button>` : ""}</div>
-    <div class="tvl-screen" style="background:${esc(wp.base || "#0b2633")};background:${esc(wp.bg)}">${body}</div>
+    <div class="tvl-screen" data-sort-list="y" data-id="${id}" style="background:${esc(wp.base || "#0b2633")};background:${esc(wp.bg)}">${body}</div>
     <p class="note">${esc(t("tvs.layout.hint"))}</p>`;
 }
 
@@ -420,7 +427,7 @@ section.tv { margin-top: 8px; }
 .tvl-screen { border-radius: var(--alv-radius); padding: 18px 0 8px; color: #fff; background-size: cover; overflow: hidden;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); }
 .tvl-row { padding: 0 0 14px; }
-.tvl-row-head { display: flex; align-items: center; gap: 6px; padding: 0 14px 8px 20px; }
+.tvl-row-head { display: flex; align-items: center; gap: 6px; padding: 0 14px 8px 10px; }
 .tvl-row-head h4 { margin: 0; font-size: 16px; font-weight: 600; color: rgba(255, 255, 255, .92); }
 .tvl-row-head .spacer { flex: 1; }
 .tvl-row.off .tvl-row-head h4, .tvl-row.off .tvl-track { opacity: .38; }
@@ -433,7 +440,21 @@ section.tv { margin-top: 8px; }
 .tvl-tile-ic { --mdc-icon-size: 24px; color: rgba(255, 255, 255, .95); }
 .tvl-tile-name { font-size: 14px; font-weight: 500; line-height: 1.25; min-height: 2.5em; overflow: hidden; display: -webkit-box;
   -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-.tvl-tile-ctl { display: flex; justify-content: space-between; margin: 0 -4px; }
+.tvl-tile-ctl { display: flex; align-items: center; gap: 4px; margin: 0 -4px; }
+.tvl-hidden { font-size: 11px; color: rgba(255, 255, 255, .6); }
+.tvl-tile-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.tvl-tile { cursor: grab; user-select: none; -webkit-user-select: none; }
+.tvl-tile:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.tvl-grip { border: 0; background: transparent; color: rgba(255, 255, 255, .7); cursor: grab; display: grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 8px; padding: 0; --mdc-icon-size: 22px; touch-action: none; }
+.tvl-grip.small { width: 26px; height: 26px; margin: -6px -4px 0 0; --mdc-icon-size: 20px; }
+.tvl-grip:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+.tvl-grip:focus-visible { outline: 2px solid #fff; }
+.tvl-row-head { cursor: grab; user-select: none; -webkit-user-select: none; }
+.dragging { cursor: grabbing !important; z-index: 5; position: relative; transition: none !important; }
+.tvl-tile.dragging { box-shadow: 0 14px 30px rgba(0, 0, 0, .45), inset 0 0 0 2px rgba(255, 255, 255, .6); background: rgba(255, 255, 255, .22); }
+.tvl-row.dragging { background: rgba(255, 255, 255, .08); box-shadow: 0 14px 30px rgba(0, 0, 0, .4); border-radius: 12px; }
+.sorting { scroll-behavior: auto; }
 .tvl-btn { width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: rgba(255, 255, 255, .85); cursor: pointer;
   display: grid; place-items: center; --mdc-icon-size: 20px; padding: 0; }
 .tvl-btn:hover:not(:disabled) { background: rgba(255, 255, 255, .16); color: #fff; }

@@ -77,7 +77,8 @@ const STRINGS = {
       pick: "Wybierz telewizor",
       sections: { control: "Sterowanie", layout: "Układ ekranu", settings: "Ustawienia", log: "Dziennik błędów" },
       layout: {
-        hint: "Tak jak na ekranie tego telewizora: rzędy od góry, kafelki od lewej. Strzałki zmieniają kolejność, oko ukrywa. Dotyczy tylko tego telewizora; to, co ukryjesz w zakładce Ekran, znika ze wszystkich.",
+        hint: "Tak jak na ekranie tego telewizora: rzędy od góry, kafelki od lewej. Przeciągnij kafelek albo rząd, żeby zmienić kolejność (na telefonie za uchwyt ⋮⋮); oko ukrywa. Dotyczy tylko tego telewizora; to, co ukryjesz w zakładce Ekran, znika ze wszystkich.",
+        drag_row: "Przeciągnij rząd {name} (albo strzałki w górę i w dół)", drag_tile: "{name}: przeciągnij albo przesuń strzałkami w lewo i w prawo",
         no_catalog: "Telewizor jeszcze nie przysłał swojego ekranu. Włącz go i otwórz na nim Alvunę.",
         row_hidden: "Ukryty", row_up: "Rząd wyżej: {name}", row_down: "Rząd niżej: {name}",
         row_hide: "Ukryj rząd: {name}", row_show: "Pokaż rząd: {name}",
@@ -164,7 +165,8 @@ const STRINGS = {
       pick: "Pick a TV",
       sections: { control: "Control", layout: "Screen layout", settings: "Settings", log: "Error log" },
       layout: {
-        hint: "As on this TV's screen: rows from the top, tiles from the left. Arrows change the order, the eye hides. Only for this TV; what you hide on the Screen tab is gone from every TV.",
+        hint: "As on this TV's screen: rows from the top, tiles from the left. Drag a tile or a row to change the order (on a phone by its ⋮⋮ grip); the eye hides. Only for this TV; what you hide on the Screen tab is gone from every TV.",
+        drag_row: "Drag the {name} row (or up and down arrows)", drag_tile: "{name}: drag, or move with the left and right arrows",
         no_catalog: "The TV has not sent its screen yet. Turn it on and open Alvuna on it.",
         row_hidden: "Hidden", row_up: "Row up: {name}", row_down: "Row down: {name}",
         row_hide: "Hide row: {name}", row_show: "Show row: {name}",
