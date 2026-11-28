@@ -397,7 +397,7 @@ export const TVS_STYLE = `
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 section.tv { margin-top: 8px; }
-.tv-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin: 18px 0 20px; }
+.tv-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 320px)); gap: 10px; margin: 18px 0 20px; }
 .tv-pick { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: center; text-align: left; padding: 12px 14px;
   border-radius: var(--alv-radius); border: 1px solid var(--alv-div); background: var(--alv-card); cursor: pointer; color: var(--primary-text-color); }
 .tv-pick:hover { background: var(--alv-hover); }
