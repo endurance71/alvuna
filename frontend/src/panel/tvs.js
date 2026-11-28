@@ -79,7 +79,8 @@ function tvCard(tv, ctx) {
   const id = esc(tv.entry_id);
   const state = tv.connected
     ? `<span class="tv-dot on"></span>${esc(tv.since ? t("tvs.online_since", { time: clock(tv.since, lang) }) : t("tvs.online"))}`
-    : `<span class="tv-dot"></span>${esc(tv.last_seen ? `${t("tvs.offline")} · ${t("tvs.seen", { ago: ago(tv.last_seen, lang) })}` : t("tvs.never"))}`;
+    // Without last_seen: not seen since Home Assistant started keeping it (this version), not necessarily never.
+    : `<span class="tv-dot"></span>${esc(tv.last_seen ? `${t("tvs.offline")} · ${t("tvs.seen", { ago: ago(tv.last_seen, lang) })}` : t("tvs.offline"))}`;
   const platform = st.platform ? `<span class="badge muted">${esc(t(`tvs.platform.${st.platform}`))}</span>` : "";
   const device = tv.device_id ? `<a class="tv-link" href="/config/devices/device/${encodeURIComponent(tv.device_id)}" data-nav>${esc(t("tvs.device"))}${ctx.svg(ctx.P.next)}</a>` : "";
   const screenLine = tv.connected && st.view

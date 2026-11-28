@@ -109,7 +109,8 @@ class AlvunaPanel extends HTMLElement {
   set route(value) {
     const before = this._tab;
     this._route = value;
-    if (this._built && this._tab !== before) { this._render(); this.scrollTop = 0; }
+    // Newer Home Assistant scrolls the document, older ones the panel itself: both go back to the top.
+    if (this._built && this._tab !== before) { this._render(); this.scrollTop = 0; window.scrollTo(0, 0); }
   }
 
   get _tab() { return /^\/tvs/.test(this._route?.path || "") ? "tvs" : "layout"; }
