@@ -380,6 +380,8 @@ class AlvunaPanel extends HTMLElement {
     const sel = active && "selectionStart" in active && active.selectionStart != null ? [active.selectionStart, active.selectionEnd] : null;
     const html = this._content();
     const main = root.querySelector(".content");
+    // The TVs tab takes the whole width (rows of tiles, cards side by side); the Screen tab's lists stay a column.
+    main.classList.toggle("wide", this._tab === "tvs");
     // A list being picked from would close under the user's mouse: the update waits until it is left.
     if (html !== this._lastHtml && ((active?.tagName === "SELECT" && !focusKey) || this._dragging)) { this._deferred = true; return; }
     this._deferred = false;
@@ -869,6 +871,7 @@ button { font: inherit; color: inherit; }
 @keyframes pulse { from { opacity: .35; } to { opacity: 1; } }
 
 .content { max-width: 880px; margin: 0 auto; padding: 28px 16px calc(72px + var(--safe-area-inset-bottom, 0px)); }
+.content.wide { max-width: none; padding-left: 32px; padding-right: 32px; }
 .intro { margin: 0 4px 8px; max-width: 680px; }
 .intro p { margin: 0; font-size: 16px; line-height: 1.5; }
 .intro .intro-save { margin-top: 8px; font-size: 14px; color: var(--alv-sub); }
@@ -996,7 +999,7 @@ h2 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -.01em; displ
 .switch:checked::after { transform: translateX(18px); }
 
 @media (max-width: 600px) {
-  .content { padding: 20px 12px calc(56px + var(--safe-area-inset-bottom, 0px)); }
+  .content, .content.wide { padding: 20px 12px calc(56px + var(--safe-area-inset-bottom, 0px)); }
   section { margin-top: 28px; }
   .row { gap: 10px; padding: 10px 6px 10px 12px; }
   .card > * + *::before { left: 58px; }
