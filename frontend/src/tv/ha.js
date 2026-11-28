@@ -114,8 +114,8 @@ export const subscribeTv = (conn, cb) => conn.subscribeMessage(cb, { type: "alvu
 
 // What this TV shows and which settings it has, for the Alvuna panel's Televisions tab (alvuna/tv/report); its errors
 // (alvuna/tv/log). Older integrations do not know them: those calls fail quietly.
-export const reportTv = (conn, { status, settings, rev }) =>
-  conn.sendMessagePromise({ type: "alvuna/tv/report", status, settings, rev }).catch(() => null);
+export const reportTv = (conn, { status, settings, rev, catalog }) =>
+  conn.sendMessagePromise({ type: "alvuna/tv/report", status, settings, rev, ...(catalog && { catalog }) }).catch(() => null);
 export const logTv = (conn, entries) => conn.sendMessagePromise({ type: "alvuna/tv/log", entries }).catch(() => null);
 
 // Hourly and daily forecast (one-shot, like the tablet card's _loadForecast), with twice-daily folded into days.

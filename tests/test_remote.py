@@ -126,6 +126,46 @@ async def test_report_settings_and_commands(hass: HomeAssistant, hass_client_no_
     assert update["tvs"] == []
 
 
+async def test_layout_and_catalog(hass: HomeAssistant, hass_client_no_auth, hass_ws_client) -> None:
+    """A TV reports its rows and tiles; the panel sets the TV's own layout, which reaches it like any setting."""
+    await _setup(hass)
+    client = await hass_client_no_auth()
+    tv_entry, token = await _pair(hass, client)
+    admin = await hass_ws_client(hass)
+    await admin.send_json_auto_id({"type": "alvuna/tvs/subscribe"})
+    assert (await admin.receive_json())["success"]
+    assert (await _tvs(admin))["tvs"][0]["catalog"] == []
+
+    ws = await hass_ws_client(hass, access_token=token)
+    await ws.send_json_auto_id({"type": "alvuna/tv/subscribe"})
+    await ws.receive_json()
+    await _tvs(admin)
+    catalog = [{"key": "scenes", "title": "Sceny", "items": [{"id": "scene.film", "name": "Film", "icon": "mdi:movie"},
+                                                             {"id": "all-off", "name": "Wyłącz"}]},
+               {"key": "rooms", "title": "Pokoje", "items": [{"id": "area:salon", "name": "Salon"}]}]
+    await ws.send_json_auto_id({"type": "alvuna/tv/report", "status": {"view": "home"}, "catalog": catalog})
+    assert (await ws.receive_json())["success"]
+    tv = (await _tvs(admin))["tvs"][0]
+    assert tv["catalog"][0]["items"][1] == {"id": "all-off", "name": "Wyłącz", "icon": ""}
+
+    layout = {"rows": ["rooms", "scenes"], "hidden_rows": ["media"], "hidden": ["all-off"], "order": {"scenes": ["all-off", "scene.film"]}}
+    await admin.send_json_auto_id({"type": "alvuna/tvs/settings", "entry_id": tv_entry.entry_id, "settings": {"layout": layout}})
+    assert (await admin.receive_json())["success"]
+    assert (await ws.receive_json())["event"] == {"type": "settings", "settings": {"layout": layout}, "rev": 1}
+    # A report without the catalog keeps the one reported before.
+    await ws.send_json_auto_id({"type": "alvuna/tv/report", "rev": 1, "status": {"view": "home"}, "settings": {"layout": layout}})
+    assert (await ws.receive_json())["success"]
+    while not (tv := (await _tvs(admin))["tvs"][0])["settings"].get("layout") or tv["pending"]:
+        pass
+    assert tv["catalog"] and tv["settings"]["layout"] == layout
+
+    await admin.send_json_auto_id({"type": "alvuna/tvs/settings", "entry_id": tv_entry.entry_id,
+                                   "settings": {"layout": {"rows": ["nowhere"]}}})
+    assert (await admin.receive_json())["error"]["code"] == "invalid_format"
+    await ws.send_json_auto_id({"type": "alvuna/tv/report", "status": {}, "catalog": [{"key": "attic", "title": "x", "items": []}]})
+    assert (await ws.receive_json())["error"]["code"] == "invalid_format"
+
+
 async def test_only_admins_and_tvs(hass: HomeAssistant, hass_client_no_auth, hass_ws_client) -> None:
     await _setup(hass)
     client = await hass_client_no_auth()

@@ -7,10 +7,19 @@ import { prefs, setPref } from "./prefs.js";
 
 const PREF_KEYS = ["glass", "ring", "anim", "dim", "shift", "saver", "exit"];
 const REV_KEY = "alvuna-settings-rev"; // the revision of the panel's settings this TV last applied
+// This TV's layout (rows and tiles: order, hidden), set only in the panel; see ROWS and renderHome in home.js.
+const LAYOUT_KEY = "alvuna-layout";
+
+let layout = null; // read once: every render asks for it
+export function tvLayout() {
+  if (!layout) { try { layout = JSON.parse(localStorage.getItem(LAYOUT_KEY)) || {}; } catch (e) { layout = {}; } }
+  return layout;
+}
 
 export function currentSettings() {
   const p = prefs(), out = { wallpaper: currentWallpaper().id, accent: currentAccent().id };
   for (const k of PREF_KEYS) out[k] = p[k];
+  out.layout = tvLayout();
   return out;
 }
 
@@ -24,6 +33,10 @@ export function applySettings(s = {}, rev) {
   if (s.accent && s.accent !== currentAccent().id && ACCENTS.some((a) => a.id === s.accent)) setAccent(s.accent);
   const p = prefs();
   for (const k of PREF_KEYS) if (k in s && s[k] !== p[k]) setPref(k, s[k]);
+  if (s.layout && typeof s.layout === "object") {
+    layout = s.layout;
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(s.layout)); } catch (e) { /* storage blocked: this session only */ }
+  }
   if (rev != null) { try { localStorage.setItem(REV_KEY, String(rev)); } catch (e) { /* storage blocked */ } }
   return wallpaper;
 }

@@ -4,17 +4,45 @@ import { displayName } from "../instances.js";
 import { esc, num, wIcon, wxWord, alertWord, time, longDate, fmtTime } from "../model/format.js";
 import { t } from "../../shared/i18n.js";
 import { icon } from "./icons.js";
+import { ROWS } from "./rows.js";
+
+// The rows in their default order. This TV's own layout (ctx.layout, set in the Alvuna panel's TVs tab, see
+// ui/layout.js) may reorder rows and their tiles and hide either; an open or wet sensor still comes first and is never hidden.
+function buildRows(h, ctx) {
+  return { working: workingRow(h), scenes: scenesRow(h), rooms: roomsRow(h), media: mediaRow(h), climate: climateRow(h, ctx),
+    security: securityRow(h) };
+}
 
 export function renderHome(h, ctx) {
-  const rows = [workingRow(h), scenesRow(h), roomsRow(h), mediaRow(h), climateRow(h, ctx), securityRow(h)].filter(Boolean);
+  const L = ctx.layout || {}, built = buildRows(h, ctx);
+  const order = [...(L.rows || []).filter((k) => ROWS.includes(k)), ...ROWS.filter((k) => !(L.rows || []).includes(k))];
+  const hiddenRows = new Set(L.hidden_rows || []), hidden = new Set(L.hidden || []);
+  const rows = order.map((k) => built[k]).filter((r) => r && (!hiddenRows.has(r.key) || r.alarm)).map((r) => {
+    const keep = r.items.filter((it) => it.always || !hidden.has(it.id));
+    const want = L.order?.[r.key] || [];
+    const pos = (it) => { const i = want.indexOf(it.id); return i < 0 ? want.length + r.items.indexOf(it) : i; };
+    return { ...r, items: want.length ? keep.slice().sort((a, b) => pos(a) - pos(b)) : keep };
+  }).filter((r) => r.items.length);
   // Something open or wet comes first, right under the header.
   const alarm = rows.findIndex((r) => r.key === "security" && r.alarm);
   if (alarm > 0) rows.unshift(rows.splice(alarm, 1)[0]);
-  return `<div class="page" data-scroll>${header(h, ctx)}${rows.map((r) => r.html).join("")}</div>`;
+  return `<div class="page" data-scroll>${header(h, ctx)}${rows.map(rowHtml).join("")}</div>`;
 }
 
-const row = (key, title, tiles, extra = {}) => ({ key, ...extra, html: `<section class="row" data-line="${key}">
-  <h2>${esc(title)}</h2><div class="track" data-track>${tiles.join("")}</div></section>` });
+// Every row and the tiles it can have, for the panel's layout editor (what the TV reports): tiles that come and go
+// with the house (a running washer, an open window) are left out, their row is listed all the same.
+export function homeCatalog(h, ctx) {
+  const built = buildRows(h, ctx), titles = { working: t("tv.rows.working"), scenes: t("scenes.title"), rooms: t("tabs.rooms"),
+    media: t("tabs.media"), climate: t("tv.rows.climate"), security: t("cameras.title") };
+  return ROWS.map((k) => ({ key: k, title: built[k]?.title || titles[k],
+    items: (built[k]?.items || []).filter((it) => !it.dynamic).map(({ id, name, icon: ic }) => ({ id, name: String(name || "").slice(0, 80), icon: ic || "" })) }));
+}
+
+// A tile: its stable id (for the layout), name and icon (for the editor) and its HTML.
+const tile = (id, name, ic, html, extra = {}) => ({ id, name, icon: ic, html, ...extra });
+const row = (key, title, items, extra = {}) => ({ key, title, items, ...extra });
+const rowHtml = (r) => `<section class="row" data-line="${r.key}">
+  <h2>${esc(r.title)}</h2><div class="track" data-track>${r.items.map((it) => it.html).join("")}</div></section>`;
 
 // --- header ---------------------------------------------------------------------------------------
 // Variants of the top of the screen (?hero= or `tv_hero` in the card config; default today): classic (clock left, weather and people
@@ -116,42 +144,42 @@ export function ring(pct, size, cls = "") {
 // what changes by the minute.
 function workingRow(h) {
   const tiles = h.working().map(({ kind, v, ap }) => {
-    if (kind === "vac") return `<div class="tile device on" data-f="dev:vac" data-act="device" data-dev="vac">
+    if (kind === "vac") return tile("dev:vac", v.name, "mdi:robot-vacuum", `<div class="tile device on" data-f="dev:vac" data-act="device" data-dev="vac">
       <div class="head"><div class="ic">${icon("mdi:robot-vacuum")}</div>${v.battery != null ? `<div class="dbadge">${icon(v.charging ? "mdi:battery-charging" : "mdi:battery-outline")}${Math.round(v.battery)}%</div>` : ""}</div>
-      <div class="name">${esc(v.name)}</div><div class="sub">${esc([v.label, v.room].filter(Boolean).join(" · "))}</div></div>`;
+      <div class="name">${esc(v.name)}</div><div class="sub">${esc([v.label, v.room].filter(Boolean).join(" · "))}</div></div>`, { dynamic: true });
     const sub = ap.active ? [ap.left > 0 ? `${Math.round(ap.left)} min` : "", ap.paused || !ap.program ? ap.label : ap.program].filter(Boolean).join(" · ") : ap.label;
-    return `<div class="tile device ${ap.active ? "on" : "done"}" data-f="dev:${ap.i}" data-act="device" data-dev="${ap.i}">
+    return tile(`dev:${ap.i}`, ap.name, ap.icon, `<div class="tile device ${ap.active ? "on" : "done"}" data-f="dev:${ap.i}" data-act="device" data-dev="${ap.i}">
       <div class="head"><div class="ic">${icon(ap.icon)}</div>
         ${ap.active ? `<div class="dring">${ring(ap.pct, 86)}<span>${ap.pct != null ? Math.round(ap.pct) : 0}<small>%</small></span></div>` : `<div class="dcheck">${icon("mdi:check-bold")}</div>`}</div>
-      <div class="name">${esc(ap.name)}</div><div class="sub">${esc(sub)}</div></div>`;
+      <div class="name">${esc(ap.name)}</div><div class="sub">${esc(sub)}</div></div>`, { dynamic: true });
   });
   return tiles.length ? row("working", t("tv.rows.working"), tiles) : null;
 }
 
 function scenesRow(h) {
   const tiles = h.scenes().map((s) => {
-    const on = h.sceneOn(s), st = h.st(s.entity);
-    return `<div class="tile scene ${on ? "on" : ""}" data-f="scene:${esc(s.entity)}" data-act="scene" data-entity="${esc(s.entity)}"
+    const on = h.sceneOn(s), st = h.st(s.entity), ic = s.icon || st?.attributes.icon || "mdi:palette-outline";
+    return tile(s.entity, h.name(s), ic, `<div class="tile scene ${on ? "on" : ""}" data-f="scene:${esc(s.entity)}" data-act="scene" data-entity="${esc(s.entity)}"
       ${on && s.off ? `data-off="${esc(s.off)}"` : ""}>
-      <div class="ic">${icon(s.icon || st?.attributes.icon || "mdi:palette-outline")}</div>
-      <div class="name">${esc(h.name(s))}</div>${on ? `<div class="sub">${on.left ? t("tv.min_left", { n: on.left }) : t("tv.scene_active")}</div>` : ""}</div>`;
+      <div class="ic">${icon(ic)}</div>
+      <div class="name">${esc(h.name(s))}</div>${on ? `<div class="sub">${on.left ? t("tv.min_left", { n: on.left }) : t("tv.scene_active")}</div>` : ""}</div>`);
   });
   if (!h.allLights().length && !tiles.length) return null;
   const lit = h.lightsOn().length;
-  tiles.push(`<div class="tile scene" data-f="all-off" data-act="all" data-on="0"><div class="ic">${icon("mdi:lightbulb-off-outline")}</div>
-    <div class="name">${t("home.all_off_btn")}</div>${lit ? `<div class="sub">${t("tv.summary.lights_on", { n: lit })}</div>` : ""}</div>`);
-  tiles.push(`<div class="tile scene" data-f="all-on" data-act="all" data-on="1"><div class="ic">${icon("mdi:lightbulb-group-outline")}</div>
-    <div class="name">${t("home.all_on_btn")}</div></div>`);
+  tiles.push(tile("all-off", t("home.all_off_btn"), "mdi:lightbulb-off-outline", `<div class="tile scene" data-f="all-off" data-act="all" data-on="0"><div class="ic">${icon("mdi:lightbulb-off-outline")}</div>
+    <div class="name">${t("home.all_off_btn")}</div>${lit ? `<div class="sub">${t("tv.summary.lights_on", { n: lit })}</div>` : ""}</div>`));
+  tiles.push(tile("all-on", t("home.all_on_btn"), "mdi:lightbulb-group-outline", `<div class="tile scene" data-f="all-on" data-act="all" data-on="1"><div class="ic">${icon("mdi:lightbulb-group-outline")}</div>
+    <div class="name">${t("home.all_on_btn")}</div></div>`));
   return row("scenes", t("scenes.title"), tiles);
 }
 
 function roomsRow(h) {
   const tiles = h.rooms().map((r, i) => {
     const s = h.roomSummary(r);
-    return `<div class="tile room ${s.on ? "on" : ""}" data-f="room:${i}" data-act="room" data-room="${i}">
+    return tile(`area:${r.area ?? i}`, r.name, r.icon || "mdi:home-outline", `<div class="tile room ${s.on ? "on" : ""}" data-f="room:${i}" data-act="room" data-room="${i}">
       <div class="head"><div class="ic">${icon(r.icon || "mdi:home-outline")}</div>${s.t != null ? `<div class="temp">${num(s.t)}°</div>` : ""}</div>
       <div class="name">${esc(r.name)}</div><div class="sub">${esc(s.sub)}</div>
-      ${s.lights.length ? `<div class="dots">${s.lights.map((id) => `<i class="${h.on(id) ? "on" : ""}"></i>`).join("")}</div>` : ""}</div>`;
+      ${s.lights.length ? `<div class="dots">${s.lights.map((id) => `<i class="${h.on(id) ? "on" : ""}"></i>`).join("")}</div>` : ""}</div>`);
   });
   return tiles.length ? row("rooms", t("tabs.rooms"), tiles) : null;
 }
@@ -172,16 +200,17 @@ function mediaRow(h) {
     const wide = i === 0 && m.active;
     const state = m.active ? (m.playing ? t("tv.media.playing") : t("media.paused")) : m.on ? m.input || t("common.on_m") : t("common.off_m");
     const pct = m.duration ? Math.min(100, (h.mediaPosition(m) / m.duration) * 100) : 0;
-    return `<div class="tile media ${wide ? "wide" : ""} ${m.on ? "lit" : ""}" data-f="media:${i}" data-act="media" data-media="${i}">
+    const ic = m.isTv ? "mdi:television" : /soundbar/i.test(m.name) ? "mdi:soundbar" : "mdi:speaker";
+    return tile(m.tv, m.name, ic, `<div class="tile media ${wide ? "wide" : ""} ${m.on ? "lit" : ""}" data-f="media:${i}" data-act="media" data-media="${i}">
       ${wide ? mediaArt(m, true) : ""}
       <div class="media-body">
-        ${wide ? "" : `<div class="ic">${icon(m.isTv ? "mdi:television" : /soundbar/i.test(m.name) ? "mdi:soundbar" : "mdi:speaker")}</div>`}
+        ${wide ? "" : `<div class="ic">${icon(ic)}</div>`}
         ${m.active && m.app ? `<div class="kicker">${esc(m.app)}</div>` : ""}
         <div class="name">${esc(m.active ? m.title : m.name)}</div>
         <div class="sub">${esc(m.active ? m.artist || state : state)}</div>
         ${wide && m.duration ? `<div class="bar"><i style="width:${pct.toFixed(1)}%" data-progress="${i}"></i></div>
           <div class="times"><span data-elapsed="${i}">${fmtTime(h.mediaPosition(m))}</span><span>${fmtTime(m.duration)}</span></div>` : ""}
-      </div></div>`;
+      </div></div>`);
   });
   return row("media", t("tabs.media"), tiles);
 }
@@ -191,23 +220,23 @@ function climateRow(h, ctx) {
   const w = h.weatherNow();
   if (w.w) {
     const cond = wxWord(w.cond) || "", today = ctx.forecast?.daily?.[0];
-    tiles.push(`<div class="tile weather" data-f="weather" data-act="weather">
+    tiles.push(tile("weather", t("weather.title"), wIcon(w.cond, w.night), `<div class="tile weather" data-f="weather" data-act="weather">
       <div class="label">${icon(wIcon(w.cond, w.night))}${t("weather.title")}</div>
       <div class="big">${w.temp != null ? Math.round(w.temp) + "°" : "–"}</div>
-      <div class="sub">${esc(cond)}${today ? ` · ${Math.round(today.temperature)}° / ${Math.round(today.templow ?? today.temperature)}°` : ""}</div></div>`);
+      <div class="sub">${esc(cond)}${today ? ` · ${Math.round(today.temperature)}° / ${Math.round(today.templow ?? today.temperature)}°` : ""}</div></div>`));
   }
   const th = h.thermo();
-  if (th) tiles.push(`<div class="tile climate ${th.heating ? "on" : ""}" data-f="thermo" data-act="climate">
+  if (th) tiles.push(tile("thermo", t("tabs.heating"), "mdi:thermostat", `<div class="tile climate ${th.heating ? "on" : ""}" data-f="thermo" data-act="climate">
       <div class="label">${icon(th.heating ? "mdi:fire" : "mdi:thermostat")}${t("tabs.heating")}</div>
-      <div class="big">${num(th.target)}°</div><div class="sub">${esc(th.status)}${isFinite(th.current) ? ` · ${t("heating.now_lc", { t: num(th.current) })}` : ""}</div></div>`);
+      <div class="big">${num(th.target)}°</div><div class="sub">${esc(th.status)}${isFinite(th.current) ? ` · ${t("heating.now_lc", { t: num(th.current) })}` : ""}</div></div>`));
   for (const [i, x] of h.climateSensors().entries()) {
     if (x.t == null && x.h == null) continue;
     const main = x.temperature || x.humidity, second = x.temperature && x.humidity ? x.humidity : "";
-    tiles.push(`<div class="tile sensor ${x.outdoor ? "out" : ""}" data-f="sensor:${i}" data-act="entity" data-kind="numeric"
+    tiles.push(tile(`sensor:${main || x.name}`, x.name, x.icon || "mdi:thermometer", `<div class="tile sensor ${x.outdoor ? "out" : ""}" data-f="sensor:${i}" data-act="entity" data-kind="numeric"
       data-entity="${esc(main)}" data-entity2="${esc(second)}" data-name="${esc(x.name)}" data-icon="${esc(x.icon || "mdi:thermometer")}">
       <div class="label">${icon(x.icon || "mdi:thermometer")}${esc(x.name)}</div>
       <div class="big">${x.t != null ? num(x.t) + "°" : "–"}</div>
-      <div class="sub">${x.h != null ? t("rooms.humidity", { v: Math.round(x.h) }) : "&nbsp;"}</div></div>`);
+      <div class="sub">${x.h != null ? t("rooms.humidity", { v: Math.round(x.h) }) : "&nbsp;"}</div></div>`));
   }
   return tiles.length ? row("climate", t("tv.rows.climate"), tiles) : null;
 }
@@ -247,21 +276,21 @@ function securityRow(h) {
   const items = h.securityItems(), cams = h.cameras();
   const alerts = items.filter((x) => x.alert), offline = items.filter((x) => x.off);
   if (!alerts.length && !offline.length && !cams.length) return null;
-  const tiles = alerts.map((x) => `<div class="tile sec alert" data-f="sec:${esc(x.id)}" data-act="entity" data-kind="binary"
+  const tiles = alerts.map((x) => tile(`sec:${x.id}`, x.name, "mdi:shield-alert-outline", `<div class="tile sec alert" data-f="sec:${esc(x.id)}" data-act="entity" data-kind="binary"
       data-entity="${esc(x.id)}" data-name="${esc(x.name)}">
       <div class="head"><div class="ic">${icon("mdi:shield-alert-outline")}</div></div>
-      <div class="name">${esc(x.name)}</div><div class="sub">${esc(alertWord(x.dc) || t("security.attention"))}${x.st?.last_changed ? ` · ${t("tv.since_time", { t: time(new Date(x.st.last_changed)) })}` : ""}</div></div>`);
-  if (offline.length) tiles.push(`<div class="tile sec off" data-f="sec-offline" data-act="summary">
+      <div class="name">${esc(x.name)}</div><div class="sub">${esc(alertWord(x.dc) || t("security.attention"))}${x.st?.last_changed ? ` · ${t("tv.since_time", { t: time(new Date(x.st.last_changed)) })}` : ""}</div></div>`, { dynamic: true, always: true }));
+  if (offline.length) tiles.push(tile("sec-offline", t("security.offline", { n: offline.length }), "mdi:shield-off-outline", `<div class="tile sec off" data-f="sec-offline" data-act="summary">
       <div class="head"><div class="ic">${icon("mdi:shield-off-outline")}</div></div>
       <div class="name">${t("security.offline", { n: offline.length })}</div>
-      <div class="sub">${esc(offline.map((x) => x.name).join(", "))}</div></div>`);
+      <div class="sub">${esc(offline.map((x) => x.name).join(", "))}</div></div>`, { dynamic: true }));
   if (!alerts.length && items.length > offline.length && cams.length) {
     const calm = items.length - offline.length;
-    tiles.unshift(`<div class="tile sec calm" data-f="sec-calm" data-act="summary">
+    tiles.unshift(tile("sec-calm", t("security.safe"), "mdi:shield-check-outline", `<div class="tile sec calm" data-f="sec-calm" data-act="summary">
       <div class="head"><div class="ic">${icon("mdi:shield-check-outline")}</div></div>
-      <div class="name">${t("security.safe")}</div><div class="sub">${t("tv.sensors_ok", { n: calm })}</div></div>`);
+      <div class="name">${t("security.safe")}</div><div class="sub">${t("tv.sensors_ok", { n: calm })}</div></div>`, { dynamic: true }));
   }
-  for (const [i, c] of cams.entries()) tiles.push(`<div class="tile cam" data-f="cam:${i}" data-act="camera" data-cam="${i}">
-      <img class="art" src="${esc(camUrl(h, c))}" alt="" decoding="async"><div class="media-body"><div class="name">${esc(h.name(c))}</div></div></div>`);
+  for (const [i, c] of cams.entries()) tiles.push(tile(c.entity, h.name(c), "mdi:cctv", `<div class="tile cam" data-f="cam:${i}" data-act="camera" data-cam="${i}">
+      <img class="art" src="${esc(camUrl(h, c))}" alt="" decoding="async"><div class="media-body"><div class="name">${esc(h.name(c))}</div></div></div>`));
   return row("security", alerts.length || !cams.length ? t("tabs.security") : t("cameras.title"), tiles, { alarm: alerts.length > 0 });
 }
