@@ -528,6 +528,8 @@ function tick() {
     if (S.saver && now.getSeconds() === 0) drawSaver();
     return;
   }
+  // A camera full screen is being watched: no dimming, screensaver or exit over it (its picture changes anyway).
+  if (S.camera != null && !S.saver) S.lastInput = Date.now();
   const idle = Date.now() - S.lastInput, saverMs = minutes("saver"), exitMs = minutes("exit");
   // Halfway to the screensaver (at least half a minute in) the screen dims, a first step that saves the panel.
   document.body.classList.toggle("dimmed", !!(prefs().dim && S.config && !S.saver && saverMs > 0 && idle > Math.max(30000, saverMs / 2)));
@@ -708,9 +710,17 @@ async function mountCamera(h) {
   };
   // The video takes over from the still on its first frame actually on screen. "playing" comes too early on Android
   // TV's WebView (the Chromecast reported it ~2 s before any picture, showing black meanwhile), so it is only the
-  // fallback where requestVideoFrameCallback is missing.
-  if (v.requestVideoFrameCallback) v.requestVideoFrameCallback(shown);
-  else v.addEventListener("playing", shown, { once: true });
+  // fallback where requestVideoFrameCallback is missing. webOS has requestVideoFrameCallback but never calls it: the
+  // TV draws video on its own hardware plane, not through the page. There the picture is up once its time runs
+  // (measured on the C4: playing 1.2 s after opening, no frame callback in 20 s, so the still stayed for good).
+  if (v.requestVideoFrameCallback && !WEBOS) v.requestVideoFrameCallback(shown);
+  else if (WEBOS) {
+    let t0 = null;
+    v.addEventListener("timeupdate", () => {
+      if (t0 == null) t0 = v.currentTime;
+      else if (v.currentTime > t0 + 0.2 && v.videoWidth > 0) shown();
+    });
+  } else v.addEventListener("playing", shown, { once: true });
   stage.appendChild(v);
   setTimeout(() => { if (alive() && !started) { stopCamera(); v.remove(); stills(); } }, 12000);
 }
