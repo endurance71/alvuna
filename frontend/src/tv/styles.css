@@ -279,7 +279,10 @@ body:not(.dimmed)::after { transition-duration: .5s; }
 .range i { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: linear-gradient(90deg, #7FC8FF, var(--warn)); }
 
 /* --- camera, full screen ----------------------------------------------------------------------------- */
-.camera-full { position: absolute; inset: 0; z-index: 20; background: #000; animation: cam-in .55s var(--sheet) both; }
+/* backwards, not both: a finished cam-in left an identity transform on the layer, and a transformed ancestor keeps
+   Android TV's WebView from showing the video on its own hardware plane, so it composited every frame on the GPU
+   (measured on a TCL 75P8K: 2304×1296 cameras at ~6 fps, half the frames dropped; the same stream outside it, smooth). */
+.camera-full { position: absolute; inset: 0; z-index: 20; background: #000; animation: cam-in .55s var(--sheet) backwards; }
 .camera-full.closing { animation: cam-out .5s var(--sheet-out) both; pointer-events: none; }
 @keyframes cam-in { from { opacity: 0; transform: scale(.96); } }
 @keyframes cam-out { to { opacity: 0; transform: scale(.96); } }
