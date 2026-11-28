@@ -1,4 +1,5 @@
-// The Alvuna panel's Televisions tab: each paired TV with what it shows now, commands for it and its settings.
+// The Alvuna panel's Televisions tab: a TV is picked first (cards with its name and state, when there is more than
+// one), then only that TV is shown: its state, and its options in three sections: control, settings, error log.
 // The data comes from alvuna/tvs/subscribe (custom_components/alvuna/tv.py), which sends the whole list again whenever
 // a TV connects, reports, logs an error or is changed; this module only turns it into HTML. The panel handles the
 // controls (data-action="tv-…") and sends alvuna/tvs/command and alvuna/tvs/settings.
@@ -70,17 +71,51 @@ export function tvsTab(ctx) {
       <p>${esc(t("tvs.none", { url }))}</p>
     </div>`;
   }
-  return intro + data.tvs.map((tv) => tvCard(tv, ctx)).join("");
+  const tv = data.tvs.find((x) => x.entry_id === ctx.selected) || data.tvs[0];
+  return intro + (data.tvs.length > 1 ? picker(data.tvs, tv, ctx) : "") + tvDetail(tv, ctx);
+}
+
+// The state in a few words, for the picker and the TV's header.
+function stateLine(tv, lang) {
+  if (!tv.connected) {
+    // Without last_seen: not seen since Home Assistant started keeping it (this version), not necessarily never.
+    return { on: false, text: tv.last_seen ? `${t("tvs.offline")} · ${t("tvs.seen", { ago: ago(tv.last_seen, lang) })}` : t("tvs.offline") };
+  }
+  return { on: true, text: tv.since ? t("tvs.online_since", { time: clock(tv.since, lang) }) : t("tvs.online") };
+}
+
+function picker(tvs, selected, ctx) {
+  return `<div class="tv-picker" role="tablist" aria-label="${esc(t("tvs.pick"))}">${tvs.map((tv) => {
+    const st = tv.status || {}, s = stateLine(tv, ctx.lang), on = tv === selected;
+    const now = tv.connected && st.view ? onScreen(st) : s.text;
+    return `<button class="tv-pick" role="tab" aria-selected="${on}" data-action="tv-pick" data-id="${esc(tv.entry_id)}" data-focus="tv-pick|${esc(tv.entry_id)}">
+      <span class="icon tv-icon small ${tv.connected ? "" : "off"}">${icon("mdi:television")}</span>
+      <span class="tv-pick-text"><span class="tv-pick-name">${esc(tv.name)}</span>
+        <span class="tv-pick-state"><span class="tv-dot ${s.on ? "on" : ""}"></span>${esc(now)}</span></span>
+    </button>`;
+  }).join("")}</div>`;
+}
+
+function tvDetail(tv, ctx) {
+  const section = ["control", "settings", "log"].includes(ctx.section) ? ctx.section : "control";
+  const n = (tv.log || []).length;
+  const tab = (key, label, extra = "") => `<button class="tab" role="tab" data-action="tv-section" data-key="${key}" data-focus="tv-section|${key}"
+    aria-selected="${section === key}">${esc(label)}${extra}</button>`;
+  const tabs = `<div class="tabs sub" role="tablist">
+    ${tab("control", t("tvs.sections.control"))}
+    ${tab("settings", t("tvs.sections.settings"), tv.pending ? ` <span class="pending-dot" title="${esc(t("tvs.pending"))}"></span>` : "")}
+    ${tab("log", t("tvs.sections.log"), n ? `<span class="count">${n}</span>` : "")}
+  </div>`;
+  const body = section === "settings" ? settings(tv, ctx) : section === "log" ? log(tv, ctx) : actions(tv, ctx);
+  return `${tvCard(tv, ctx)}${tabs}${body}`;
 }
 
 function tvCard(tv, ctx) {
   const { lang, data } = ctx;
   const st = tv.status || {};
   const id = esc(tv.entry_id);
-  const state = tv.connected
-    ? `<span class="tv-dot on"></span>${esc(tv.since ? t("tvs.online_since", { time: clock(tv.since, lang) }) : t("tvs.online"))}`
-    // Without last_seen: not seen since Home Assistant started keeping it (this version), not necessarily never.
-    : `<span class="tv-dot"></span>${esc(tv.last_seen ? `${t("tvs.offline")} · ${t("tvs.seen", { ago: ago(tv.last_seen, lang) })}` : t("tvs.offline"))}`;
+  const s = stateLine(tv, lang);
+  const state = `<span class="tv-dot ${s.on ? "on" : ""}"></span>${esc(s.text)}`;
   const platform = st.platform ? `<span class="badge muted">${esc(t(`tvs.platform.${st.platform}`))}</span>` : "";
   const device = tv.device_id ? `<a class="tv-link" href="/config/devices/device/${encodeURIComponent(tv.device_id)}" data-nav>${esc(t("tvs.device"))}${ctx.svg(ctx.P.next)}</a>` : "";
   const screenLine = tv.connected && st.view
@@ -111,9 +146,6 @@ function tvCard(tv, ctx) {
       ${facts.length ? `<dl class="tv-facts">${facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : ""}
       ${st.ua ? `<details class="tv-ua"><summary>${esc(t("tvs.ua"))}</summary><p class="mono">${esc(st.ua)}</p></details>` : ""}
     </div>
-    ${actions(tv, ctx)}
-    ${settings(tv, ctx)}
-    ${log(tv, ctx)}
   </section>`;
 }
 
@@ -136,8 +168,7 @@ function actions(tv, ctx) {
   const flash = ctx.flash[tv.entry_id];
   const draft = ctx.drafts[tv.entry_id] || "";
   return `<div class="tv-block">
-    <div class="section-head small"><h3>${esc(t("tvs.actions"))}</h3>
-      ${flash ? `<span class="tv-flash ${flash.error ? "error" : ""}" role="status">${esc(flash.text)}</span>` : ""}</div>
+    <div class="tv-flash-row" role="status">${flash ? `<span class="tv-flash ${flash.error ? "error" : ""}">${esc(flash.text)}</span>` : ""}</div>
     <div class="card tv-pad">
       <div class="tv-acts">
         ${btn("reload", "mdi:refresh", t("tvs.reload"))}
@@ -162,12 +193,7 @@ function settings(tv, ctx) {
   const id = esc(tv.entry_id);
   const reported = tv.settings && Object.keys(tv.settings).length > 0;
   const s = { ...TV_DEFAULTS, ...(tv.settings || {}) };
-  const open = ctx.open.has(`settings|${tv.entry_id}`);
-  const head = `<div class="section-head small"><h3>${esc(t("tvs.settings"))}</h3>
-    ${tv.pending ? `<span class="badge warn">${esc(t("tvs.pending"))}</span>` : ""}
-    <button class="text-button" data-action="tv-toggle-open" data-key="settings|${id}" data-focus="tv-open-settings|${id}" aria-expanded="${open}">
-      ${esc(t(open ? "tvs.hide" : "tvs.show"))}</button></div>`;
-  if (!open) return `<div class="tv-block">${head}</div>`;
+  const head = `<div class="tv-flash-row">${tv.pending ? `<span class="badge warn">${esc(t("tvs.pending"))}</span>` : ""}</div>`;
   const set = (key, value, label, inner, cls = "") => `<button class="${cls}" data-action="tv-set" data-id="${id}" data-key="${key}" data-value="${esc(value)}"
     data-focus="tv-set|${id}|${key}|${esc(value)}" aria-pressed="${String(s[key]) === String(value)}" title="${esc(label)}" aria-label="${esc(label)}">${inner}</button>`;
   const wp = (list) => `<div class="tv-wps">${list.map((w) => set("wallpaper", w.id, w.name || w.id,
@@ -213,13 +239,8 @@ function settings(tv, ctx) {
 
 function log(tv, ctx) {
   const id = esc(tv.entry_id), lines = tv.log || [];
-  const open = ctx.open.has(`log|${tv.entry_id}`);
-  const head = `<div class="section-head small"><h3>${esc(t("tvs.log"))}${lines.length ? `<span class="count">${lines.length}</span>` : ""}</h3>
-    <span class="spacer"></span>
-    ${open && lines.length ? `<button class="text-button" data-action="tv-clear-log" data-id="${id}" data-focus="tv-clear|${id}">${esc(t("tvs.clear"))}</button>` : ""}
-    <button class="text-button" data-action="tv-toggle-open" data-key="log|${id}" data-focus="tv-open-log|${id}" aria-expanded="${open}">
-      ${esc(t(open ? "tvs.hide" : "tvs.show"))}</button></div>`;
-  if (!open) return `<div class="tv-block">${head}</div>`;
+  const head = `<div class="tv-flash-row">${lines.length ? `<button class="text-button" data-action="tv-clear-log" data-id="${id}"
+    data-focus="tv-clear|${id}">${esc(t("tvs.clear"))}</button>` : ""}</div>`;
   const body = lines.length ? `<ol class="tv-log">${lines.slice().reverse().map((l) => `<li>
       <span class="tv-log-time">${esc(new Intl.DateTimeFormat(ctx.lang, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(l.at)))}</span>
       <span class="tv-log-msg mono">${esc(l.message)}${l.source ? ` <span class="id">${esc(l.source)}</span>` : ""}</span></li>`).join("")}</ol>`
@@ -234,7 +255,19 @@ export const TVS_STYLE = `
 .tab .count { font-size: 13px; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-section.tv { margin-top: 28px; }
+section.tv { margin-top: 8px; }
+.tv-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin: 18px 0 20px; }
+.tv-pick { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: center; text-align: left; padding: 12px 14px;
+  border-radius: var(--alv-radius); border: 1px solid var(--alv-div); background: var(--alv-card); cursor: pointer; color: var(--primary-text-color); }
+.tv-pick:hover { background: var(--alv-hover); }
+.tv-pick[aria-selected="true"] { border-color: var(--alv-accent); box-shadow: 0 0 0 1px var(--alv-accent); background: var(--alv-tint); }
+.tv-icon.small { width: 36px; height: 36px; border-radius: 10px; --mdc-icon-size: 22px; }
+.tv-pick-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tv-pick-name { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tv-pick-state { font-size: 13px; color: var(--alv-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tabs.sub { margin: 20px 0 0; }
+.pending-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warning-color, #ffa600); display: inline-block; align-self: center; }
+.tv-flash-row { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-height: 30px; margin: 6px 0 4px; }
 .tv-head { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 16px; }
 .tv-icon { width: 44px; height: 44px; border-radius: 12px; --mdc-icon-size: 26px; }
 .tv-icon.off { background: var(--alv-hover); color: var(--alv-sub); }
@@ -255,7 +288,7 @@ section.tv { margin-top: 28px; }
 .tv-ua summary { cursor: pointer; width: fit-content; }
 .tv-ua p { margin: 6px 0 0; overflow-wrap: anywhere; }
 
-.tv-block { margin-top: 18px; }
+.tv-block { margin-top: 0; }
 .section-head.small { min-height: 32px; margin-bottom: 8px; justify-content: flex-start; }
 .section-head.small h3 { margin: 0; font-size: 16px; font-weight: 600; display: flex; gap: 8px; align-items: baseline; }
 .section-head.small .text-button { margin-left: auto; font-size: 14px; padding: 6px 10px; }
