@@ -13,6 +13,9 @@ collection. Nobody builds a dashboard, and nothing is typed on the TV.
   waste calendars, air quality and weather warnings.
 - **The Alvuna panel** in Home Assistant's sidebar, for administrators: hide what should not show, rename, reorder, add a
   script as a scene. Changes reach every TV at once.
+- **Televisions** in the same panel: each TV with what it shows right now and when the remote was last used; commands
+  (reload, home screen, screensaver, open a room or panel, a camera, a message) and the TV's own settings (wallpaper,
+  accent, tiles, screensaver, OLED care), sent at once or when the TV next starts; its error log.
 - **On the TV**, hold OK on a tile to hide it.
 - **Pairing by code**: the TV shows a code; in Home Assistant, under Discovered, type it. Each TV gets its own user
   (not an administrator; local network only unless you allow a TV in another home), and removing it revokes it.
@@ -78,4 +81,5 @@ Strona i pokaz na żywo: [alvuna.shipapp.pl](https://alvuna.shipapp.pl/).
    *Wykryte*, wybierz **Alvuna TV** i wpisz kod z ekranu.
 
 Układ powstaje sam z obszarów i pięter. W panelu **Alvuna** w menu bocznym ukryjesz elementy, zmienisz nazwy
-i kolejność albo dodasz skrypt jako scenę; na telewizorze przytrzymanie OK na kaflu też pozwala go ukryć.
+i kolejność albo dodasz skrypt jako scenę, a w zakładce **Telewizory** zobaczysz, co pokazuje każdy telewizor, wyślesz
+mu polecenie i zmienisz jego ustawienia; na telewizorze przytrzymanie OK na kaflu też pozwala go ukryć.

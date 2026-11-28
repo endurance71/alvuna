@@ -112,6 +112,12 @@ export const hideItem = (conn, item) => conn.sendMessagePromise({ type: "alvuna/
 // This TV's channel: notifications and cameras sent by the alvuna.notify / alvuna.show_camera actions.
 export const subscribeTv = (conn, cb) => conn.subscribeMessage(cb, { type: "alvuna/tv/subscribe" });
 
+// What this TV shows and which settings it has, for the Alvuna panel's Televisions tab (alvuna/tv/report); its errors
+// (alvuna/tv/log). Older integrations do not know them: those calls fail quietly.
+export const reportTv = (conn, { status, settings, rev }) =>
+  conn.sendMessagePromise({ type: "alvuna/tv/report", status, settings, rev }).catch(() => null);
+export const logTv = (conn, entries) => conn.sendMessagePromise({ type: "alvuna/tv/log", entries }).catch(() => null);
+
 // Hourly and daily forecast (one-shot, like the tablet card's _loadForecast), with twice-daily folded into days.
 // `ids`: the weather entity shown, then the others listed in `weather`: when the first gives only a few days (IMGW: 3),
 // the longest daily forecast of the others is used for the days.
